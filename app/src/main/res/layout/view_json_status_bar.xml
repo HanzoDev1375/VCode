@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<merge xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools">
+
+    <LinearLayout
+        android:id="@+id/json_status_container"
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/vcode_json_status_bar_height"
+        android:gravity="center_vertical"
+        android:orientation="horizontal"
+        android:paddingHorizontal="16dp"
+        tools:background="@drawable/vcode_bg_json_status_valid">
+
+        <ImageView
+            android:id="@+id/iv_json_status_icon"
+            android:layout_width="14dp"
+            android:layout_height="14dp"
+            android:importantForAccessibility="no"
+            android:layout_marginEnd="8dp"
+            app:tint="?attr/colorTertiary"
+            tools:src="@drawable/ic_circle_check" />
+
+        <TextView
+            android:id="@+id/tv_json_status_msg"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_weight="1"
+            android:textColor="?attr/colorOnSurface"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            tools:text="@string/vcode_valid_json" />
+
+        <com.google.android.material.progressindicator.CircularProgressIndicator
+            android:id="@+id/progress_json_validating"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:indeterminate="true"
+            android:visibility="gone"
+            app:indicatorColor="@color/vcode_text_secondary"
+            app:indicatorSize="14dp"
+            app:trackThickness="2dp" />
+
+    </LinearLayout>
+</merge>

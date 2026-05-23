@@ -1,0 +1,249 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.drawerlayout.widget.DrawerLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/drawer_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:background="?attr/colorSurfaceContainerLowest">
+
+    <LinearLayout
+        android:id="@+id/main_content"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical">
+
+        <com.google.android.material.appbar.AppBarLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="?attr/colorSurfaceContainerLow"
+            app:elevation="0dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vcode_editor_toolbar_height"
+                android:background="@drawable/vcode_bg_toolbar"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:paddingHorizontal="8dp">
+
+                <ImageView
+                    android:id="@+id/btn_menu"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
+                    android:importantForAccessibility="no"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="10dp"
+                    android:src="@drawable/ic_bars"
+                    app:tint="?attr/colorOnSurface" />
+
+                <TextView
+                    android:id="@+id/tv_project_name"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="0dp"
+                    android:layout_weight="1"
+                    android:ellipsize="end"
+                    android:maxLines="1"
+                    android:includeFontPadding="false"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textAppearance="@style/TextAppearance.Material3.ActionBar.Title"
+                    android:textSize="18sp"
+                    tools:text="VCODE" />
+
+                <ImageView
+                    android:id="@+id/btn_undo"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:importantForAccessibility="no"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_rotate_left"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                <ImageView
+                    android:id="@+id/btn_redo"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:importantForAccessibility="no"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_rotate_right"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                <ImageView
+                    android:id="@+id/btn_run"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:layout_marginStart="4dp"
+                    android:importantForAccessibility="no"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_play"
+                    app:tint="?attr/colorTertiary" />
+
+                <ImageView
+                    android:id="@+id/btn_save_current"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:importantForAccessibility="no"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_floppy_disk"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+
+                <ImageView
+                    android:id="@+id/btn_overflow"
+                    android:layout_width="36dp"
+                    android:layout_height="36dp"
+                    android:importantForAccessibility="no"
+                    android:background="?attr/selectableItemBackgroundBorderless"
+                    android:padding="8dp"
+                    android:src="@drawable/ic_ellipsis_vertical"
+                    app:tint="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+
+            <com.cocode.vcode.ide.views.TabBar
+                android:id="@+id/tab_bar"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vcode_editor_tab_bar_height"
+                android:background="?attr/colorSurfaceContainerLowest"
+                android:scrollbars="none" />
+
+            <com.cocode.vcode.ide.views.BreadcrumbView
+                android:id="@+id/breadcrumb"
+                android:layout_width="match_parent"
+                android:layout_height="@dimen/vcode_breadcrumb_height"
+                android:background="@color/vcode_bg_surface"
+                android:scrollbars="none" />
+
+            <com.cocode.vcode.ide.views.JsonStatusBar
+                android:id="@+id/json_status_bar"
+                android:visibility="gone"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent"/>
+
+            <com.cocode.vcode.ide.views.FindReplaceBar
+                android:id="@+id/find_replace_bar"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:visibility="gone" />
+
+        </com.google.android.material.appbar.AppBarLayout>
+
+        <FrameLayout
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1">
+
+            <FrameLayout
+                android:id="@+id/editor_content_container"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:visibility="gone">
+
+                <com.cocode.vcode.ide.views.CodeEditorLayout
+                    android:id="@+id/editor_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+
+                <com.cocode.vcode.ide.views.ZoomImageView
+                    android:id="@+id/iv_image_viewer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:visibility="gone"
+                    android:background="?attr/colorSurfaceContainerLowest" />
+
+                <LinearLayout
+                    android:id="@+id/layout_font_viewer"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    android:gravity="center"
+                    android:visibility="gone"
+                    android:padding="24dp"
+                    android:background="?attr/colorSurfaceContainerLowest">
+
+                    <TextView
+                        android:id="@+id/tv_font_name"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+                        android:textColor="?attr/colorOnSurface"/>
+
+                    <EditText
+                        android:id="@+id/et_font_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:background="@null"
+                        android:gravity="center"
+                        android:hint="Type here to preview font..."
+                        android:text="The quick brown fox jumps over the lazy dog\n0123456789"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textSize="24sp" />
+
+                    <WebView
+                        android:id="@+id/webview_font_preview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="24dp"
+                        android:background="#00000000"
+                        android:visibility="gone" />
+                </LinearLayout>
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_empty_editor"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:gravity="center"
+                android:orientation="vertical"
+                tools:ignore="UseCompoundDrawables">
+
+                <ImageView
+                    android:layout_width="@dimen/vcode_empty_state_icon_size"
+                    android:layout_height="@dimen/vcode_empty_state_icon_size"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_code"
+                    app:tint="?attr/colorOutlineVariant" />
+
+                <TextView
+                    android:id="@+id/tv_open_file_from_tree"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:text="@string/vcode_open_file_from_explorer"
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
+            </LinearLayout>
+
+            <ImageView
+                android:id="@+id/iv_view_preview"
+                android:layout_width="50dp"
+                android:layout_height="50dp"
+                android:padding="12dp"
+                android:layout_gravity="bottom|end"
+                android:layout_marginEnd="16dp"
+                android:layout_marginBottom="16dp"
+                android:clickable="true"
+                android:focusable="true"
+                android:importantForAccessibility="no"
+                android:visibility="gone"
+                app:tint="@color/vcode_bg_surface"
+                android:src="@drawable/ic_globe"
+                tools:visibility="visible" />
+
+        </FrameLayout>
+    </LinearLayout>
+
+    <FrameLayout
+        android:id="@+id/drawer_container"
+        android:layout_width="@dimen/vcode_file_drawer_width"
+        android:layout_height="match_parent"
+        android:layout_gravity="start"
+        android:background="?attr/colorSurfaceContainerLowest" />
+
+</androidx.drawerlayout.widget.DrawerLayout>

@@ -1,0 +1,14 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string-array name="tab_size_entries">
+        <item>2 spaces</item>
+        <item>4 spaces</item>
+        <item>8 spaces</item>
+    </string-array>
+
+    <string-array name="tab_size_values">
+        <item>2</item>
+        <item>4</item>
+        <item>8</item>
+    </string-array>
+</resources>

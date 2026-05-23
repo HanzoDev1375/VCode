@@ -1,0 +1,125 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bottom_sheet_background"
+    android:orientation="vertical">
+
+    <com.google.android.material.bottomsheet.BottomSheetDragHandleView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"/>
+
+    <TextView
+        android:id="@+id/tv_create_new_snippet"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/vcode_create_snippet"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginEnd="0dp"/>
+
+    <TextView
+        android:id="@+id/tv_enter_snippet_title_and_code"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/vcode_enter_snippet_title_and_code"
+        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginEnd="0dp"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_snippet_title_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/vcode_snippet_title"
+                android:layout_marginTop="24dp"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginEnd="0dp"/>
+
+            <EditText
+                android:id="@+id/et_snippet_title"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="6dp"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:hint="@string/vcode_snippet_title_hint"
+                android:imeOptions="actionNext"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:minHeight="48dp"
+                android:padding="14dp"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
+                tools:ignore="VisualLintTextFieldSize" />
+
+            <TextView
+                android:id="@+id/tv_snippet_code"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/vcode_snippet_code"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="6dp"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginEnd="0dp"/>
+
+            <EditText
+                android:id="@+id/et_snippet_code"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:minHeight="110dp"
+                android:hint="@string/vcode_snippet_code_hint"
+                android:importantForAutofill="no"
+                android:padding="14dp"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:inputType="textMultiLine"
+                android:singleLine="false"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:gravity="top|start"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                tools:ignore="VisualLintTextFieldSize" />
+
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_create_snippet"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="end"
+                android:layout_marginStart="0dp"
+                android:layout_marginTop="40dp"
+                android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginBottom="20dp"
+                android:paddingHorizontal="24dp"
+                android:text="@string/vcode_create_snippet"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnPrimary"
+                app:backgroundTint="?attr/colorPrimary"
+                tools:ignore="DuplicateSpeakableTextCheck" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

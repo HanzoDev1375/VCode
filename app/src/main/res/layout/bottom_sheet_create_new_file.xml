@@ -1,0 +1,156 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:background="@drawable/bottom_sheet_background"
+    android:orientation="vertical">
+
+    <com.google.android.material.bottomsheet.BottomSheetDragHandleView
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center_horizontal"/>
+
+    <TextView
+        android:id="@+id/tv_create_new_file"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/vcode_create_new_file"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginEnd="0dp"/>
+
+    <TextView
+        android:id="@+id/tv_choose_name_extension"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="@string/vcode_choose_name_extension"
+        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textColor="?attr/colorOnSurfaceVariant"
+        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginEnd="0dp"/>
+
+    <androidx.core.widget.NestedScrollView
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1"
+        android:fillViewport="true">
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical">
+
+            <TextView
+                android:id="@+id/tv_file_name_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/file_name"
+                android:layout_marginTop="24dp"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginEnd="0dp"/>
+
+            <EditText
+                android:id="@+id/et_file_name"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:hint="@string/e_g_index_file"
+                android:imeOptions="actionDone"
+                android:importantForAutofill="no"
+                android:padding="14dp"
+                android:layout_marginTop="6dp"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:inputType="text"
+                android:maxLines="1"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
+
+            <TextView
+                android:id="@+id/tv_quick_select_template_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="@string/vcode_quick_select_template"
+                android:layout_marginTop="24dp"
+                android:layout_marginBottom="6dp"
+                android:textAllCaps="true"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginEnd="0dp"/>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/template_1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="0dp"
+                    android:layout_marginEnd="10dp"
+                    layout="@layout/layout_choose_template"/>
+                <include
+                    android:id="@+id/template_2"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="0dp"
+                    android:layout_marginEnd="10dp"
+                    layout="@layout/layout_choose_template"/>
+                <include
+                    android:id="@+id/template_3"
+                    layout="@layout/layout_choose_template"/>
+
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="10dp"
+                android:orientation="horizontal">
+
+                <include
+                    android:id="@+id/template_4"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="0dp"
+                    android:layout_marginEnd="10dp"
+                    layout="@layout/layout_choose_template"/>
+                <include
+                    android:id="@+id/template_5"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="0dp"
+                    android:layout_marginEnd="10dp"
+                    layout="@layout/layout_choose_template"/>
+                <include
+                    android:id="@+id/template_6"
+                    layout="@layout/layout_choose_template"/>
+
+            </LinearLayout>
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_create_file"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="40dp"
+                android:layout_marginStart="0dp"
+                android:layout_marginBottom="20dp"
+                android:paddingHorizontal="24dp"
+                android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
+                android:layout_gravity="end"
+                android:text="@string/vcode_action_create_file"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnPrimary"
+                app:backgroundTint="?attr/colorPrimary" />
+
+        </LinearLayout>
+
+    </androidx.core.widget.NestedScrollView>
+</LinearLayout>

@@ -1,0 +1,20 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <declare-styleable name="CodeEditText">
+        <attr name="vcode_cet_language" format="enum">
+            <enum name="html" value="0"/>
+            <enum name="css" value="1"/>
+            <enum name="javascript" value="2"/>
+            <enum name="json" value="3"/>
+            <enum name="text" value="4"/>
+        </attr>
+        <attr name="vcode_cet_fontSize" format="dimension"/>
+        <attr name="vcode_cet_showLineNumbers" format="boolean"/>
+        <attr name="vcode_cet_highlightCurrentLine" format="boolean"/>
+        <attr name="vcode_cet_autoCloseBrackets" format="boolean"/>
+        <attr name="vcode_cet_autoCloseHtmlTags" format="boolean"/>
+        <attr name="vcode_cet_tabSize" format="integer"/>
+        <attr name="vcode_cet_wordWrap" format="boolean"/>
+    </declare-styleable>
+    <attr name="colorBackground" format="color"/>
+</resources>

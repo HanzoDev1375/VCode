@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/tab_container"
+    android:layout_width="wrap_content"
+    android:layout_height="match_parent"
+    android:background="@drawable/vcode_ripple_tab"
+    android:clickable="true"
+    android:focusable="true"
+    android:gravity="center_vertical"
+    android:minWidth="@dimen/vcode_editor_tab_min_width"
+    android:maxWidth="@dimen/vcode_editor_tab_max_width"
+    android:orientation="horizontal"
+    android:paddingHorizontal="12dp">
+
+    <TextView
+        android:id="@+id/tv_lang_badge"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginEnd="6dp"
+        android:fontFamily="sans-serif-black"
+        android:textColor="@color/vcode_text_secondary"
+        android:includeFontPadding="false"
+        android:textSize="9sp"
+        tools:text="HTML" />
+
+    <TextView
+        android:id="@+id/tv_file_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:layout_weight="1"
+        android:ellipsize="end"
+        android:fontFamily="sans-serif-medium"
+        android:maxLines="1"
+        android:textColor="@color/vcode_text_primary"
+        android:includeFontPadding="false"
+        android:textSize="13sp"
+        tools:text="index.html" />
+
+    <View
+        android:id="@+id/dot_dirty"
+        android:layout_width="@dimen/vcode_tab_dirty_dot_size"
+        android:layout_height="@dimen/vcode_tab_dirty_dot_size"
+        android:layout_marginStart="6dp"
+        android:background="@drawable/vcode_bg_git_status_modified"
+        android:visibility="gone"
+        tools:visibility="visible" />
+
+    <ImageView
+        android:id="@+id/btn_close"
+        android:layout_width="@dimen/vcode_tab_close_button_size"
+        android:layout_height="@dimen/vcode_tab_close_button_size"
+        android:layout_marginStart="8dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:clickable="true"
+        android:contentDescription="@string/vcode_action_cancel"
+        android:focusable="true"
+        android:src="@drawable/ic_xmark"
+        android:tint="@color/vcode_text_secondary"
+        tools:ignore="UseAppTint" />
+
+</LinearLayout>

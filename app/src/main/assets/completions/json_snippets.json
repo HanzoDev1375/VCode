@@ -1,0 +1,32 @@
+[
+  {
+    "label": "{}",
+    "insertText": "{\n  |\n}",
+    "detail": "Object",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "[]",
+    "insertText": "[\n  |\n]",
+    "detail": "Array",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "key: value",
+    "insertText": "\"|\": \"\"",
+    "detail": "Key-Value Pair",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "package.json",
+    "insertText": "{\n  \"name\": \"my-project\",\n  \"version\": \"1.0.0\",\n  \"description\": \"\",\n  \"main\": \"index.js\",\n  \"scripts\": {\n    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\"\n  },\n  \"keywords\": [],\n  \"author\": \"\",\n  \"license\": \"ISC\"\n}",
+    "detail": "Node Manifest",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "config template",
+    "insertText": "{\n  \"port\": 8080,\n  \"environment\": \"development\",\n  \"debug\": true,\n  \"apiKeys\": {\n    \"default\": \"|\"\n  }\n}",
+    "detail": "Configuration",
+    "type": "SNIPPET"
+  }
+]

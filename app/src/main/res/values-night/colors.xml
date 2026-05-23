@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vcode_bg_deep">#0D0F14</color>
+    <color name="vcode_bg_surface">#13161E</color>
+    <color name="vcode_bg_card">#1C2030</color>
+    <color name="vcode_bg_elevated">#242840</color>
+
+    <color name="vcode_accent_primary">#4F8EF7</color>
+    <color name="vcode_accent_secondary">#7C5CFC</color>
+    <color name="vcode_accent_success">#3DD68C</color>
+    <color name="vcode_accent_warning">#F5A623</color>
+    <color name="vcode_accent_error">#F25F5C</color>
+    <color name="vcode_accent_json">#E5C07B</color>
+    <color name="vcode_accent_git">#F97583</color>
+
+    <!-- M3 On/Container colors (dark) -->
+    <color name="vcode_on_primary">#00327A</color>
+    <color name="vcode_primary_container">#004799</color>
+    <color name="vcode_on_primary_container">#D6E4FF</color>
+    <color name="vcode_on_secondary">#2D0096</color>
+    <color name="vcode_secondary_container">#4A30A8</color>
+    <color name="vcode_on_secondary_container">#E9DDFF</color>
+    <color name="vcode_on_success">#003822</color>
+    <color name="vcode_success_container">#005233</color>
+    <color name="vcode_on_success_container">#BBFFD8</color>
+    <color name="vcode_on_error">#690005</color>
+    <color name="vcode_error_container">#93000A</color>
+    <color name="vcode_on_error_container">#FFDAD6</color>
+    <color name="vcode_surface_variant">#242840</color>
+    <color name="vcode_on_surface_variant">#7B82A0</color>
+    <color name="vcode_outline">#1E2235</color>
+    <color name="vcode_outline_variant">#3A3F5C</color>
+    <color name="vcode_inverse_surface">#E2E2F0</color>
+    <color name="vcode_inverse_on_surface">#2F3049</color>
+    <color name="vcode_inverse_primary">#2B6EE8</color>
+    <color name="vcode_scrim">#000000</color>
+    <color name="vcode_surface_tint">#4F8EF7</color>
+
+    <color name="vcode_text_primary">#E8EAF2</color>
+    <color name="vcode_text_secondary">#7B82A0</color>
+    <color name="vcode_text_hint">#3E4560</color>
+
+    <color name="vcode_divider">#1E2235</color>
+    <color name="vcode_line_number_bg">#10121A</color>
+    <color name="vcode_line_number_text">#3A4060</color>
+    <color name="vcode_active_line_highlight">#1A1E2E</color>
+    <color name="vcode_selection_color">#4D4F8EF7</color>
+    <color name="vcode_tab_dirty_dot">#F5A623</color>
+    <color name="vcode_project_card_gradient_start">#1C2030</color>
+    <color name="vcode_project_card_gradient_end">#242840</color>
+    <color name="vcode_branch_chip_bg">#1A4F8EF7</color>
+    <color name="vcode_branch_chip_active_bg">#334F8EF7</color>
+
+    <color name="vcode_diff_added_bg">#1A3A2A</color>
+    <color name="vcode_diff_added_text">#3DD68C</color>
+    <color name="vcode_diff_removed_bg">#3A1A1A</color>
+    <color name="vcode_diff_removed_text">#F25F5C</color>
+    <color name="vcode_diff_modified_bg">#2A2A1A</color>
+    <color name="vcode_diff_hunk_bg">#1A1E35</color>
+
+    <color name="vcode_git_staged_color">#3DD68C</color>
+    <color name="vcode_git_modified_color">#F5A623</color>
+    <color name="vcode_git_untracked_color">#7B82A0</color>
+    <color name="vcode_git_deleted_color">#F25F5C</color>
+    <color name="vcode_git_conflicted_color">#FF9E64</color>
+
+    <color name="vcode_lang_html">#F28B70</color>
+    <color name="vcode_lang_css">#7B9FFF</color>
+    <color name="vcode_lang_js">#F7DF1E</color>
+    <color name="vcode_lang_on_js">#1C2030</color>
+    <color name="vcode_lang_json">#E5C07B</color>
+    <color name="vcode_lang_md">#5BB8FF</color>
+</resources>

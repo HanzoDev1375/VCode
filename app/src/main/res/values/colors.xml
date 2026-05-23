@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vcode_bg_deep">#F0F2F8</color>
+    <color name="vcode_bg_surface">#FFFFFF</color>
+    <color name="vcode_bg_card">#F7F8FC</color>
+    <color name="vcode_bg_elevated">#ECEEF6</color>
+
+    <color name="vcode_accent_primary">#2B6EE8</color>
+    <color name="vcode_accent_secondary">#6340E0</color>
+    <color name="vcode_accent_success">#1FB870</color>
+    <color name="vcode_accent_warning">#D4850A</color>
+    <color name="vcode_accent_error">#D93B38</color>
+    <color name="vcode_accent_json">#B58B00</color>
+    <color name="vcode_accent_git">#C0392B</color>
+
+    <!-- M3 On/Container colors (light) -->
+    <color name="vcode_on_primary">#FFFFFF</color>
+    <color name="vcode_primary_container">#D6E4FF</color>
+    <color name="vcode_on_primary_container">#001A41</color>
+    <color name="vcode_on_secondary">#FFFFFF</color>
+    <color name="vcode_secondary_container">#E9DDFF</color>
+    <color name="vcode_on_secondary_container">#1E0066</color>
+    <color name="vcode_on_success">#FFFFFF</color>
+    <color name="vcode_success_container">#BBFFD8</color>
+    <color name="vcode_on_success_container">#002114</color>
+    <color name="vcode_on_error">#FFFFFF</color>
+    <color name="vcode_error_container">#FFDAD6</color>
+    <color name="vcode_on_error_container">#410002</color>
+    <color name="vcode_surface_variant">#E1E4F0</color>
+    <color name="vcode_on_surface_variant">#5A6080</color>
+    <color name="vcode_outline">#DDE0EC</color>
+    <color name="vcode_outline_variant">#C1C4D0</color>
+    <color name="vcode_inverse_surface">#2F3049</color>
+    <color name="vcode_inverse_on_surface">#EEF0FA</color>
+    <color name="vcode_inverse_primary">#ADC6FF</color>
+    <color name="vcode_scrim">#000000</color>
+    <color name="vcode_surface_tint">#2B6EE8</color>
+
+    <color name="vcode_text_primary">#0D0F1A</color>
+    <color name="vcode_text_secondary">#5A6080</color>
+    <color name="vcode_text_hint">#9BA3C0</color>
+
+    <color name="vcode_divider">#DDE0EC</color>
+    <color name="vcode_line_number_bg">#E8EBF5</color>
+    <color name="vcode_line_number_text">#9BA3C0</color>
+    <color name="vcode_active_line_highlight">#EEF0FA</color>
+    <color name="vcode_selection_color">#4D2B6EE8</color>
+    <color name="vcode_tab_dirty_dot">#D4850A</color>
+    <color name="vcode_project_card_gradient_start">#F7F8FC</color>
+    <color name="vcode_project_card_gradient_end">#ECEEF6</color>
+    <color name="vcode_branch_chip_bg">#1A2B6EE8</color>
+    <color name="vcode_branch_chip_active_bg">#332B6EE8</color>
+
+    <color name="vcode_diff_added_bg">#E6FFEC</color>
+    <color name="vcode_diff_added_text">#1A7F37</color>
+    <color name="vcode_diff_removed_bg">#FFEBE9</color>
+    <color name="vcode_diff_removed_text">#CF222E</color>
+    <color name="vcode_diff_modified_bg">#FFF8C5</color>
+    <color name="vcode_diff_hunk_bg">#EEF0FA</color>
+
+    <color name="vcode_git_staged_color">#1FB870</color>
+    <color name="vcode_git_modified_color">#D4850A</color>
+    <color name="vcode_git_untracked_color">#5A6080</color>
+    <color name="vcode_git_deleted_color">#D93B38</color>
+    <color name="vcode_git_conflicted_color">#D4850A</color>
+
+    <color name="vcode_lang_html">#E44D26</color>
+    <color name="vcode_lang_css">#264DE4</color>
+    <color name="vcode_lang_js">#F7DF1E</color>
+    <color name="vcode_lang_on_js">#323330</color>
+    <color name="vcode_lang_json">#B58B00</color>
+    <color name="vcode_lang_md">#0083D1</color>
+    <color name="vcode_file_img">#4CAF50</color>
+    <color name="vcode_file_gif">#FF9800</color>
+    <color name="vcode_file_svg">#FFB13B</color>
+    <color name="vcode_file_ico">#9E9E9E</color>
+    <color name="vcode_file_bmp">#607D8B</color>
+    <color name="vcode_file_font">#8E44AD</color>
+    <color name="vcode_file_music">#E91E63</color>
+    <color name="vcode_file_video">#F44336</color>
+    <color name="vcode_file_csv">#2ECC71</color>
+    <color name="vcode_file_web_manifest">#16A085</color>
+    <color name="vcode_file_env">#2C3E50</color>
+    <color name="vcode_file_pdf">#E74C3C</color>
+    <color name="vcode_file_log">#34495E</color>
+    <color name="vcode_file_bak">#7F8C8D</color>
+</resources>

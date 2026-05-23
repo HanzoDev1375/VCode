@@ -1,0 +1,146 @@
+package com.cocode.vcode.ide.core.formatter;
+
+/**
+ * Comprehensive formatting token state engine tailored for ECMAScript/JavaScript formatting.
+ * Handles bracket tracking, conditional nesting structures, argument definitions, string structures,
+ * and controls block chaining (e.g., managing spacing layouts for keyword chains like else, catch, finally).
+ */
+public class JsFormatter extends BaseFormatter {
+    @Override
+    public String format(String code) {
+        StringBuilder out = new StringBuilder();
+        int indent = 0;
+        boolean inString = false;
+        char stringChar = 0;
+        int inParens = 0; // Counts paren layers to properly adjust formatting style inside loop parameters or arguments
+
+        // Clean out erratic tabs and double whitespaces, keeping baseline structural spaces intact
+        String cleanCode = code.replaceAll("[ \\t\\x0B\\f\\r]+", " ")
+                .replaceAll(" \\n", "\n")
+                .replaceAll("\\n ", "\n")
+                .trim();
+
+        boolean isNewLine = true;
+
+        for (int i = 0; i < cleanCode.length(); i++) {
+            char c = cleanCode.charAt(i);
+
+            // String block protection: Pass internal contents forward unmodified
+            if (inString) {
+                out.append(c);
+                if (c == stringChar && cleanCode.charAt(i - 1) != '\\') inString = false;
+                continue;
+            }
+
+            // Check for modern JS template literals, double quotes, and single quotes alike
+            if (c == '"' || c == '\'' || c == '`') {
+                if (isNewLine) {
+                    out.append(getIndentString(indent));
+                    isNewLine = false;
+                }
+                inString = true;
+                stringChar = c;
+                out.append(c);
+                continue;
+            }
+
+            // Monitor start parameters to control statement splitting behavior inside parameters
+            if (c == '(') {
+                if (isNewLine) {
+                    out.append(getIndentString(indent));
+                    isNewLine = false;
+                }
+                inParens++;
+                out.append(c);
+                continue;
+            }
+            // Monitor close parameters
+            if (c == ')') {
+                if (isNewLine) {
+                    out.append(getIndentString(indent));
+                    isNewLine = false;
+                }
+                inParens = Math.max(0, inParens - 1);
+                out.append(c);
+                continue;
+            }
+
+            // Handle start braces: Advance scope indentation settings and push a line break
+            if (c == '{') {
+                if (!isNewLine && out.length() > 0 && out.charAt(out.length() - 1) != ' ')
+                    out.append(" ");
+                out.append("{\n");
+                indent++;
+                isNewLine = true;
+            }
+            // Handle close braces: Decrease indentation level safely and align syntax properly
+            else if (c == '}') {
+                indent = Math.max(0, indent - 1);
+                if (!isNewLine) out.append("\n");
+
+                out.append(getIndentString(indent)).append("}");
+                isNewLine = false;
+
+                // Look ahead to check if the upcoming token needs to combine inline with this closing brace
+                int j = i + 1;
+                while (j < cleanCode.length() && (cleanCode.charAt(j) == ' ' || cleanCode.charAt(j) == '\n')) {
+                    j++;
+                }
+
+                if (j < cleanCode.length()) {
+                    char nextC = cleanCode.charAt(j);
+                    // If block is followed by standard termination signs, do not break line
+                    if (nextC != ',' && nextC != ';' && nextC != ')' && nextC != ']' && nextC != '}') {
+                        String rem = cleanCode.substring(j);
+                        // Check for inline keyword chains to append cleanly on the same row (e.g. "} else {")
+                        if (rem.startsWith("else") || rem.startsWith("catch") || rem.startsWith("finally")) {
+                            out.append(" ");
+                        } else {
+                            out.append("\n");
+                            isNewLine = true;
+                        }
+                    }
+                }
+            }
+            // Rule statement break processing
+            else if (c == ';') {
+                out.append(";");
+                // Only create line break for semicolons outside function or control loops parameters
+                if (inParens == 0) {
+                    out.append("\n");
+                    isNewLine = true;
+                }
+            }
+            // Separator parameter processing
+            else if (c == ',') {
+                out.append(",");
+                if (inParens == 0) {
+                    out.append("\n");
+                    isNewLine = true;
+                } else {
+                    out.append(" "); // Maintain a tidy readable space inside multiple argument definitions
+                }
+            }
+            // Guard trailing structural carriage line breaks from building redundant layers
+            else if (c == '\n') {
+                if (out.length() > 0 && out.charAt(out.length() - 1) == '\n') {
+                    continue;
+                }
+                out.append("\n");
+                isNewLine = true;
+            }
+            else {
+                if (c == ' ' && isNewLine) continue;
+
+                if (isNewLine) {
+                    out.append(getIndentString(indent));
+                    isNewLine = false;
+                }
+                out.append(c);
+            }
+        }
+
+        // Post-processing: Empty out accidental blank string margins and ensure empty structures display tightly as '{}'
+        return out.toString().replaceAll("(?m)^\\s+$", "").replaceAll("\\n{3,}", "\n\n").replaceAll("\\{\\s+\\}", "{}").trim();
+    }
+}

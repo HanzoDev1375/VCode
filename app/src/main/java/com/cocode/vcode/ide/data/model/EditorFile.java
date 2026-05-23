@@ -1,0 +1,147 @@
+package com.cocode.vcode.ide.data.model;
+
+import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.utils.FileUtils;
+import java.io.File;
+
+/**
+ * Workspace runtime object representing an active file session inside the editor stage.
+ * Tracks character mutations, text dirty states, target languages, scrolling viewport
+ * coordinates, and caret cursor locations for state persistence across tabs.
+ */
+public class EditorFile {
+
+    private String id;
+    private File file;
+    private String content;
+    private String savedContent = "";
+    private Language language;
+    private AssetType assetType;
+    private int cursorPosition;
+    private int scrollY;
+
+    public EditorFile() {
+    }
+
+    /**
+     * Initializes an active workspace tracking session for a local target file.
+     */
+    public EditorFile(String id, File file, String content, Language language) {
+        this.id = id;
+        this.file = file;
+        this.content = content != null ? content : "";
+        this.savedContent = content != null ? content : "";
+        this.language = language;
+        // Auto-detect if this file is a binary asset based on its extension
+        this.assetType = AssetType.fromExtension(FileUtils.getExtension(file.getName()));
+    }
+
+    /**
+     * Helper to check if the UI needs to show an Image/Font viewer instead of the text editor.
+     */
+    public boolean isBinaryAsset() {
+        return assetType != null && !assetType.isTextBased();
+    }
+
+    public AssetType getAssetType() {
+        return assetType;
+    }
+
+    public void setAssetType(AssetType assetType) {
+        this.assetType = assetType;
+    }
+
+    /**
+     * Compares active working text lines against disk persistence states to look for unsaved edits.
+     * Prevents tracking mutations on external asset models.
+     * @return True if there are uncommitted buffer changes waiting for a disk write sequence.
+     */
+    public boolean isDirty() {
+        if (isBinaryAsset())
+            return false; // Binary assets edited externally cannot be "dirty" in our text editor
+        if (content == null && savedContent == null) return false;
+        if (content == null || savedContent == null) return true;
+        return !content.equals(savedContent);
+    }
+
+    /**
+     * Synchronizes storage bookmarks after writing data to disk, clearing dirty markers.
+     */
+    public void markSaved() {
+        this.savedContent = this.content;
+    }
+
+    public String getFileName() {
+        return file != null ? file.getName() : "Untitled";
+    }
+
+    /**
+     * Computes localized file tree routing rules relative to the active root project path.
+     * Clean up long file layouts so tab headers display clean paths.
+     */
+    public String getRelativePath(File projectRoot) {
+        if (file == null || projectRoot == null) return getFileName();
+        try {
+            String root = projectRoot.getCanonicalPath();
+            String path = file.getCanonicalPath();
+            if (path.startsWith(root)) {
+                String relative = path.substring(root.length());
+                if (relative.startsWith(File.separator)) {
+                    relative = relative.substring(File.separator.length());
+                }
+                return relative;
+            }
+        } catch (Exception e) {
+            // Fall through to name only if file validation checks encounter an error
+        }
+        return getFileName();
+    }
+
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public File getFile() {
+        return file;
+    }
+
+    public void setFile(File file) {
+        this.file = file;
+    }
+
+    public String getContent() {
+        return content != null ? content : "";
+    }
+
+    public void setContent(String content) {
+        this.content = content != null ? content : "";
+    }
+
+    public Language getLanguage() {
+        return language;
+    }
+
+    public void setLanguage(Language language) {
+        this.language = language;
+    }
+
+    public int getCursorPosition() {
+        return cursorPosition;
+    }
+
+    public void setCursorPosition(int cursorPosition) {
+        this.cursorPosition = Math.max(0, cursorPosition);
+    }
+
+    public int getScrollY() {
+        return scrollY;
+    }
+
+    public void setScrollY(int scrollY) {
+        this.scrollY = Math.max(0, scrollY);
+    }
+}

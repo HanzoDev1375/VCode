@@ -1,0 +1,96 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <style name="Theme.VCode" parent="Theme.Material3.DayNight.NoActionBar">
+
+        <!-- Primary -->
+        <item name="colorPrimary">@color/vcode_accent_primary</item>
+        <item name="colorOnPrimary">@color/vcode_on_primary</item>
+        <item name="colorPrimaryContainer">@color/vcode_primary_container</item>
+        <item name="colorOnPrimaryContainer">@color/vcode_on_primary_container</item>
+
+        <!-- Secondary -->
+        <item name="colorSecondary">@color/vcode_accent_secondary</item>
+        <item name="colorOnSecondary">@color/vcode_on_secondary</item>
+        <item name="colorSecondaryContainer">@color/vcode_secondary_container</item>
+        <item name="colorOnSecondaryContainer">@color/vcode_on_secondary_container</item>
+
+        <!-- Tertiary (mapped to success/green) -->
+        <item name="colorTertiary">@color/vcode_accent_success</item>
+        <item name="colorOnTertiary">@color/vcode_on_success</item>
+        <item name="colorTertiaryContainer">@color/vcode_success_container</item>
+        <item name="colorOnTertiaryContainer">@color/vcode_on_success_container</item>
+
+        <!-- Error -->
+        <item name="colorError">@color/vcode_accent_error</item>
+        <item name="colorOnError">@color/vcode_on_error</item>
+        <item name="colorErrorContainer">@color/vcode_error_container</item>
+        <item name="colorOnErrorContainer">@color/vcode_on_error_container</item>
+
+        <!-- Background -->
+        <item name="colorBackground">@color/vcode_bg_deep</item>
+        <item name="colorOnBackground">@color/vcode_text_primary</item>
+        <item name="android:colorBackground">@color/vcode_bg_deep</item>
+
+        <!-- Surface -->
+        <item name="colorSurface">@color/vcode_bg_surface</item>
+        <item name="colorOnSurface">@color/vcode_text_primary</item>
+        <item name="colorSurfaceVariant">@color/vcode_surface_variant</item>
+        <item name="colorOnSurfaceVariant">@color/vcode_on_surface_variant</item>
+
+        <!-- Surface containers (M3) -->
+        <item name="colorSurfaceContainerLowest">@color/vcode_bg_deep</item>
+        <item name="colorSurfaceContainerLow">@color/vcode_bg_surface</item>
+        <item name="colorSurfaceContainer">@color/vcode_bg_card</item>
+        <item name="colorSurfaceContainerHigh">@color/vcode_bg_elevated</item>
+        <item name="colorSurfaceContainerHighest">@color/vcode_bg_elevated</item>
+
+        <!-- Outline -->
+        <item name="colorOutline">@color/vcode_outline</item>
+        <item name="colorOutlineVariant">@color/vcode_outline_variant</item>
+
+        <!-- Other -->
+        <item name="scrimBackground">@color/vcode_scrim</item>
+
+        <!-- System bars -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@color/vcode_bg_surface</item>
+        <item name="android:windowLightStatusBar">true</item>
+
+        <!-- Shape -->
+        <item name="shapeAppearanceSmallComponent">@style/VCode.Shape.Small</item>
+        <item name="shapeAppearanceMediumComponent">@style/VCode.Shape.Medium</item>
+        <item name="shapeAppearanceLargeComponent">@style/VCode.Shape.Large</item>
+
+        <!-- Dialog -->
+        <item name="materialAlertDialogTheme">@style/VCode.AlertDialog</item>
+    </style>
+
+    <!-- Shapes -->
+    <style name="VCode.Shape.Small" parent="ShapeAppearance.Material3.SmallComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">8dp</item>
+    </style>
+
+    <style name="VCode.Shape.Medium" parent="ShapeAppearance.Material3.MediumComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">12dp</item>
+    </style>
+
+    <style name="VCode.Shape.Large" parent="ShapeAppearance.Material3.LargeComponent">
+        <item name="cornerFamily">rounded</item>
+        <item name="cornerSize">16dp</item>
+    </style>
+
+    <!-- Dialog -->
+    <style name="VCode.AlertDialog" parent="ThemeOverlay.Material3.MaterialAlertDialog">
+        <item name="shapeAppearanceOverlay">@style/VCode.Shape.Large</item>
+        <item name="colorSurface">@color/vcode_bg_card</item>
+    </style>
+
+    <!-- Night mode override -->
+    <style name="Theme.VCode.Night" parent="Theme.VCode">
+        <item name="android:windowLightStatusBar">false</item>
+    </style>
+
+</resources>

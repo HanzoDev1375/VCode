@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <dimen name="vcode_editor_toolbar_height">56dp</dimen>
+    <dimen name="vcode_app_toolbar_height">65dp</dimen>
+    <dimen name="vcode_app_gap_horizontal">24dp</dimen>
+    <dimen name="vcode_editor_tab_bar_height">44dp</dimen>
+    <dimen name="vcode_editor_tab_min_width">100dp</dimen>
+    <dimen name="vcode_editor_tab_max_width">180dp</dimen>
+    <dimen name="vcode_file_drawer_width">320dp</dimen>
+    <dimen name="vcode_git_panel_peek_height">56dp</dimen>
+    <dimen name="vcode_autocomplete_popup_max_height">240dp</dimen>
+    <dimen name="vcode_autocomplete_popup_width">280dp</dimen>
+    <dimen name="vcode_autocomplete_item_height">48dp</dimen>
+    <dimen name="vcode_card_corner_radius">12dp</dimen>
+    <dimen name="vcode_button_corner_radius">8dp</dimen>
+    <dimen name="vcode_dialog_corner_radius">16dp</dimen>
+    <dimen name="vcode_project_card_height">180dp</dimen>
+    <dimen name="vcode_diff_line_number_width">40dp</dimen>
+    <dimen name="vcode_commit_avatar_size">32dp</dimen>
+    <dimen name="vcode_branch_chip_height">28dp</dimen>
+    <dimen name="vcode_git_status_icon_size">8dp</dimen>
+    <dimen name="vcode_tab_close_button_size">16dp</dimen>
+    <dimen name="vcode_tab_dirty_dot_size">6dp</dimen>
+    <dimen name="vcode_line_number_padding">8dp</dimen>
+    <dimen name="vcode_breadcrumb_height">32dp</dimen>
+    <dimen name="vcode_json_status_bar_height">32dp</dimen>
+    <dimen name="vcode_git_status_bar_height">36dp</dimen>
+    <dimen name="vcode_drawer_header_height">72dp</dimen>
+    <dimen name="vcode_file_tree_item_height">40dp</dimen>
+    <dimen name="vcode_file_tree_indent_per_level">16dp</dimen>
+    <dimen name="vcode_empty_state_icon_size">80dp</dimen>
+</resources>

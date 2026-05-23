@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <color name="vcode_color_html_tag">#F7768E</color>
+    <color name="vcode_color_html_attribute">#E0AF68</color>
+    <color name="vcode_color_html_value">#9ECE6A</color>
+    <color name="vcode_color_html_bracket">#7DCFFF</color>
+    <color name="vcode_color_css_selector">#F7768E</color>
+    <color name="vcode_color_css_property">#7AA2F7</color>
+    <color name="vcode_color_css_value">#BB9AF7</color>
+    <color name="vcode_color_css_at_rule">#FF9E64</color>
+    <color name="vcode_color_js_keyword">#BB9AF7</color>
+    <color name="vcode_color_js_string">#9ECE6A</color>
+    <color name="vcode_color_js_number">#FF9E64</color>
+    <color name="vcode_color_js_function">#7DCFFF</color>
+    <color name="vcode_color_js_comment">#565F89</color>
+    <color name="vcode_color_js_boolean">#F7768E</color>
+    <color name="vcode_color_js_operator">#89DCEB</color>
+    <color name="vcode_color_json_key">#7DCFFF</color>
+    <color name="vcode_color_json_string">#9ECE6A</color>
+    <color name="vcode_color_json_number">#FF9E64</color>
+    <color name="vcode_color_json_boolean">#F7768E</color>
+    <color name="vcode_color_json_null">#BB9AF7</color>
+    <color name="vcode_color_json_bracket">#000CBF</color>
+    <color name="vcode_color_json_colon">#7B82A0</color>
+    <color name="vcode_color_json_comma">#7B82A0</color>
+    <color name="vcode_color_comment">#565F89</color>
+</resources>

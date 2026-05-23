@@ -1,0 +1,189 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!--    Activity: Projects-->
+    <string name="vcode_app_name">VCode</string>
+    <string name="vcode_your_projects">Your Projects</string>
+    <string name="vcode_env_active">Environment Active</string>
+    <string name="vcode_workspace_overview">Workspace Overview</string>
+    <string name="vcode_total_projects">Total Projects</string>
+    <string name="vcode_total_commits_today">Commits Today</string>
+    <string name="vcode_search_hint">Search projects</string>
+    <string name="vcode_action_create_project">Create Project</string>
+
+    <!--    Activity: Settings-->
+    <string name="settings">Settings</string>
+    <string name="editor_settings">EDITOR SETTINGS</string>
+    <string name="show_line_numbers">Show Line Numbers</string>
+    <string name="gutter_display_for_indices">Gutter display for indices</string>
+    <string name="font_size">FONT SIZE</string>
+    <string name="_14px">14px</string>
+    <string name="auto_close_brackets">Auto-close Brackets</string>
+    <string name="automatically_insert_matching_closing_symbols">Automatically insert matching closing symbols</string>
+    <string name="auto_indent">Auto-indent</string>
+    <string name="automatically_handle_indentation">Automatically handle indentation for respective files</string>
+    <string name="auto_save">Auto save</string>
+    <string name="automatically_save_file">Automatically save the file as you stopped typing</string>
+    <string name="git_settings">GIT SETTINGS</string>
+    <string name="validate_json">Validate JSON</string>
+    <string name="keeps_validating_json_at_realtime">Keeps validating JSON file in realtime and shows the status</string>
+    <string name="in_app_preview">In-app Preview</string>
+    <string name="show_in_app_preview_directly_in_the_app">Preview the website directly inside the app\'s native preview section</string>
+    <string name="default_branch">DEFAULT BRANCH</string>
+    <string name="main">main</string>
+    <string name="confirm_hard_reset">Confirm Hard Reset</string>
+    <string name="extra_safety_step_for_destructive_actions">Extra safety step for destructive actions</string>
+    <string name="theme_amp_appearance"><![CDATA[THEME & APPEARANCE]]></string>
+    <string name="use_system_theme">Use System Theme</string>
+    <string name="dark_theme">Dark Theme</string>
+    <string name="light_theme">Light Theme</string>
+    <string name="general">GENERAL</string>
+
+
+    <!--    Bottom Sheet: Create Project-->
+    <string name="vcode_create_new_project">Create New Project</string>
+    <string name="vcode_configure_workspace_and_building">Configure your workspace and starts building</string>
+    <string name="project_template">PROJECT TEMPLATE</string>
+    <string name="blank">Blank</string>
+    <string name="html_css_js">HTML+CSS+JS</string>
+    <string name="html">HTML</string>
+    <string name="initialize_git_repository">Initialize Git Repository</string>
+    <string name="automatically_creates_a_git_folder_nand_initial_commit">Automatically creates a .git folder\nand initial commit</string>
+
+    <!--    Bottom Sheet: Rename Project/File/Folder/Branch-->
+    <string name="vcode_rename_project">Rename Project</string>
+    <string name="vcode_rename_file">Rename File</string>
+    <string name="vcode_rename_folder">Rename Folder</string>
+    <string name="vcode_action_rename">Rename</string>
+    <string name="project_name">PROJECT NAME</string>
+    <string name="file_name">FILE NAME</string>
+    <string name="folder_name">FOLDER NAME</string>
+    <string name="e_g_my_awesome_project">e.g., My Awesome Project</string>
+    <string name="e_g_index_file">e.g., index.html</string>
+    <string name="e_g_assets">e.g., assets</string>
+    <string name="vcode_rename_branch">Rename Branch</string>
+    <string name="branch_name">Branch Name</string>
+    <string name="e_g_feature_branch">e.g., feature/login-flow</string>
+
+    <!--    Bottom Sheet: Create Folder-->
+    <string name="vcode_create_folder">Create Folder</string>
+
+    <!--    Bottom Sheet: Delete Project/File/Folder-->
+    <string name="vcode_delete_project">Delete \'%s\' project?</string>
+    <string name="vcode_delete_file">Delete \'%s\' file?</string>
+    <string name="vcode_delete_folder">Delete \'%s\' folder?</string>
+    <string name="vcode_delete_snippet">Delete \'%s\' snippet?</string>
+    <string name="vcode_delete_branch">Delete \'%1$s\' branch?</string>
+    <string name="vcode_action_cannot_be_undone">Are you sure you want to delete this %s? This action is permanent and cannot be undone.</string>
+    <string name="vcode_action_delete">Delete</string>
+
+
+    <!--    Bottom Sheet: GitHub Login-->
+    <string name="vcode_connect_your_github">Connect your GitHub</string>
+    <string name="vcode_how_to_get_github_token">Enter your personal access token to connect VCode IDE with your GitHub Profile.</string>
+    <string name="vcode_pat">Personal Access Token</string>
+    <string name="vcode_pat_hint">(ghp_...)</string>
+    <string name="vcode_connect">Connect</string>
+    <string name="vcode_connecting">Connecting...</string>
+    <string name="vcode_visit_token_page">Visit Token Page</string>
+
+    <!--    Bottom Sheet: Create New File-->
+    <string name="vcode_create_new_file">Create New File</string>
+    <string name="vcode_choose_name_extension">Choose a name and extension for your new workspace item</string>
+    <string name="vcode_quick_select_template">Quick Select Template</string>
+    <string name="vcode_action_create_file">Create File</string>
+
+    <!--    Bottom Sheet: Snippet Manager-->
+    <string name="vcode_snippet_manager">Snippet Manager</string>
+    <string name="vcode_search_snippet_by_name">Search snippet by name</string>
+
+    <!--    Bottom Sheet: Create/Edit Snippet-->
+    <string name="vcode_create_snippet">Create Snippet</string>
+    <string name="vcode_enter_snippet_title_and_code">Enter snippet title and code</string>
+    <string name="vcode_snippet_title">Snippet Title</string>
+    <string name="vcode_snippet_title_hint">e.g., For Loop</string>
+    <string name="vcode_snippet_code">Snippet Code</string>
+    <string name="vcode_snippet_code_hint">Code (Use | for cursor placement)</string>
+    <string name="vcode_edit_snippet">Edit Snippet</string>
+    <string name="vcode_edit_snippet_title_and_code">Edit snippet title and code</string>
+
+    <!--    Bottom Sheet: Git Author Info-->
+    <string name="vcode_git_author_info">Author Info</string>
+    <string name="vcode_required_for_commits_to_manage_history">Required for your commits. These details will be attached to your Git history.</string>
+    <string name="vcode_git_author_name_label">Full Name</string>
+    <string name="vcode_git_author_email_label">Email Address</string>
+    <string name="vcode_btn_save_and_commit">Save &amp; Commit</string>
+
+    <!--    Bottom Sheet: Go To Line-->
+    <string name="vcode_go_to_line">Go to Line</string>
+    <string name="vcode_line_number">Line Number</string>
+    <string name="vcode_btn_go">Go</string>
+
+    <!--    Fragment: File Explorer-->
+    <string name="vcode_file_explorer">File Explorer</string>
+    <string name="vcode_import_files">Import Files</string>
+    <string name="vcode_import_folder">Import Folder</string>
+
+    <!--    Fragment: Git History-->
+    <string name="vcode_no_commits_yet">No Commits Yet</string>
+    <string name="vcode_commits_you_make_appear_here">Commits you make inside this repository will appear right here.</string>
+    <string name="vcode_search_commits">Search commits</string>
+
+    <!--    Fragment: Git Changes-->
+    <string name="vcode_staged_changes_label">Staged Changes</string>
+    <string name="vcode_unstaged_changes_label">Unstaged Changes</string>
+    <string name="vcode_btn_stage_all">Stage All</string>
+    <string name="vcode_btn_unstage_all">Unstage All</string>
+    <string name="vcode_hint_commit_message_description">Commit message description...</string>
+    <string name="vcode_amend_last_commit">Amend last commit</string>
+    <string name="vcode_action_commit">Commit</string>
+
+    <!--    Fragment: Git Remote-->
+    <string name="vcode_action_link_account">Link Account</string>
+    <string name="vcode_ready_for_report">Ready for execution context report tracking...</string>
+    <string name="vcode_github_remote">GitHub Remote</string>
+    <string name="vcode_github_account">GitHub Account</string>
+    <string name="vcode_remote_url_hint">https://github.com/user/repo.git</string>
+    <string name="vcode_remote_url_label">REMOTE URL</string>
+    <string name="vcode_target_branch_label">TARGET BRANCH</string>
+    <string name="vcode_select_target_branch_hint">Select tracking target branch</string>
+    <string name="vcode_action_push">Push</string>
+
+    <!--    Fragment: Git Branch-->
+    <string name="vcode_current_branch_label">CURRENT BRANCH</string>
+    <string name="vcode_available_branches_label">AVAILABLE BRANCHES</string>
+    <string name="vcode_action_new_branch">New Branch</string>
+
+
+    <string name="vcode_git_changes_count">• %d changes</string>
+
+
+    <!--    Empty State: Projects Activity-->
+    <string name="vcode_no_projects_yet">No projects yet</string>
+    <string name="vcode_create_project_hint">Tap the button below to create your first project</string>
+
+
+    <!--    Empty State: Editor Activity-->
+    <string name="vcode_open_file_from_explorer">Open a file from the file explorer</string>
+
+    <!--    Empty State: Snippet Sheet-->
+    <string name="vcode_no_snippet_yet">No snippets yet</string>
+    <string name="vcode_save_reusable_code_block">Save reusable code blocks here.</string>
+
+    <!--    Empty State: Git Remote Fragment-->
+    <string name="vcode_link_github_account">Link GitHub Account</string>
+    <string name="vcode_link_github_desc">Connect your GitHub configuration profile to interact seamlessly with online repositories and publish revisions.</string>
+
+
+    <!--    State: Storage Access-->
+    <string name="vcode_storage_access_required">Storage Access Required</string>
+    <string name="vcode_storage_access_desc">VCode needs access to your device storage to create, save, and manage your workspace.</string>
+    <string name="vcode_grant_permission">Grant Permission</string>
+
+    <!--    Custom View: Editor Tab-->
+    <string name="vcode_action_cancel">Cancel</string>
+
+    <!--    Custom View: JsonStatusBar-->
+    <string name="vcode_valid_json">Valid JSON</string>
+    <string name="vcode_invalid_json">Invalid JSON</string>
+    <string name="vcode_validating_json">Validating…</string>
+</resources>
