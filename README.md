@@ -20,7 +20,6 @@ Built with a focus on speed, aesthetics, and Git-first workflows, VCode turns yo
     *   Smart indentation and bracket matching.
     *   Find and Replace with Regex support.
     *   Word wrap and customizable font sizes.
-*   **Symbol Keyboard:** A dedicated row for quick access to `{`, `}`, `[`, `]`, `<`, `>`, `/`, and other coding essentials.
 
 ### 🌿 Native Git & GitHub Integration
 VCode isn't just an editor; it's a full Git client.
@@ -38,7 +37,7 @@ VCode isn't just an editor; it's a full Git client.
 ### 📁 Smart Project Management
 *   **Project-First Workflow:** Organize your work into isolated projects, each with its own settings and Git state.
 *   **File Tree Navigation:** Easily manage nested folders and files with a fast, intuitive sidebar.
-*   **Templates:** Start new projects instantly with "Blank", "HTML+CSS+JS", or "JSON" templates.
+*   **Templates:** Start new projects instantly with "Blank", "HTML" or "HTML+CSS+JS" templates.
 *   **Snippet Manager:** Save your most-used code blocks and insert them with a single tap.
 
 ### 🎨 Modern & Responsive UI
@@ -78,9 +77,5 @@ Please ensure your code follows the project's naming conventions (e.g., `vcode_`
 Distributed under the **Apache License 2.0**. See `LICENSE` for more information.
 
 ---
-
-## 📞 Contact
-
-Project Link: [https://github.com/yourusername/VCode](https://github.com/yourusername/VCode)
 
 *VCode — The IDE that fits in your pocket.*
