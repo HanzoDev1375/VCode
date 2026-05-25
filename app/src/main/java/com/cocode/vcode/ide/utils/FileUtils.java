@@ -256,8 +256,8 @@ public class FileUtils {
         for (File entry : entries) {
             String name = entry.getName();
 
-            // Explicitly exclude .git, .gitignore, and .nomedia. Allow all other dotfiles (like .env)
-            if (name.equals(".git") || name.equals(".gitignore") || name.equals(".nomedia")) {
+            // Explicitly exclude .git, and .nomedia. Allow all other dotfiles (like .env)
+            if (name.equals(".git") || name.equals(".nomedia")) {
                 continue;
             }
 

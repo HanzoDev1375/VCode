@@ -139,22 +139,10 @@ public class GitFilesAdapter extends ListAdapter<GitFileItem, GitFilesAdapter.Vi
             } else {
                 // Code / Structural language category paths
                 Language lang = Language.fromExtension(ext);
+                binding.ivFileIcon.setImageResource(lang.getIconResId());
 
-                int iconResId = R.drawable.ic_file_lines; // Baseline fallback choice
-                if (lang == Language.HTML) iconResId = R.drawable.ic_html_icon;
-                else if (lang == Language.CSS) iconResId = R.drawable.ic_css_icon;
-                else if (lang == Language.JAVASCRIPT) iconResId = R.drawable.ic_js_icon;
-                else if (lang == Language.JSON) iconResId = R.drawable.ic_json_icon;
-                else if (lang == Language.MARKDOWN) iconResId = R.drawable.ic_md_icon;
-
-                binding.ivFileIcon.setImageResource(iconResId);
-
-                if (lang != Language.TEXT || ext.equals("txt") || ext.isEmpty()) {
-                    int fileColor = ContextCompat.getColor(itemView.getContext(), lang.getColorResId());
-                    binding.ivFileIcon.setColorFilter(fileColor, PorterDuff.Mode.SRC_IN);
-                } else {
-                    binding.ivFileIcon.clearColorFilter();
-                }
+                int fileColor = ContextCompat.getColor(itemView.getContext(), lang.getColorResId());
+                binding.ivFileIcon.setColorFilter(fileColor, PorterDuff.Mode.SRC_IN);
             }
 
             binding.getRoot().setOnClickListener(v -> listener.onFileClick(item));

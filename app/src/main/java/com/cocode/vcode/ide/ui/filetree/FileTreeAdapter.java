@@ -433,23 +433,11 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             } else {
                 // Language-specific code icon styling
                 Language lang = node.getLanguage();
-
-                int iconResId = R.drawable.ic_file_lines;
-                if (lang == Language.HTML) iconResId = R.drawable.ic_html_icon;
-                else if (lang == Language.CSS) iconResId = R.drawable.ic_css_icon;
-                else if (lang == Language.JAVASCRIPT) iconResId = R.drawable.ic_js_icon;
-                else if (lang == Language.JSON) iconResId = R.drawable.ic_json_icon;
-                else if (lang == Language.MARKDOWN) iconResId = R.drawable.ic_md_icon;
-
-                binding.ivIcon.setImageResource(iconResId);
+                binding.ivIcon.setImageResource(lang.getIconResId());
 
                 // Apply language coloring to the icon
-                if (lang != Language.TEXT || ext.equals("txt") || ext.isEmpty()) {
-                    int fileColor = ContextCompat.getColor(itemView.getContext(), lang.getColorResId());
-                    binding.ivIcon.setColorFilter(fileColor, PorterDuff.Mode.SRC_IN);
-                } else {
-                    binding.ivIcon.clearColorFilter();
-                }
+                int fileColor = ContextCompat.getColor(itemView.getContext(), lang.getColorResId());
+                binding.ivIcon.setColorFilter(fileColor, PorterDuff.Mode.SRC_IN);
             }
 
             updateGitStatus(node);

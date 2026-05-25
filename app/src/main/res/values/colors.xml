@@ -85,4 +85,5 @@
     <color name="vcode_file_pdf">#E74C3C</color>
     <color name="vcode_file_log">#34495E</color>
     <color name="vcode_file_bak">#7F8C8D</color>
+    <color name="vcode_file_git">#F05032</color>
 </resources>

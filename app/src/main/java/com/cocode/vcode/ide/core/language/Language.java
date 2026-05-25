@@ -9,20 +9,24 @@ import com.cocode.vcode.ide.R;
  */
 public enum Language {
 
-    HTML("html", "HTML"),
-    CSS("css", "CSS"),
-    JAVASCRIPT("js", "JavaScript"),
-    JSON("json", "JSON"),
-    TEXT("txt", "Plain Text"),
-    MARKDOWN("md", "Markdown");
+    HTML(R.drawable.ic_html_icon, R.color.vcode_lang_html,"html", "HTML"),
+    CSS(R.drawable.ic_css_icon, R.color.vcode_lang_css, "css", "CSS"),
+    JAVASCRIPT(R.drawable.ic_js_icon, R.color.vcode_lang_js, "js", "JavaScript"),
+    JSON(R.drawable.ic_json_icon, R.color.vcode_lang_json, "json", "JSON"),
+    TEXT(R.drawable.ic_file_lines, R.color.vcode_accent_primary, "txt", "Plain Text"),
+    MARKDOWN(R.drawable.ic_md_icon, R.color.vcode_lang_md, "md", "Markdown");
 
     private final String extension;
     private final String displayName;
+    private final int iconResId;
+    private final int colorResId;
 
     /**
-     * Internal constructor initialization to pair file extensions with display properties.
+     * Internal constructor initialization to map file icon, extensions and display properties.
      */
-    Language(String extension, String displayName) {
+    Language(int iconResId, int colorResId, String extension, String displayName) {
+        this.iconResId = iconResId;
+        this.colorResId = colorResId;
         this.extension = extension;
         this.displayName = displayName;
     }
@@ -52,6 +56,14 @@ public enum Language {
         return TEXT;
     }
 
+    public int getIconResId() {
+        return iconResId;
+    }
+
+    public int getColorResId() {
+        return colorResId;
+    }
+
     /**
      * Gets the formatted, human-readable name of the language for workspace menus and file tabs.
      */
@@ -59,26 +71,4 @@ public enum Language {
         return displayName;
     }
 
-    /**
-     * Resolves the specialized color value resource mapped to this specific platform syntax type.
-     * Useful for dynamic token styling, tab badges, or sidebar folder icons.
-     * @return The Android Color resource reference ID (e.g., R.color.vcode_lang_html).
-     */
-    public int getColorResId() {
-        switch (this) {
-            case HTML:
-                return R.color.vcode_lang_html;
-            case CSS:
-                return R.color.vcode_lang_css;
-            case JAVASCRIPT:
-                return R.color.vcode_lang_js;
-            case JSON:
-                return R.color.vcode_lang_json;
-            case MARKDOWN:
-                return R.color.vcode_lang_md;
-            default:
-                // Universal theme accent color for non-code files or unparsed flat documents
-                return R.color.vcode_text_secondary;
-        }
-    }
 }

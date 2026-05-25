@@ -24,7 +24,8 @@ public enum AssetType {
     FIREBASE(R.drawable.ic_firebase_icon, R.color.vcode_file_firebase, "firebaserc", "rules"),
     PDF(R.drawable.ic_pdf_icon, R.color.vcode_file_pdf, "pdf"),
     LOG(R.drawable.ic_log_icon, R.color.vcode_file_log, "log"),
-    BAK(R.drawable.ic_clock_rotate, R.color.vcode_file_bak, "bak");
+    BAK(R.drawable.ic_clock_rotate, R.color.vcode_file_bak, "bak"),
+    GITIGNORE(R.drawable.ic_git, R.color.vcode_file_git, "gitignore");
 
     private final int iconResId;
     private final int colorResId;
@@ -68,6 +69,6 @@ public enum AssetType {
      * Decides if the file can be opened inside a text field instead of launching specialized graphic views.
      */
     public boolean isTextBased() {
-        return this == CSV || this == ENV || this == LOG || this == BAK || this == MANIFEST || this == SVG || this == FIREBASE;
+        return this == CSV || this == ENV || this == LOG || this == BAK || this == MANIFEST || this == SVG || this == FIREBASE || this == GITIGNORE;
     }
 }
