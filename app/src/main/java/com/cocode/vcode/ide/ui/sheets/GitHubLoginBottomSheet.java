@@ -80,8 +80,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             binding.btnsContainer.setVisibility(View.GONE);
 
             String username = store.getUsername(requireContext());
-            binding.tvGithubUsername.setText(username != null ? username : "Connected");
-            binding.tvGithubEmail.setText("GitHub Account");
+            binding.tvAccountUsername.setText(username != null ? username : "Connected");
 
         } else {
             // User is NOT authenticated: Show PAT input form and instructions
@@ -177,8 +176,8 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         binding.btnConnectGithub.setTypeface(fm.getUiSemiBold(ctx));
         binding.btnVisitTokenPage.setTypeface(fm.getUiSemiBold(ctx));
 
-        binding.tvGithubUsername.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tvGithubEmail.setTypeface(fm.getUiMedium(ctx));
+        binding.tvGithubAccount.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tvAccountUsername.setTypeface(fm.getUiSemiBold(ctx));
 
         UiUtils.setViewRounded(binding.etPat, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
     }

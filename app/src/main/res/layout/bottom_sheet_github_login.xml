@@ -50,21 +50,21 @@
                     android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/tv_github_username"
+                        android:id="@+id/tv_github_account"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:text="@string/vcode_github_account"
                         android:textColor="?attr/colorOnSurface"
                         android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
-                        android:textSize="15sp"
-                        tools:text="octocat" />
+                        android:textSize="15sp" />
 
                     <TextView
-                        android:id="@+id/tv_github_email"
+                        android:id="@+id/tv_account_username"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:textColor="?attr/colorOnSurfaceVariant"
                         android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                        tools:text="octocat@github.com" />
+                        tools:text="cocodestudio" />
                 </LinearLayout>
 
                 <ImageView
