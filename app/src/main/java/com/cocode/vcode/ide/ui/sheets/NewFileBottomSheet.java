@@ -213,8 +213,11 @@ public class NewFileBottomSheet extends BottomSheetDialogFragment {
                 return;
             }
 
-            // Load boilerplate content from assets
-            String content = readTemplateFromAssets(templateFiles[selectedTemplateIndex]);
+            // Load boilerplate content only if the typed extension matches the active template
+            String content = "";
+            if (name.toLowerCase().endsWith(extensions[selectedTemplateIndex].toLowerCase())) {
+                content = readTemplateFromAssets(templateFiles[selectedTemplateIndex]);
+            }
 
             if (listener != null) {
                 listener.onCreateFile(name, content);
