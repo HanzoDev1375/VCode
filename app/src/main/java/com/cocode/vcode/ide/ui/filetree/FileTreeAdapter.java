@@ -143,41 +143,10 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             return true;
         }
 
-        // Supported code and configuration formats
-        switch (ext) {
-            case "java":
-            case "xml":
-            case "html":
-            case "htm":
-            case "css":
-            case "js":
-            case "json":
-            case "md":
-            case "txt":
-            case "php":
-            case "dart":
-            case "yaml":
-            case "yml":
-            case "cpp":
-            case "c":
-            case "h":
-            case "py":
-            case "sh":
-            case "gitignore":
-            case "properties":
-            case "gradle":
-            case "kt":
-            case "csv":
-            case "mjs":
-            case "cjs":
-            case "env":
-            case "local":
-            case "firebaserc":
-            case "rules":
-                return true;
-            default:
-                return false;
-        }
+        // Support all generic text and code files dynamically.
+        // If an extension isn't explicitly classified as a restricted binary asset (like Audio/Video/PDF),
+        // we safely assume it's a readable text format and allow the editor to parse it.
+        return assetType == null || assetType.isTextBased();
     }
 
     @NonNull
