@@ -1,24 +1,35 @@
 package com.cocode.vcode.ide.core.formatter;
 
+import java.util.regex.Pattern;
+
 /**
  * Comprehensive formatting token state engine tailored for ECMAScript/JavaScript formatting.
  * Handles bracket tracking, conditional nesting structures, argument definitions, string structures,
  * and controls block chaining (e.g., managing spacing layouts for keyword chains like else, catch, finally).
  */
 public class JsFormatter extends BaseFormatter {
+
+    private static final Pattern SPACES = Pattern.compile("[ \\t\\x0B\\f\\r]+");
+    private static final Pattern SPACE_NEWLINE = Pattern.compile(" \\n");
+    private static final Pattern NEWLINE_SPACE = Pattern.compile("\\n ");
+    private static final Pattern BLANK_LINES = Pattern.compile("(?m)^\\s+$");
+    private static final Pattern MULTI_NEWLINES = Pattern.compile("\\n{3,}");
+    private static final Pattern EMPTY_BRACES = Pattern.compile("\\{\\s+\\}");
+
     @Override
     public String format(String code) {
-        StringBuilder out = new StringBuilder();
+        if (code == null || code.isEmpty()) return "";
+        StringBuilder out = new StringBuilder(code.length() + code.length() / 10);
         int indent = 0;
         boolean inString = false;
         char stringChar = 0;
         int inParens = 0; // Counts paren layers to properly adjust formatting style inside loop parameters or arguments
 
         // Clean out erratic tabs and double whitespaces, keeping baseline structural spaces intact
-        String cleanCode = code.replaceAll("[ \\t\\x0B\\f\\r]+", " ")
-                .replaceAll(" \\n", "\n")
-                .replaceAll("\\n ", "\n")
-                .trim();
+        String cleanCode = SPACES.matcher(code).replaceAll(" ");
+        cleanCode = SPACE_NEWLINE.matcher(cleanCode).replaceAll("\n");
+        cleanCode = NEWLINE_SPACE.matcher(cleanCode).replaceAll("\n");
+        cleanCode = cleanCode.trim();
 
         boolean isNewLine = true;
 
@@ -141,6 +152,10 @@ public class JsFormatter extends BaseFormatter {
         }
 
         // Post-processing: Empty out accidental blank string margins and ensure empty structures display tightly as '{}'
-        return out.toString().replaceAll("(?m)^\\s+$", "").replaceAll("\\n{3,}", "\n\n").replaceAll("\\{\\s+\\}", "{}").trim();
+        String result = out.toString();
+        result = BLANK_LINES.matcher(result).replaceAll("");
+        result = MULTI_NEWLINES.matcher(result).replaceAll("\n\n");
+        result = EMPTY_BRACES.matcher(result).replaceAll("{}");
+        return result.trim();
     }
 }

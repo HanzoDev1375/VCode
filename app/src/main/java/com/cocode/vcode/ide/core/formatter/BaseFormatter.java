@@ -14,19 +14,30 @@ public abstract class BaseFormatter {
 
     /**
      * Abstract contract to format source string code into a structured, uniform style.
-     * * @param code The raw, unformatted source text sequence.
+     * @param code The raw, unformatted source text sequence.
      * @return The formatted source code string.
      */
     public abstract String format(String code);
 
+    private static final String[] INDENT_CACHE = new String[50];
+    static {
+        INDENT_CACHE[0] = "";
+        for (int i = 1; i < INDENT_CACHE.length; i++) {
+            INDENT_CACHE[i] = INDENT_CACHE[i - 1] + INDENT;
+        }
+    }
+
     /**
      * Builds an indentation block sequence corresponding directly to the nested bracket hierarchy depth.
-     * * @param level The current structural nesting depth level.
+     * @param level The current structural nesting depth level.
      * @return A consolidated spacer sequence string matching the requested indentation weight.
      */
     protected String getIndentString(int level) {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < level; i++) {
+        if (level <= 0) return "";
+        if (level < INDENT_CACHE.length) return INDENT_CACHE[level];
+
+        StringBuilder sb = new StringBuilder(INDENT_CACHE[INDENT_CACHE.length - 1]);
+        for (int i = INDENT_CACHE.length; i < level; i++) {
             sb.append(INDENT);
         }
         return sb.toString();

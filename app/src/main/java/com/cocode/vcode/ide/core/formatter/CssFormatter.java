@@ -1,20 +1,28 @@
 package com.cocode.vcode.ide.core.formatter;
 
+import java.util.regex.Pattern;
+
 /**
  * Format beautifier for CSS source sheets.
  * Runs a token state scan across raw style text to apply consistent indentation levels,
  * break property declarations onto dedicated rows, and manage inline property-value spacing rules.
  */
 public class CssFormatter extends BaseFormatter {
+
+    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+    private static final Pattern BLANK_LINES = Pattern.compile("(?m)^\\s+$");
+    private static final Pattern MULTI_NEWLINES = Pattern.compile("\\n{3,}");
+
     @Override
     public String format(String code) {
-        StringBuilder out = new StringBuilder();
+        if (code == null || code.isEmpty()) return "";
+        StringBuilder out = new StringBuilder(code.length() + code.length() / 10);
         int indent = 0;
         boolean inString = false; // State flag to avoid scrambling characters inside literal text blocks
         char stringChar = 0;      // Tracks quote boundaries matching double vs single bounds
 
         // Collapse all messy pre-existing whitespaces down to a single space token to reset baseline positioning
-        String cleanCode = code.replaceAll("\\s+", " ").trim();
+        String cleanCode = WHITESPACE.matcher(code).replaceAll(" ").trim();
         boolean isNewLine = true;
 
         for (int i = 0; i < cleanCode.length(); i++) {
@@ -92,6 +100,9 @@ public class CssFormatter extends BaseFormatter {
         }
 
         // Final sanitation sweep: clear out completely blank whitespace rows and smooth over double breaks
-        return out.toString().replaceAll("(?m)^\\s+$", "").replaceAll("\\n{3,}", "\n\n").trim();
+        String result = out.toString();
+        result = BLANK_LINES.matcher(result).replaceAll("");
+        result = MULTI_NEWLINES.matcher(result).replaceAll("\n\n");
+        return result.trim();
     }
 }

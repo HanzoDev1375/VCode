@@ -1,29 +1,70 @@
 package com.cocode.vcode.ide.core.formatter;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import java.util.regex.Pattern;
 
 /**
- * Standard data structure beautifier leveraging native platform object parsers
- * to parse and convert minified JSON text data into human-readable structural formats.
+ * Fast streaming token state beautifier for JSON payload text.
+ * Parses character streams directly to apply indentation without allocating complex in-memory tree nodes,
+ * supporting processing of large payloads without memory constraint issues.
  */
 public class JsonFormatter extends BaseFormatter {
+
+    private static final Pattern EMPTY_OBJECT = Pattern.compile("\\{\\s+\\}");
+    private static final Pattern EMPTY_ARRAY = Pattern.compile("\\[\\s+]");
+
     @Override
     public String format(String code) {
-        try {
-            String trimmed = code.trim();
-            // Top-level entry point is an Object block dictionary schema
-            if (trimmed.startsWith("{")) {
-                return new JSONObject(trimmed).toString(INDENT.length());
+        if (code == null || code.isEmpty()) return "";
+        StringBuilder out = new StringBuilder(code.length() + code.length() / 10);
+        int indent = 0;
+        boolean inString = false;
+        
+        for (int i = 0; i < code.length(); i++) {
+            char c = code.charAt(i);
+            
+            // Protect internal literal string formats from being altered
+            if (inString) {
+                out.append(c);
+                if (c == '"' && code.charAt(i - 1) != '\\') {
+                    inString = false;
+                }
+                continue;
             }
-            // Top-level entry point is a sequential value Array list schema
-            else if (trimmed.startsWith("[")) {
-                return new JSONArray(trimmed).toString(INDENT.length());
+            
+            // Start of a string literal
+            if (c == '"') {
+                out.append(c);
+                inString = true;
+                continue;
             }
-        } catch (Exception e) {
-            // Log formatting parse trace failures without throwing runtime thread crashes
-            e.printStackTrace();
+            
+            // Skip structural external whitespaces
+            if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
+                continue;
+            }
+            
+            // Layout scoping rules
+            if (c == '{' || c == '[') {
+                out.append(c).append('\n');
+                indent++;
+                out.append(getIndentString(indent));
+            } else if (c == '}' || c == ']') {
+                out.append('\n');
+                indent = Math.max(0, indent - 1);
+                out.append(getIndentString(indent)).append(c);
+            } else if (c == ',') {
+                out.append(c).append('\n').append(getIndentString(indent));
+            } else if (c == ':') {
+                out.append(c).append(' ');
+            } else {
+                out.append(c);
+            }
         }
-        return code; // Revert safely back to unformatted raw payload if an exception occurs
+        
+        // Post-processing cleanup for empty brackets
+        String result = out.toString();
+        result = EMPTY_OBJECT.matcher(result).replaceAll("{}");
+        result = EMPTY_ARRAY.matcher(result).replaceAll("[]");
+        return result.trim();
     }
 }
