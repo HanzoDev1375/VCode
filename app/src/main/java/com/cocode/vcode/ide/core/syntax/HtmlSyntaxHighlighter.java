@@ -31,11 +31,25 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
     private final JsSyntaxHighlighter jsHighlighter;
     private final CssSyntaxHighlighter cssHighlighter;
 
+    private final int colorComment;
+    private final int colorBracket;
+    private final int colorTag;
+    private final int colorAttrName;
+    private final int colorAttrVal;
+    private final int colorEntity;
+
     public HtmlSyntaxHighlighter(Context context) {
         super(context);
         // Instantiate specialized engine blocks to handle interior script/style text regions
         jsHighlighter = new JsSyntaxHighlighter(context);
         cssHighlighter = new CssSyntaxHighlighter(context);
+
+        colorComment = getColor(R.color.vcode_color_comment);
+        colorBracket = getColor(R.color.vcode_color_html_bracket);
+        colorTag = getColor(R.color.vcode_color_html_tag);
+        colorAttrName = getColor(R.color.vcode_color_html_attribute);
+        colorAttrVal = getColor(R.color.vcode_color_html_value);
+        colorEntity = getColor(R.color.vcode_color_html_attribute);
     }
 
     @Override
@@ -43,13 +57,6 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         if (code == null || code.isEmpty())
             return new SpannableStringBuilder(code != null ? code : "");
         SpannableStringBuilder ssb = new SpannableStringBuilder(code);
-
-        int colorComment = getColor(R.color.vcode_color_comment);
-        int colorBracket = getColor(R.color.vcode_color_html_bracket);
-        int colorTag = getColor(R.color.vcode_color_html_tag);
-        int colorAttrName = getColor(R.color.vcode_color_html_attribute);
-        int colorAttrVal = getColor(R.color.vcode_color_html_value);
-        int colorEntity = getColor(R.color.vcode_color_html_attribute);
 
         // Pass 1: Delegate internal <script> content blocks to the specialized JavaScript highlighter
         Matcher scriptMatcher = PAT_SCRIPT.matcher(code);

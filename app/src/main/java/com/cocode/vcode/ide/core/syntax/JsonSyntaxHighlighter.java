@@ -25,8 +25,25 @@ public class JsonSyntaxHighlighter extends SyntaxHighlighter {
     private static final Pattern PAT_COLON = Pattern.compile(":");
     private static final Pattern PAT_COMMA = Pattern.compile(",");
 
+    private final int colorKey;
+    private final int colorString;
+    private final int colorNumber;
+    private final int colorBoolean;
+    private final int colorNull;
+    private final int colorBracket;
+    private final int colorColon;
+    private final int colorComma;
+
     public JsonSyntaxHighlighter(Context context) {
         super(context);
+        colorKey = getColor(R.color.vcode_color_json_key);
+        colorString = getColor(R.color.vcode_color_json_string);
+        colorNumber = getColor(R.color.vcode_color_json_number);
+        colorBoolean = getColor(R.color.vcode_color_json_boolean);
+        colorNull = getColor(R.color.vcode_color_json_null);
+        colorBracket = getColor(R.color.vcode_color_json_bracket);
+        colorColon = getColor(R.color.vcode_color_json_colon);
+        colorComma = getColor(R.color.vcode_color_json_comma);
     }
 
     @Override
@@ -34,15 +51,6 @@ public class JsonSyntaxHighlighter extends SyntaxHighlighter {
         if (code == null || code.isEmpty())
             return new SpannableStringBuilder(code != null ? code : "");
         SpannableStringBuilder ssb = new SpannableStringBuilder(code);
-
-        int colorKey = getColor(R.color.vcode_color_json_key);
-        int colorString = getColor(R.color.vcode_color_json_string);
-        int colorNumber = getColor(R.color.vcode_color_json_number);
-        int colorBoolean = getColor(R.color.vcode_color_json_boolean);
-        int colorNull = getColor(R.color.vcode_color_json_null);
-        int colorBracket = getColor(R.color.vcode_color_json_bracket);
-        int colorColon = getColor(R.color.vcode_color_json_colon);
-        int colorComma = getColor(R.color.vcode_color_json_comma);
 
         // Pass 1: Trace out and log boundaries of all string ranges.
         // This index profile protects characters like ':' or ',' wrapped inside data values from being colored as punctuation delimiters.

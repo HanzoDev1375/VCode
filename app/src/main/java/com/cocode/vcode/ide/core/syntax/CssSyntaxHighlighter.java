@@ -24,8 +24,25 @@ public class CssSyntaxHighlighter extends SyntaxHighlighter {
     private static final Pattern PAT_IMPORTANT = Pattern.compile("!important");
     private static final Pattern PAT_CSS_VALUE = Pattern.compile("(?<=:)[^;{}]+(?=[;{}])"); // Catches values mapped behind structural colons
 
+    private final int colorComment;
+    private final int colorAtRule;
+    private final int colorSelector;
+    private final int colorProperty;
+    private final int colorValue;
+    private final int colorNumber;
+    private final int colorString;
+    private final int colorWarning;
+
     public CssSyntaxHighlighter(Context context) {
         super(context);
+        colorComment = getColor(R.color.vcode_color_comment);
+        colorAtRule = getColor(R.color.vcode_color_css_at_rule);
+        colorSelector = getColor(R.color.vcode_color_css_selector);
+        colorProperty = getColor(R.color.vcode_color_css_property);
+        colorValue = getColor(R.color.vcode_color_css_value);
+        colorNumber = getColor(R.color.vcode_color_js_number);
+        colorString = getColor(R.color.vcode_color_js_string);
+        colorWarning = getColor(R.color.vcode_accent_warning);
     }
 
     @Override
@@ -33,15 +50,6 @@ public class CssSyntaxHighlighter extends SyntaxHighlighter {
         if (code == null || code.isEmpty())
             return new SpannableStringBuilder(code != null ? code : "");
         SpannableStringBuilder ssb = new SpannableStringBuilder(code);
-
-        int colorComment = getColor(R.color.vcode_color_comment);
-        int colorAtRule = getColor(R.color.vcode_color_css_at_rule);
-        int colorSelector = getColor(R.color.vcode_color_css_selector);
-        int colorProperty = getColor(R.color.vcode_color_css_property);
-        int colorValue = getColor(R.color.vcode_color_css_value);
-        int colorNumber = getColor(R.color.vcode_color_js_number);
-        int colorString = getColor(R.color.vcode_color_js_string);
-        int colorWarning = getColor(R.color.vcode_accent_warning);
 
         // Cascading processing hierarchy: Layer lower priority structural boundaries first,
         // and allow distinct localized elements (strings, colors, comments) to paint over them.

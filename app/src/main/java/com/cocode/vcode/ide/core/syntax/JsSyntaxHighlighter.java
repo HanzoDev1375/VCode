@@ -39,8 +39,25 @@ public class JsSyntaxHighlighter extends SyntaxHighlighter {
     private static final Pattern PAT_FUNC_NAME = Pattern.compile(
             "\\b([a-zA-Z_$][\\w$]*)(?=\\s*\\()"); // Identifies labels followed directly by call parentheses
 
+    private final int colorComment;
+    private final int colorString;
+    private final int colorKeyword;
+    private final int colorBoolean;
+    private final int colorBuiltin;
+    private final int colorNumber;
+    private final int colorOperator;
+    private final int colorFunc;
+
     public JsSyntaxHighlighter(Context context) {
         super(context);
+        colorComment = getColor(R.color.vcode_color_js_comment);
+        colorString = getColor(R.color.vcode_color_js_string);
+        colorKeyword = getColor(R.color.vcode_color_js_keyword);
+        colorBoolean = getColor(R.color.vcode_color_js_boolean);
+        colorBuiltin = getColor(R.color.vcode_color_js_function);
+        colorNumber = getColor(R.color.vcode_color_js_number);
+        colorOperator = getColor(R.color.vcode_color_js_operator);
+        colorFunc = getColor(R.color.vcode_color_js_function);
     }
 
     @Override
@@ -48,15 +65,6 @@ public class JsSyntaxHighlighter extends SyntaxHighlighter {
         if (code == null || code.isEmpty())
             return new SpannableStringBuilder(code != null ? code : "");
         SpannableStringBuilder ssb = new SpannableStringBuilder(code);
-
-        int colorComment = getColor(R.color.vcode_color_js_comment);
-        int colorString = getColor(R.color.vcode_color_js_string);
-        int colorKeyword = getColor(R.color.vcode_color_js_keyword);
-        int colorBoolean = getColor(R.color.vcode_color_js_boolean);
-        int colorBuiltin = getColor(R.color.vcode_color_js_function);
-        int colorNumber = getColor(R.color.vcode_color_js_number);
-        int colorOperator = getColor(R.color.vcode_color_js_operator);
-        int colorFunc = getColor(R.color.vcode_color_js_function);
 
         // CRITICAL SEQUENCE ORDERING: Highlights run out from lowest to highest layout priority.
         // Broad elements are drawn early, allowing precise tokens (like text literals and comments)
