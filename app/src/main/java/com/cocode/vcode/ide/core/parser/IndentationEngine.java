@@ -7,11 +7,14 @@ import com.cocode.vcode.ide.core.language.Language;
  * Matches structural syntax cues like brackets, block elements, or open states to adjust tab indentation.
  */
 public class IndentationEngine {
-
+    private final String tabString;
     private final int tabSize;
 
     public IndentationEngine(int tabSize) {
         this.tabSize = Math.max(1, tabSize);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < this.tabSize; i++) sb.append(" ");
+        this.tabString = sb.toString();
     }
 
     /**
@@ -20,10 +23,10 @@ public class IndentationEngine {
     public String getIndentForNewLine(String text, int cursorPos, Language lang) {
         if (text == null || cursorPos <= 0) return "";
 
-        // Extract the full text line immediately preceding the cursor pointer
-        String before = text.substring(0, Math.min(cursorPos, text.length()));
-        int lineStart = before.lastIndexOf('\n');
-        String currentLine = lineStart >= 0 ? before.substring(lineStart + 1) : before;
+        // Scan backwards to extract the current line up to the cursor safely without redundant allocations
+        int minPos = Math.min(cursorPos, text.length());
+        int lineStart = text.lastIndexOf('\n', minPos - 1);
+        String currentLine = text.substring(lineStart + 1, minPos);
 
         String baseIndent = getLeadingWhitespace(currentLine); // Read ancestral indentation level
         String trimmedLine = currentLine.trim();
@@ -36,13 +39,8 @@ public class IndentationEngine {
         return baseIndent; // Maintain original layout balance level
     }
 
-    /**
-     * Builds standard layout spacing blocks based on active tab preferences.
-     */
     public String getTabString() {
-        StringBuilder sb = new StringBuilder();
-        for (int i = 0; i < tabSize; i++) sb.append("\t");
-        return sb.toString();
+        return this.tabString;
     }
 
     /**
@@ -86,6 +84,6 @@ public class IndentationEngine {
         while (i < line.length() && (line.charAt(i) == ' ' || line.charAt(i) == '\t')) {
             i++;
         }
-        return line.substring(0, i);
+        return i == 0 ? "" : line.substring(0, i);
     }
 }

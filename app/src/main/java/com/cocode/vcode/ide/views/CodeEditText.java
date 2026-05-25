@@ -732,7 +732,7 @@ public class CodeEditText extends AppCompatEditText {
 
     private String buildTabSpaces() {
         StringBuilder sb = new StringBuilder();
-        int tabSize = 4;
+        int tabSize = new AppSettings().tabSize;
         for (int i = 0; i < tabSize; i++) sb.append(' ');
         return sb.toString();
     }

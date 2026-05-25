@@ -120,7 +120,7 @@ public class AppSettings {
     public String getIndent() {
         StringBuilder indent = new StringBuilder();
         for (int i = 0; i < tabSize; i++) {
-            indent.append("\t");
+            indent.append(" ");
         }
         return indent.toString();
     }
