@@ -19,7 +19,7 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
     private static final Pattern PAT_TAG_NAME = Pattern.compile("(?<=</?)[\\w-]+"); // Positive lookbehind isolates target tag keyword
     private static final Pattern PAT_BRACKET = Pattern.compile("</?|/?>|>");
     private static final Pattern PAT_ATTR_NAME = Pattern.compile("\\s([\\w:-]+)(?=\\s*=)"); // Positive lookahead catches key names
-    private static final Pattern PAT_ATTR_VAL = Pattern.compile("\"[^\"]*\"|'[^']*'");
+    private static final Pattern PAT_ATTR_VAL = Pattern.compile("=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')");
     private static final Pattern PAT_ENTITY = Pattern.compile("&[#\\w]+;");
 
     // Scopes extracted for nested multi-language engine delegation processing
@@ -101,7 +101,12 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         }
 
         // Pass 8: Inline attribute field values
-        apply(ssb, PAT_ATTR_VAL, code, colorAttrVal);
+        Matcher valMatcher = PAT_ATTR_VAL.matcher(code);
+        while (valMatcher.find()) {
+            if (valMatcher.group(1) != null) {
+                applySpan(ssb, valMatcher.start(1), valMatcher.end(1), colorAttrVal);
+            }
+        }
 
         // Pass 9: Character reference entities
         apply(ssb, PAT_ENTITY, code, colorEntity);
