@@ -200,7 +200,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
      * Attaches click and interaction listeners to the main UI components.
      */
     private void setupListeners() {
-        binding.btnMenu.setOnClickListener(v -> binding.drawerLayout.openDrawer(GravityCompat.START));
+        binding.btnMenu.setOnClickListener(v -> {
+            UiUtils.hideKeyboard(this);
+            if (codeEditText != null) {
+                codeEditText.clearFocus();
+            }
+            binding.drawerLayout.openDrawer(GravityCompat.START);
+        });
 
         binding.btnUndo.setOnClickListener(v -> {
             if (codeEditText != null && codeEditText.canUndo()) codeEditText.undo();
