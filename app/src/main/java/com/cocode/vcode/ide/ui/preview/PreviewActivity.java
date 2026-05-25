@@ -82,20 +82,30 @@ public class PreviewActivity extends BaseActivity {
         // Standard web features required for modern web apps
         settings.setJavaScriptEnabled(true);
         settings.setDomStorageEnabled(true);
+        settings.setDatabaseEnabled(true);
+        settings.setCacheMode(android.webkit.WebSettings.LOAD_DEFAULT);
 
         // --- SECURITY & ACCESS CONFIGURATION ---
         // We explicitly enable local file access and cross-access between file URLs.
         // This is necessary for a local web IDE preview, as it allows an HTML file
         // to load its relative assets (CSS, JS, Images) from the device filesystem.
         settings.setAllowFileAccess(true);
+        settings.setAllowContentAccess(true);
         settings.setAllowFileAccessFromFileURLs(true);
         settings.setAllowUniversalAccessFromFileURLs(true);
+
+        settings.setMixedContentMode(android.webkit.WebSettings.MIXED_CONTENT_ALWAYS_ALLOW);
 
         // Configure zoom and viewport for a better mobile experience
         settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false); // Hides the default zoom buttons for a cleaner UI
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
+        
+        // Advanced Browser Capabilities
+        settings.setSupportMultipleWindows(true);
+        settings.setJavaScriptCanOpenWindowsAutomatically(true);
+        settings.setMediaPlaybackRequiresUserGesture(false);
 
         // Track and display page loading progress
         binding.webView.setWebChromeClient(new WebChromeClient() {
