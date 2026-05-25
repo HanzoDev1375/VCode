@@ -139,10 +139,7 @@ public class RenameBottomSheet extends BottomSheetDialogFragment {
         // Show soft keyboard with a slight delay to ensure the window is ready
         binding.etProjectName.postDelayed(() -> {
             if (getContext() != null) {
-                InputMethodManager imm = (InputMethodManager) getContext().getSystemService(Context.INPUT_METHOD_SERVICE);
-                if (imm != null) {
-                    imm.showSoftInput(binding.etProjectName, InputMethodManager.SHOW_IMPLICIT);
-                }
+                com.cocode.vcode.ide.utils.UiUtils.showKeyboard(binding.etProjectName);
             }
         }, 200);
     }

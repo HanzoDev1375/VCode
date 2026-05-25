@@ -84,6 +84,7 @@ public class CodeEditText extends AppCompatEditText {
     private final Runnable highlightRunnable = this::triggerHighlight;
     private boolean isUndoRedoActive = false;
     private boolean isSettingText = false;
+    private boolean isTypingText = false;
 
     private OnScrollChangeListener scrollChangeListener;
 
@@ -159,6 +160,7 @@ public class CodeEditText extends AppCompatEditText {
 
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                isTypingText = true;
             }
 
             @Override
@@ -184,6 +186,7 @@ public class CodeEditText extends AppCompatEditText {
 
             @Override
             public void afterTextChanged(Editable s) {
+                isTypingText = false;
                 if (isApplyingHighlight || isUndoRedoActive || isSettingText || isAutoClosing)
                     return;
                 scheduleHighlight();
@@ -735,6 +738,26 @@ public class CodeEditText extends AppCompatEditText {
         int tabSize = new AppSettings().tabSize;
         for (int i = 0; i < tabSize; i++) sb.append(' ');
         return sb.toString();
+    }
+
+    @Override
+    public boolean onKeyPreIme(int keyCode, android.view.KeyEvent event) {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+            if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
+                autoCompletePopup.dismiss();
+            }
+        }
+        return super.onKeyPreIme(keyCode, event);
+    }
+
+    @Override
+    protected void onSelectionChanged(int selStart, int selEnd) {
+        super.onSelectionChanged(selStart, selEnd);
+        if (!isTypingText && !isSettingText && !isAutoClosing && !isUndoRedoActive) {
+            if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
+                autoCompletePopup.dismiss();
+            }
+        }
     }
 
     @Override

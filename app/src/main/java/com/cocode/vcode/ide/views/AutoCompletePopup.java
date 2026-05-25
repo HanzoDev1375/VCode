@@ -165,6 +165,21 @@ public class AutoCompletePopup {
 
         private List<CompletionItem> items = new ArrayList<>();
         private OnItemSelectedListener listener;
+        private final int colorPrimary, colorSecondary, colorSuccess, colorWarning, colorJson, colorTextSecondary, colorTextPrimary;
+        private final Typeface uiFont, uiFontBold, codeFont;
+
+        AutoCompleteAdapter() {
+            colorPrimary = ContextCompat.getColor(context, R.color.vcode_accent_primary);
+            colorSecondary = ContextCompat.getColor(context, R.color.vcode_accent_secondary);
+            colorSuccess = ContextCompat.getColor(context, R.color.vcode_accent_success);
+            colorWarning = ContextCompat.getColor(context, R.color.vcode_accent_warning);
+            colorJson = ContextCompat.getColor(context, R.color.vcode_accent_json);
+            colorTextSecondary = ContextCompat.getColor(context, R.color.vcode_text_secondary);
+            colorTextPrimary = ContextCompat.getColor(context, R.color.vcode_text_primary);
+            uiFont = FontManager.getInstance().getUiFont(context);
+            uiFontBold = Typeface.create(uiFont, Typeface.BOLD);
+            codeFont = FontManager.getInstance().getCodeFont(context);
+        }
 
         @SuppressLint("NotifyDataSetChanged")
         void setItems(List<CompletionItem> items) {
@@ -196,7 +211,11 @@ public class AutoCompletePopup {
             badge.setGravity(android.view.Gravity.CENTER);
             badge.setTextSize(8);
             badge.setTextColor(Color.WHITE);
-            badge.setTypeface(FontManager.getInstance().getUiFont(context), Typeface.BOLD);
+            badge.setTypeface(uiFontBold);
+            
+            android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
+            d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+            badge.setBackground(d);
             row.addView(badge);
 
             // Build completion target text layout
@@ -204,15 +223,15 @@ public class AutoCompletePopup {
             LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             label.setLayoutParams(labelParams);
             label.setTextSize(14);
-            label.setTextColor(ContextCompat.getColor(context, R.color.vcode_text_primary));
+            label.setTextColor(colorTextPrimary);
             label.setMaxLines(1);
             row.addView(label);
 
             // Build secondary descriptive detail markers
             TextView detail = new TextView(context);
             detail.setTextSize(11);
-            detail.setTextColor(ContextCompat.getColor(context, R.color.vcode_text_secondary));
-            detail.setTypeface(FontManager.getInstance().getUiFont(context));
+            detail.setTextColor(colorTextSecondary);
+            detail.setTypeface(uiFont);
             detail.setMaxLines(1);
             row.addView(detail);
 
@@ -224,7 +243,7 @@ public class AutoCompletePopup {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             CompletionItem item = items.get(position);
 
-            holder.badge.setBackground(buildCircleDrawable(getBadgeColor(item.getType())));
+            ((android.graphics.drawable.GradientDrawable) holder.badge.getBackground()).setColor(getBadgeColor(item.getType()));
             holder.badge.setText(getBadgeLetter(item.getType()));
 
             String labelText = item.getLabel();
@@ -235,8 +254,7 @@ public class AutoCompletePopup {
             }
 
             // Emphasize the top matches group by applying standard bold weightings to the first item row entry
-            holder.label.setTypeface(FontManager.getInstance().getCodeFont(context),
-                    position == 0 ? Typeface.BOLD : Typeface.NORMAL);
+            holder.label.setTypeface(codeFont, position == 0 ? Typeface.BOLD : Typeface.NORMAL);
 
             holder.detail.setText(item.getDetail() != null ? item.getDetail() : "");
 
@@ -254,25 +272,19 @@ public class AutoCompletePopup {
          * Resolves unique color accents assigned to distinguish varying identifier tokens categories.
          */
         private int getBadgeColor(CompletionItem.Type type) {
-            if (type == null) return ContextCompat.getColor(context, R.color.vcode_text_secondary);
+            if (type == null) return colorTextSecondary;
             switch (type) {
                 case TAG:
-                case BUILTIN:
-                    return ContextCompat.getColor(context, R.color.vcode_accent_primary);
+                case BUILTIN: return colorPrimary;
                 case ATTRIBUTE:
-                case CSS_PROPERTY:
-                    return ContextCompat.getColor(context, R.color.vcode_accent_secondary);
+                case CSS_PROPERTY: return colorSecondary;
                 case VALUE:
                 case CSS_VALUE:
-                case FUNCTION:
-                    return ContextCompat.getColor(context, R.color.vcode_accent_success);
-                case KEYWORD:
-                    return ContextCompat.getColor(context, R.color.vcode_accent_warning);
+                case FUNCTION: return colorSuccess;
+                case KEYWORD: return colorWarning;
                 case SNIPPET:
-                case JSON_KEY:
-                    return ContextCompat.getColor(context, R.color.vcode_accent_json);
-                default:
-                    return ContextCompat.getColor(context, R.color.vcode_text_secondary);
+                case JSON_KEY: return colorJson;
+                default: return colorTextSecondary;
             }
         }
 
@@ -306,12 +318,7 @@ public class AutoCompletePopup {
             }
         }
 
-        private android.graphics.drawable.GradientDrawable buildCircleDrawable(int color) {
-            android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
-            d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            d.setColor(color);
-            return d;
-        }
+
 
         private android.graphics.drawable.Drawable buildRippleBackground() {
             android.graphics.drawable.ColorDrawable bg = new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);
