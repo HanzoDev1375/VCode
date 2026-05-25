@@ -130,12 +130,15 @@ public class CodeEditText extends AppCompatEditText {
         setOverScrollMode(View.OVER_SCROLL_ALWAYS);
 
         // Intercept Touch parameters to support scrolling inside nested ScrollView containers
+        // Optimized: Only manipulate parent interception flags on DOWN/UP states to prevent 
+        // severe frame-rate drops caused by repeatedly thrashing the hierarchy during ACTION_MOVE.
         setOnTouchListener((v, event) -> {
-            if (v.getParent() != null) {
-                v.getParent().requestDisallowInterceptTouchEvent(true);
-            }
-
-            if ((event.getAction() & android.view.MotionEvent.ACTION_MASK) == android.view.MotionEvent.ACTION_UP) {
+            int action = event.getAction() & android.view.MotionEvent.ACTION_MASK;
+            if (action == android.view.MotionEvent.ACTION_DOWN) {
+                if (v.getParent() != null) {
+                    v.getParent().requestDisallowInterceptTouchEvent(true);
+                }
+            } else if (action == android.view.MotionEvent.ACTION_UP || action == android.view.MotionEvent.ACTION_CANCEL) {
                 if (v.getParent() != null) {
                     v.getParent().requestDisallowInterceptTouchEvent(false);
                 }
@@ -149,6 +152,9 @@ public class CodeEditText extends AppCompatEditText {
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             setBreakStrategy(LineBreaker.BREAK_STRATEGY_SIMPLE);
+        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            setFallbackLineSpacing(false);
         }
         setHyphenationFrequency(android.text.Layout.HYPHENATION_FREQUENCY_NONE);
 
