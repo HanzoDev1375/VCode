@@ -171,6 +171,9 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             case "mjs":
             case "cjs":
             case "env":
+            case "local":
+            case "firebaserc":
+            case "rules":
                 return true;
             default:
                 return false;

@@ -20,7 +20,8 @@ public enum AssetType {
     VIDEO(R.drawable.ic_video_icon, R.color.vcode_file_video, "mp4", "webm", "mov", "avi"),
     CSV(R.drawable.ic_csv_icon, R.color.vcode_file_csv, "csv"),
     MANIFEST(R.drawable.ic_gear, R.color.vcode_file_web_manifest, "webmanifest"),
-    ENV(R.drawable.ic_env_icon, R.color.vcode_file_env, "env, env.local"),
+    ENV(R.drawable.ic_env_icon, R.color.vcode_file_env, "env", "local"),
+    FIREBASE(R.drawable.ic_firebase_icon, R.color.vcode_file_firebase, "firebaserc", "rules"),
     PDF(R.drawable.ic_pdf_icon, R.color.vcode_file_pdf, "pdf"),
     LOG(R.drawable.ic_log_icon, R.color.vcode_file_log, "log"),
     BAK(R.drawable.ic_clock_rotate, R.color.vcode_file_bak, "bak");
@@ -67,6 +68,6 @@ public enum AssetType {
      * Decides if the file can be opened inside a text field instead of launching specialized graphic views.
      */
     public boolean isTextBased() {
-        return this == CSV || this == ENV || this == LOG || this == BAK || this == MANIFEST || this == SVG;
+        return this == CSV || this == ENV || this == LOG || this == BAK || this == MANIFEST || this == SVG || this == FIREBASE;
     }
 }
