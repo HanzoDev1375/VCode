@@ -13,11 +13,9 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
-import com.cocode.vcode.ide.data.model.AssetType;
 import com.cocode.vcode.ide.databinding.ItemGitFileBinding;
 import com.cocode.vcode.ide.git.model.GitFileItem;
-import com.cocode.vcode.ide.utils.FileUtils;
+import com.cocode.vcode.ide.utils.FileIconHelper;
 import com.cocode.vcode.ide.utils.FontManager;
 
 /**
@@ -125,25 +123,8 @@ public class GitFilesAdapter extends ListAdapter<GitFileItem, GitFilesAdapter.Vi
             binding.btnAction.setColorFilter(ContextCompat.getColor(context,
                     item.isStaged() ? R.color.vcode_accent_error : R.color.vcode_accent_primary));
 
-            String ext = FileUtils.getExtension(item.getFileName().toLowerCase());
-            AssetType assetType = AssetType.fromExtension(ext);
-
             // Select graphic layout vectors depending on file type metrics
-            if (assetType != null) {
-                // Media / Asset category path definitions
-                binding.ivFileIcon.setImageResource(assetType.getIconResId());
-                binding.ivFileIcon.setColorFilter(
-                        ContextCompat.getColor(itemView.getContext(), assetType.getColorResId()),
-                        PorterDuff.Mode.SRC_IN
-                );
-            } else {
-                // Code / Structural language category paths
-                Language lang = Language.fromExtension(ext);
-                binding.ivFileIcon.setImageResource(lang.getIconResId());
-
-                int fileColor = ContextCompat.getColor(itemView.getContext(), lang.getColorResId());
-                binding.ivFileIcon.setColorFilter(fileColor, PorterDuff.Mode.SRC_IN);
-            }
+            FileIconHelper.setFileIconAndColor(binding.ivFileIcon, item.getFileName());
 
             binding.getRoot().setOnClickListener(v -> listener.onFileClick(item));
             binding.btnAction.setOnClickListener(v -> listener.onActionClick(item));

@@ -10,11 +10,11 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
 import com.cocode.vcode.ide.data.model.AssetType;
 import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.databinding.ItemFileTreeNodeBinding;
 import com.cocode.vcode.ide.git.model.FileStatus;
+import com.cocode.vcode.ide.utils.FileIconHelper;
 import com.cocode.vcode.ide.utils.FileUtils;
 import com.cocode.vcode.ide.utils.FontManager;
 
@@ -420,25 +420,7 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
                 binding.btnAddFolder.setVisibility(View.GONE);
             }
 
-            String ext = FileUtils.getExtension(node.getFile().getName()).toLowerCase();
-            AssetType assetType = AssetType.fromExtension(ext);
-
-            if (assetType != null) {
-                // Media asset styling
-                binding.ivIcon.setImageResource(assetType.getIconResId());
-                binding.ivIcon.setColorFilter(
-                        ContextCompat.getColor(itemView.getContext(), assetType.getColorResId()),
-                        PorterDuff.Mode.SRC_IN
-                );
-            } else {
-                // Language-specific code icon styling
-                Language lang = node.getLanguage();
-                binding.ivIcon.setImageResource(lang.getIconResId());
-
-                // Apply language coloring to the icon
-                int fileColor = ContextCompat.getColor(itemView.getContext(), lang.getColorResId());
-                binding.ivIcon.setColorFilter(fileColor, PorterDuff.Mode.SRC_IN);
-            }
+            FileIconHelper.setFileIconAndColor(binding.ivIcon, node.getFile().getName());
 
             updateGitStatus(node);
         }

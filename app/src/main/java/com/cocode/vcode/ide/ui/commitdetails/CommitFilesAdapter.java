@@ -13,11 +13,9 @@ import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
-import com.cocode.vcode.ide.data.model.AssetType;
 import com.cocode.vcode.ide.databinding.ItemGitFileBinding;
 import com.cocode.vcode.ide.git.model.GitFileItem;
-import com.cocode.vcode.ide.utils.FileUtils;
+import com.cocode.vcode.ide.utils.FileIconHelper;
 import com.cocode.vcode.ide.utils.FontManager;
 
 /**
@@ -118,18 +116,7 @@ public class CommitFilesAdapter extends ListAdapter<GitFileItem, CommitFilesAdap
             binding.tvStatusBadge.setBackground(badge);
 
             // Resolve and style the file icon based on extension and language
-            String ext = FileUtils.getExtension(item.getFileName().toLowerCase());
-            AssetType assetType = AssetType.fromExtension(ext);
-
-            if (assetType != null) {
-                binding.ivFileIcon.setImageResource(assetType.getIconResId());
-                binding.ivFileIcon.setColorFilter(ContextCompat.getColor(context, assetType.getColorResId()), PorterDuff.Mode.SRC_IN);
-            } else {
-                Language lang = Language.fromExtension(ext);
-                binding.ivFileIcon.setImageResource(lang.getIconResId());
-                // Apply language-specific coloring
-                binding.ivFileIcon.setColorFilter(ContextCompat.getColor(context, lang.getColorResId()), PorterDuff.Mode.SRC_IN);
-            }
+            FileIconHelper.setFileIconAndColor(binding.ivFileIcon, item.getFileName());
 
             binding.getRoot().setOnClickListener(v -> listener.onFileClick(item));
         }
