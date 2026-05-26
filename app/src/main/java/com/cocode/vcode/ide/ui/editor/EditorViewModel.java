@@ -499,6 +499,19 @@ public class EditorViewModel extends ViewModel {
     }
 
     /**
+     * Checks if there are any open files with unsaved changes.
+     */
+    public boolean hasUnsavedFiles() {
+        List<EditorFile> docs = getOpenFilesList();
+        for (EditorFile ef : docs) {
+            if (ef.isDirty() && !ef.isBinaryAsset()) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * Bulk saves all open files that have unsaved changes.
      */
     public void saveAll() {

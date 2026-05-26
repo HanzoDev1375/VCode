@@ -171,7 +171,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     binding.findReplaceBar.slideUp();
                     return;
                 }
-                finish();
+                navigateWithUnsavedCheck(EditorActivity.this::finish);
             }
         });
     }
@@ -682,21 +682,23 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> {
-            Intent navToGit = new Intent(this, GitActivity.class);
-            if (viewModel.getProjectRoot() != null) {
-                navToGit.putExtra("project_path", viewModel.getProjectRoot().getAbsolutePath());
-                navToGit.putExtra("project_name", getIntent().getStringExtra(EXTRA_PROJECT_NAME));
+            navigateWithUnsavedCheck(() -> {
+                Intent navToGit = new Intent(this, GitActivity.class);
+                if (viewModel.getProjectRoot() != null) {
+                    navToGit.putExtra("project_path", viewModel.getProjectRoot().getAbsolutePath());
+                    navToGit.putExtra("project_name", getIntent().getStringExtra(EXTRA_PROJECT_NAME));
 
-                AppSettings settings = viewModel.getSettingsLiveData().getValue();
-                if (settings != null && settings.gitDefaultBranch != null) {
-                    navToGit.putExtra("default_branch", settings.gitDefaultBranch);
+                    AppSettings settings = viewModel.getSettingsLiveData().getValue();
+                    if (settings != null && settings.gitDefaultBranch != null) {
+                        navToGit.putExtra("default_branch", settings.gitDefaultBranch);
+                    }
+                    startActivity(navToGit);
+                } else {
+                    Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
                 }
-                startActivity(navToGit);
-            } else {
-                Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
-            }
+            });
         });
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_gear, "Settings", () -> startActivity(new Intent(this, SettingsActivity.class)));
+        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_gear, "Settings", () -> navigateWithUnsavedCheck(() -> startActivity(new Intent(this, SettingsActivity.class))));
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_floppy_disk, "Save All", () -> {
             viewModel.saveAll();
             Toast.makeText(this, "Saving all files...", Toast.LENGTH_SHORT).show();
@@ -849,6 +851,25 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             });
         });
     }
+
+    private void navigateWithUnsavedCheck(Runnable navigateAction) {
+        if (viewModel.hasUnsavedFiles()) {
+            new AlertDialog.Builder(this)
+                    .setTitle("Unsaved Changes")
+                    .setMessage("You have unsaved files. Save them before leaving?")
+                    .setPositiveButton("Save All", (d, w) -> {
+                        viewModel.saveAll();
+                        navigateAction.run();
+                    })
+                    .setNegativeButton("Discard", (d, w) -> navigateAction.run())
+                    .setNeutralButton("Cancel", null)
+                    .show();
+        } else {
+            navigateAction.run();
+        }
+    }
+
+
 
     @Override
     protected void onStop() {
