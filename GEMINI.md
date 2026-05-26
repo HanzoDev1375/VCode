@@ -5,11 +5,11 @@ This project is **VCode**, a mobile IDE for web development (HTML, CSS, JS, JSON
 ## 🏗️ Core Architecture & Tech Stack
 
 - **Platform:** Android (Java Only).
-- **Architecture:** MVVM (ViewModel + LiveData + Repository).
-- **Min SDK:** 23 (Android 6.0).
-- **Build System:** Gradle (Groovy DSL) with Version Catalogs (`libs.versions.toml`).
-- **Core Library:** JGit for all Git operations.
-- **Key Features:** Custom code editor, syntax highlighting, autocomplete, git/github integration, in-app web preview.
+- - **Architecture:** MVVM (ViewModel + LiveData + Repository).
+- - **Min SDK:** 23 (Android 6.0).
+- - **Build System:** Gradle (Groovy DSL) with Version Catalogs (`libs.versions.toml`).
+- - **Core Library:** JGit for all Git operations.
+- - **Key Features:** Custom code editor, syntax highlighting, autocomplete, git/github integration, in-app web preview.
 
 ## 📏 Mandatory Conventions
 
@@ -59,3 +59,9 @@ Every resource (color, string, dimen, attr, style, drawable) **MUST** use the `v
 - **Strict Adherence:** Follow the `vcode_` prefix and Java-only rules without exception.
 - **Verification:** Run `./gradlew assembleDebug` (or equivalent) after major changes to ensure compilation.
 - **Documentation:** Keep `VCode_APP_FLOW.md` and `VCode_IMPLEMENTATION_PLAN.md` updated if architectural changes occur.
+
+## 📦 Recent Changes
+
+- Added unsaved changes detection before navigating away from the editor.
+- Replaced deprecated `onBackPressed()` with AndroidX `OnBackPressedDispatcher` callback to ensure consistent back navigation handling.
+- Integrated `navigateWithUnsavedCheck` utility in overflow menu actions (Git, Settings) and back navigation.
