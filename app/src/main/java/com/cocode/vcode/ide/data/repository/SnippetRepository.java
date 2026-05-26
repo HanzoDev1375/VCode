@@ -294,6 +294,7 @@ public class SnippetRepository {
         return new SnippetItem(
                 obj.optString("id", UUID.randomUUID().toString()),
                 obj.optString("title", "Untitled"),
+                obj.optString("content", ""),
                 FileType.valueOf(obj.optString("fileType", obj.optString("language", FileType.TEXT.name())))
         );
     }
