@@ -37,6 +37,7 @@ import com.cocode.vcode.ide.core.syntax.CssSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.HtmlSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.JsSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.JsonSyntaxHighlighter;
+import com.cocode.vcode.ide.core.syntax.SvgSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.SyntaxHighlighter;
 import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
@@ -717,6 +718,13 @@ public class CodeEditText extends AppCompatEditText {
             }
         }
         scheduleHighlight();
+    }
+
+    public void setAssetType(com.cocode.vcode.ide.data.model.AssetType assetType) {
+        if (assetType == com.cocode.vcode.ide.data.model.AssetType.SVG) {
+            this.syntaxHighlighter = new SvgSyntaxHighlighter(getContext());
+            scheduleHighlight();
+        }
     }
 
     public void setOnScrollChangeListener(OnScrollChangeListener listener) {

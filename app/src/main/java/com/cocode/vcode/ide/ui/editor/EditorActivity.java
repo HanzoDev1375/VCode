@@ -457,11 +457,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
                 // Reset webview inline preview state
                 binding.webviewPreview.setVisibility(View.GONE);
-                binding.webviewPreview.loadUrl("about:blank");
                 binding.ivTogglePreview.setTag(false);
 
                 // Determine if we should show the code editor or a specialized asset viewer
                 if (activeFile.isBinaryAsset()) {
+                    binding.webviewPreview.loadUrl("about:blank");
                     binding.editorLayout.setVisibility(View.GONE);
                     if (binding.findReplaceBar.getVisibility() == View.VISIBLE)
                         binding.findReplaceBar.slideUp();
@@ -518,9 +518,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                             binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
                             renderInlinePreview(activeFile, textType);
                         } else {
+                            binding.webviewPreview.loadUrl("about:blank");
                             binding.ivTogglePreview.setImageResource(textType == AssetType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
                         }
                     } else {
+                        binding.webviewPreview.loadUrl("about:blank");
                         binding.ivTogglePreview.setVisibility(View.GONE);
                     }
 
@@ -538,6 +540,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                             codeEditText.removeTextChangedListener(editorTextWatcher);
                             codeEditText.setTag(activeFile.getId());
                             codeEditText.setLanguage(activeFile.getLanguage());
+                            codeEditText.setAssetType(activeFile.getAssetType());
                             codeEditText.setText(activeFile.getContent());
 
                             // Restore cursor and scroll position
