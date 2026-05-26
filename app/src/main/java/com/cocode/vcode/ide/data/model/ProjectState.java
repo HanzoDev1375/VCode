@@ -17,6 +17,7 @@ public class ProjectState {
     private int activeTabIndex;
     private Map<String, Integer> cursorPositions; // Maps file paths to their last caret offset index
     private Map<String, Integer> scrollPositions; // Maps file paths to their vertical scroll viewport pixel positions
+    private Map<String, Boolean> previewStates; // Maps file paths to their toggle preview state (true = preview, false = text)
 
     /**
      * Initializes blank tracking parameters for view tracking containers.
@@ -25,6 +26,7 @@ public class ProjectState {
         this.openFilePaths = new ArrayList<>();
         this.cursorPositions = new HashMap<>();
         this.scrollPositions = new HashMap<>();
+        this.previewStates = new HashMap<>();
         this.activeTabIndex = 0;
     }
 
@@ -65,6 +67,22 @@ public class ProjectState {
         return val != null ? val : 0;
     }
 
+    /**
+     * Records the toggle preview state linked against a relative file path.
+     */
+    public void setPreviewStateFor(String relativePath, boolean isPreview) {
+        if (relativePath != null) previewStates.put(relativePath, isPreview);
+    }
+
+    /**
+     * Resolves the toggle preview state linked against a relative target file.
+     */
+    public boolean getPreviewStateFor(String relativePath) {
+        if (relativePath == null) return false;
+        Boolean val = previewStates.get(relativePath);
+        return val != null ? val : false;
+    }
+
     public String getProjectId() {
         return projectId;
     }
@@ -103,5 +121,13 @@ public class ProjectState {
 
     public void setScrollPositions(Map<String, Integer> map) {
         this.scrollPositions = map != null ? map : new HashMap<>();
+    }
+
+    public Map<String, Boolean> getPreviewStates() {
+        return previewStates;
+    }
+
+    public void setPreviewStates(Map<String, Boolean> map) {
+        this.previewStates = map != null ? map : new HashMap<>();
     }
 }

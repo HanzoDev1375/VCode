@@ -133,6 +133,17 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         // Cache the reference to the internal code editor view
         codeEditText = binding.editorLayout.getCodeEditText();
 
+        // Configure WebView Client for flicker-free transitions
+        binding.webviewPreview.setWebViewClient(new android.webkit.WebViewClient() {
+            @Override
+            public void onPageFinished(android.webkit.WebView view, String url) {
+                super.onPageFinished(view, url);
+                if (binding.ivTogglePreview.getTag() != null && (Boolean) binding.ivTogglePreview.getTag()) {
+                    binding.webviewPreview.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
         // Apply specialized UI fonts
         binding.tvProjectName.setText(projectName);
         binding.tvProjectName.setTypeface(FontManager.getInstance().getUiSemiBold(this));
@@ -194,6 +205,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         ovalDrawable.setShape(GradientDrawable.OVAL);
         ovalDrawable.setColor(glassAccentColor);
         binding.ivViewPreview.setBackground(ovalDrawable);
+        binding.ivTogglePreview.setBackground(ovalDrawable);
     }
 
     /**
@@ -219,6 +231,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         binding.btnRun.setOnClickListener(v -> handleRunAction());
 
         binding.ivViewPreview.setOnClickListener(v -> executeActiveFilePreviewIntent());
+
+        binding.ivTogglePreview.setOnClickListener(v -> toggleInlinePreview());
 
         binding.btnSaveCurrent.setOnClickListener(v -> {
             Integer activeIndex = viewModel.getActiveTabIndex().getValue();
@@ -268,71 +282,121 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
 
         EditorFile activeFile = files.get(activeIndex);
-        Language lang = activeFile.getLanguage();
 
-        if (lang == Language.HTML) {
-            // Initialize and start the local web server scoped to the project root
-            if (localWebServer == null) {
-                localWebServer = new LocalWebServer(viewModel.getProjectRoot());
-            }
-            localWebServer.start();
-            binding.btnRun.setImageResource(R.drawable.ic_stop);
-            binding.ivViewPreview.setVisibility(View.VISIBLE);
-
-            // Automatically trigger the preview view
-            executeActiveFilePreviewIntent();
-        } else if (lang == Language.CSS || lang == Language.JAVASCRIPT) {
-            // Inform the user that non-HTML files cannot be previewed directly
-            new AlertDialog.Builder(this)
-                    .setTitle("Preview Required")
-                    .setMessage("CSS and JS files need an HTML file to preview. Open an HTML file in a tab and tap Run from there.")
-                    .setPositiveButton("Open HTML File", (dialog, which) -> binding.drawerLayout.openDrawer(GravityCompat.START))
-                    .setNegativeButton("Cancel", null)
-                    .show();
-        } else {
-            Toast.makeText(this, "No preview available for this file type.", Toast.LENGTH_SHORT).show();
+        // Initialize and start the local web server scoped to the project root
+        if (localWebServer == null) {
+            localWebServer = new LocalWebServer(viewModel.getProjectRoot());
         }
+        localWebServer.start();
+        binding.btnRun.setImageResource(R.drawable.ic_stop);
+        binding.ivViewPreview.setVisibility(View.VISIBLE);
+
+        // Automatically trigger the preview view
+        executeActiveFilePreviewIntent();
     }
 
     /**
      * Dispatches an intent to launch the preview interface, either in-app
      * or via an external browser, depending on user preferences.
      */
-    private void executeActiveFilePreviewIntent() {
+    private void toggleInlinePreview() {
         int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
 
-        if (files == null || activeIndex < 0 || activeIndex >= files.size()) {
-            Toast.makeText(this, "No file open to preview", Toast.LENGTH_SHORT).show();
-            return;
-        }
+        if (files == null || activeIndex < 0 || activeIndex >= files.size()) return;
 
         EditorFile activeFile = files.get(activeIndex);
-        Language lang = activeFile.getLanguage();
+        AssetType type = activeFile.getAssetType();
+        if (type != AssetType.SVG && type != AssetType.CSV) return;
 
-        if (lang == Language.HTML) {
-            // Map the absolute file path to a relative URL for the local server
-            String relativePath = activeFile.getFile().getAbsolutePath()
-                    .replace(viewModel.getProjectRoot().getAbsolutePath() + "/", "");
-            String serverUrl = localWebServer.getUrl(relativePath);
+        boolean isPreviewMode = binding.ivTogglePreview.getTag() != null && (Boolean) binding.ivTogglePreview.getTag();
+        String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
 
-            AppSettings settings = viewModel.getSettingsLiveData().getValue();
-            boolean openInApp = settings == null || settings.openPreviewInApp;
-
-            if (openInApp) {
-                Intent intent = new Intent(this, PreviewActivity.class);
-                intent.putExtra(PreviewActivity.EXTRA_URL, serverUrl);
-                startActivity(intent);
-            } else {
-                try {
-                    Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(serverUrl));
-                    startActivity(browserIntent);
-                } catch (Exception e) {
-                    Toast.makeText(this, "Could not open external browser.", Toast.LENGTH_SHORT).show();
-                }
-            }
+        if (isPreviewMode) {
+            // Switch back to editor
+            binding.webviewPreview.setVisibility(View.GONE);
+            binding.webviewPreview.loadUrl("about:blank");
+            binding.editorLayout.setVisibility(View.VISIBLE);
+            binding.ivTogglePreview.setTag(false);
+            binding.ivTogglePreview.setImageResource(type == AssetType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
+            viewModel.setPreviewState(relPath, false);
         } else {
-            Toast.makeText(this, "The active operational tab must display an HTML asset to generate web views.", Toast.LENGTH_SHORT).show();
+            // Switch to preview
+            binding.editorLayout.setVisibility(View.GONE);
+            binding.webviewPreview.setVisibility(View.INVISIBLE);
+            binding.ivTogglePreview.setTag(true);
+            binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
+            viewModel.setPreviewState(relPath, true);
+
+            renderInlinePreview(activeFile, type);
+        }
+    }
+
+    private void renderInlinePreview(EditorFile activeFile, AssetType type) {
+        String content = activeFile.getContent();
+        if (type == AssetType.SVG) {
+            // Render SVG
+            String base64 = android.util.Base64.encodeToString(content.getBytes(), android.util.Base64.NO_WRAP);
+            String html = "<!DOCTYPE html><html><body style=\"margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background-color:transparent;\">" +
+                    "<img src=\"data:image/svg+xml;base64," + base64 + "\" style=\"max-width:100%;max-height:100%;\" />" +
+                    "</body></html>";
+            binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            binding.webviewPreview.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+        } else if (type == AssetType.CSV) {
+            // Render CSV as HTML Table
+            StringBuilder htmlBuilder = new StringBuilder();
+            int colorInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_text_primary);
+            String hexColor = String.format("#%06X", (0xFFFFFF & colorInt));
+            int surfaceInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_bg_surface);
+            String surfaceColor = String.format("#%06X", (0xFFFFFF & surfaceInt));
+
+            htmlBuilder.append("<!DOCTYPE html><html><head><style>")
+                    .append("body { font-family: sans-serif; color: ").append(hexColor).append("; background-color: transparent; padding: 16px; margin: 0; }")
+                    .append("table { width: 100%; border-collapse: collapse; margin-top: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }")
+                    .append("th, td { padding: 12px 15px; border: 1px solid ").append(hexColor).append("33; text-align: left; }")
+                    .append("th { background-color: ").append(surfaceColor).append("; font-weight: bold; }")
+                    .append("tr:nth-child(even) { background-color: ").append(surfaceColor).append("66; }")
+                    .append("</style></head><body><table>");
+
+            String[] lines = content.split("\n");
+            for (int i = 0; i < lines.length; i++) {
+                String line = lines[i].trim();
+                if (line.isEmpty()) continue;
+                String[] cols = line.split(",");
+                htmlBuilder.append("<tr>");
+                for (String col : cols) {
+                    if (i == 0) {
+                        htmlBuilder.append("<th>").append(android.text.TextUtils.htmlEncode(col.trim())).append("</th>");
+                    } else {
+                        htmlBuilder.append("<td>").append(android.text.TextUtils.htmlEncode(col.trim())).append("</td>");
+                    }
+                }
+                htmlBuilder.append("</tr>");
+            }
+            htmlBuilder.append("</table></body></html>");
+
+            binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            binding.webviewPreview.loadDataWithBaseURL(null, htmlBuilder.toString(), "text/html", "utf-8", null);
+        }
+    }
+
+    private void executeActiveFilePreviewIntent() {
+        String serverUrl = localWebServer.getUrl("");
+
+        AppSettings settings = viewModel.getSettingsLiveData().getValue();
+        boolean openInApp = settings == null || settings.openPreviewInApp;
+
+        if (openInApp) {
+            Intent intent = new Intent(this, PreviewActivity.class);
+            intent.putExtra(PreviewActivity.EXTRA_URL, serverUrl);
+            startActivity(intent);
+        } else {
+            try {
+                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(serverUrl));
+                startActivity(browserIntent);
+            } catch (Exception e) {
+                Toast.makeText(this, "Could not open external browser.", Toast.LENGTH_SHORT).show();
+            }
         }
     }
 
@@ -391,6 +455,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
                 binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
 
+                // Reset webview inline preview state
+                binding.webviewPreview.setVisibility(View.GONE);
+                binding.webviewPreview.loadUrl("about:blank");
+                binding.ivTogglePreview.setTag(false);
+
                 // Determine if we should show the code editor or a specialized asset viewer
                 if (activeFile.isBinaryAsset()) {
                     binding.editorLayout.setVisibility(View.GONE);
@@ -434,6 +503,26 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     binding.ivImageViewer.setVisibility(View.GONE);
                     binding.layoutFontViewer.setVisibility(View.GONE);
                     binding.editorLayout.setVisibility(View.VISIBLE);
+
+                    // Setup toggle button for SVG / CSV
+                    AssetType textType = activeFile.getAssetType();
+                    if (textType == AssetType.SVG || textType == AssetType.CSV) {
+                        binding.ivTogglePreview.setVisibility(View.VISIBLE);
+                        
+                        boolean isPreview = viewModel.getPreviewState(relPath);
+                        binding.ivTogglePreview.setTag(isPreview);
+                        
+                        if (isPreview) {
+                            binding.editorLayout.setVisibility(View.GONE);
+                            binding.webviewPreview.setVisibility(View.INVISIBLE);
+                            binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
+                            renderInlinePreview(activeFile, textType);
+                        } else {
+                            binding.ivTogglePreview.setImageResource(textType == AssetType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
+                        }
+                    } else {
+                        binding.ivTogglePreview.setVisibility(View.GONE);
+                    }
 
                     if (codeEditText != null) {
                         String currentFileId = (String) codeEditText.getTag();

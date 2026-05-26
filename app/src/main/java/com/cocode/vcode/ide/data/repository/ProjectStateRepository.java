@@ -139,6 +139,18 @@ public class ProjectStateRepository {
         }
         root.put("scrollPositions", scrolls);
 
+        // Map collection layout recording toggle preview states
+        JSONObject previews = new JSONObject();
+        Map<String, Boolean> previewMap = state.getPreviewStates();
+        if (previewMap != null) {
+            for (Map.Entry<String, Boolean> entry : previewMap.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    previews.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        root.put("previewStates", previews);
+
         File sessionFile = getSessionFile(projectDir);
         try (BufferedWriter writer = new BufferedWriter(
                 new OutputStreamWriter(new FileOutputStream(sessionFile), StandardCharsets.UTF_8))) {
@@ -210,6 +222,18 @@ public class ProjectStateRepository {
             }
         }
         state.setScrollPositions(scrollMap);
+
+        // Restore preview states
+        JSONObject previews = root.optJSONObject("previewStates");
+        Map<String, Boolean> previewMap = new HashMap<>();
+        if (previews != null) {
+            Iterator<String> keys = previews.keys();
+            while (keys.hasNext()) {
+                String key = keys.next();
+                previewMap.put(key, previews.optBoolean(key, false));
+            }
+        }
+        state.setPreviewStates(previewMap);
 
         return state;
     }

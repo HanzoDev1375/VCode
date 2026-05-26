@@ -119,7 +119,23 @@ public class EditorViewModel extends ViewModel {
      */
     private void restoreTabsFromState(ProjectState state) {
         List<String> paths = state.getOpenFilePaths();
-        if (paths == null || paths.isEmpty()) return;
+        if (paths == null || paths.isEmpty()) {
+            ExecutorProvider.getInstance().runOnIo(() -> {
+                try {
+                    File metaFile = new File(projectRoot, "project_meta.json");
+                    if (metaFile.exists()) {
+                        String metaContent = FileUtils.readFile(metaFile);
+                        org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
+                        String mainFileName = metaJson.optString("mainFile", "index.html");
+                        File mainFile = new File(projectRoot, mainFileName);
+                        if (mainFile.exists()) {
+                            ExecutorProvider.getInstance().runOnMain(() -> openFile(mainFile));
+                        }
+                    }
+                } catch (Exception ignored) { }
+            });
+            return;
+        }
 
         ExecutorProvider.getInstance().runOnIo(() -> {
             List<EditorFile> restoredFiles = new ArrayList<>();
@@ -623,7 +639,7 @@ public class EditorViewModel extends ViewModel {
     /**
      * Computes the relative path of a file with respect to the project root.
      */
-    private String getRelativePath(File file) {
+    public String getRelativePath(File file) {
         if (projectRoot == null) return file.getName();
         String rootPath = projectRoot.getAbsolutePath();
         String filePath = file.getAbsolutePath();
@@ -633,5 +649,19 @@ public class EditorViewModel extends ViewModel {
             return rel;
         }
         return file.getName();
+    }
+
+    public void setPreviewState(String relativePath, boolean isPreview) {
+        if (currentState != null) {
+            currentState.setPreviewStateFor(relativePath, isPreview);
+            persistStateAsync();
+        }
+    }
+
+    public boolean getPreviewState(String relativePath) {
+        if (currentState != null) {
+            return currentState.getPreviewStateFor(relativePath);
+        }
+        return false;
     }
 }
