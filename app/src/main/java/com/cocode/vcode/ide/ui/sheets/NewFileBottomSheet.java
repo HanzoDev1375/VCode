@@ -15,7 +15,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.databinding.BottomSheetCreateNewFileBinding;
 import com.cocode.vcode.ide.databinding.LayoutChooseTemplateBinding;
 import com.cocode.vcode.ide.utils.FontManager;
@@ -106,12 +106,12 @@ public class NewFileBottomSheet extends BottomSheetDialogFragment {
      * Configures the grid of template options with icons and labels.
      */
     private void setupTemplates() {
-        setupTemplateItem(binding.template1, R.drawable.ic_html_icon, Language.HTML, "HTML", 0);
-        setupTemplateItem(binding.template2, R.drawable.ic_css_icon, Language.CSS, "CSS", 1);
-        setupTemplateItem(binding.template3, R.drawable.ic_js_icon, Language.JAVASCRIPT, "JS", 2);
-        setupTemplateItem(binding.template4, R.drawable.ic_json_icon, Language.JSON, "JSON", 3);
-        setupTemplateItem(binding.template5, R.drawable.ic_md_icon, Language.MARKDOWN, "MD", 4);
-        setupTemplateItem(binding.template6, R.drawable.ic_file_lines, Language.TEXT, "TEXT", 5);
+        setupTemplateItem(binding.template1, R.drawable.ic_html_icon, FileType.HTML, "HTML", 0);
+        setupTemplateItem(binding.template2, R.drawable.ic_css_icon, FileType.CSS, "CSS", 1);
+        setupTemplateItem(binding.template3, R.drawable.ic_js_icon, FileType.JAVASCRIPT, "JS", 2);
+        setupTemplateItem(binding.template4, R.drawable.ic_json_icon, FileType.JSON, "JSON", 3);
+        setupTemplateItem(binding.template5, R.drawable.ic_md_icon, FileType.MARKDOWN, "MD", 4);
+        setupTemplateItem(binding.template6, R.drawable.ic_file_lines, FileType.TEXT, "TEXT", 5);
 
         // Default selection: HTML
         selectTemplate(0);
@@ -144,11 +144,11 @@ public class NewFileBottomSheet extends BottomSheetDialogFragment {
     /**
      * Helper to configure an individual template card.
      */
-    private void setupTemplateItem(LayoutChooseTemplateBinding itemBinding, int iconRes, Language language, String title, int index) {
+    private void setupTemplateItem(LayoutChooseTemplateBinding itemBinding, int iconRes, FileType fileType, String title, int index) {
         itemBinding.icon.setImageResource(iconRes);
         itemBinding.icon.setColorFilter(
-                ContextCompat.getColor(requireContext(), language.getColorResId()),
-                PorterDuff.Mode.SRC_IN
+                ContextCompat.getColor(requireContext(), fileType.getColorResId()),
+                android.graphics.PorterDuff.Mode.SRC_IN
         );
         itemBinding.title.setText(title);
         itemBinding.getRoot().setOnClickListener(v -> selectTemplate(index));

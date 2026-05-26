@@ -1,6 +1,6 @@
 package com.cocode.vcode.ide.data.model;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.utils.FileUtils;
 import java.io.File;
 
@@ -15,8 +15,7 @@ public class EditorFile {
     private File file;
     private String content;
     private String savedContent = "";
-    private Language language;
-    private AssetType assetType;
+    private FileType fileType;
     private int cursorPosition;
     private int scrollY;
 
@@ -26,29 +25,32 @@ public class EditorFile {
     /**
      * Initializes an active workspace tracking session for a local target file.
      */
-    public EditorFile(String id, File file, String content, Language language) {
+    public EditorFile(String id, File file, String content, FileType fileType) {
         this.id = id;
         this.file = file;
         this.content = content != null ? content : "";
         this.savedContent = content != null ? content : "";
-        this.language = language;
-        // Auto-detect if this file is a binary asset based on its extension
-        this.assetType = AssetType.fromExtension(FileUtils.getExtension(file.getName()));
+        
+        if (fileType != null) {
+            this.fileType = fileType;
+        } else {
+            this.fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
+        }
     }
 
     /**
      * Helper to check if the UI needs to show an Image/Font viewer instead of the text editor.
      */
     public boolean isBinaryAsset() {
-        return assetType != null && !assetType.isTextBased();
+        return fileType != null && !fileType.isTextBased();
     }
 
-    public AssetType getAssetType() {
-        return assetType;
+    public FileType getFileType() {
+        return fileType;
     }
 
-    public void setAssetType(AssetType assetType) {
-        this.assetType = assetType;
+    public void setFileType(FileType fileType) {
+        this.fileType = fileType;
     }
 
     /**
@@ -119,14 +121,6 @@ public class EditorFile {
 
     public void setContent(String content) {
         this.content = content != null ? content : "";
-    }
-
-    public Language getLanguage() {
-        return language;
-    }
-
-    public void setLanguage(Language language) {
-        this.language = language;
     }
 
     public int getCursorPosition() {

@@ -6,8 +6,7 @@ import android.widget.ImageView;
 
 import androidx.core.content.ContextCompat;
 
-import com.cocode.vcode.ide.core.language.Language;
-import com.cocode.vcode.ide.data.model.AssetType;
+import com.cocode.vcode.ide.core.model.FileType;
 
 /**
  * Utility class for setting file icons and their corresponding colors.
@@ -27,21 +26,12 @@ public class FileIconHelper {
 
         Context context = imageView.getContext();
         String ext = FileUtils.getExtension(fileName.toLowerCase());
-        AssetType assetType = AssetType.fromExtension(ext);
+        FileType fileType = FileType.fromExtension(ext);
 
-        if (assetType != null) {
-            imageView.setImageResource(assetType.getIconResId());
-            imageView.setColorFilter(
-                    ContextCompat.getColor(context, assetType.getColorResId()),
-                    PorterDuff.Mode.SRC_IN
-            );
-        } else {
-            Language lang = Language.fromExtension(ext);
-            imageView.setImageResource(lang.getIconResId());
-            imageView.setColorFilter(
-                    ContextCompat.getColor(context, lang.getColorResId()),
-                    PorterDuff.Mode.SRC_IN
-            );
-        }
+        imageView.setImageResource(fileType.getIconResId());
+        imageView.setColorFilter(
+                ContextCompat.getColor(context, fileType.getColorResId()),
+                PorterDuff.Mode.SRC_IN
+        );
     }
 }

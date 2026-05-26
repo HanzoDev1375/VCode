@@ -1,6 +1,6 @@
 package com.cocode.vcode.ide.core.parser;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 
 /**
  * Computing manager coordinating intelligent newline auto-indentation layouts.
@@ -20,7 +20,7 @@ public class IndentationEngine {
     /**
      * Determines the exact workspace indentation whitespace block necessary when a carriage return is pressed.
      */
-    public String getIndentForNewLine(String text, int cursorPos, Language lang) {
+    public String getIndentForNewLine(String text, int cursorPos, FileType lang) {
         if (text == null || cursorPos <= 0) return "";
 
         // Scan backwards to extract the current line up to the cursor safely without redundant allocations
@@ -46,7 +46,7 @@ public class IndentationEngine {
     /**
      * Decides whether the current code statement implies a nested structural block follows next.
      */
-    private boolean shouldIncreaseIndent(String trimmedLine, Language lang) {
+    private boolean shouldIncreaseIndent(String trimmedLine, FileType lang) {
         if (trimmedLine.isEmpty()) return false;
         char last = trimmedLine.charAt(trimmedLine.length() - 1);
 
@@ -54,7 +54,7 @@ public class IndentationEngine {
         if (last == '{' || last == '(' || last == '[') return true;
 
         // Custom XML/Markup evaluation blocks
-        if (lang == Language.HTML || lang == Language.TEXT) {
+        if (lang == FileType.HTML || lang == FileType.TEXT) {
             if (trimmedLine.endsWith(">") && !trimmedLine.contains("</")) {
                 // Highly efficient tag extraction without regex
                 int openAngle = trimmedLine.lastIndexOf('<');

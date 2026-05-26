@@ -13,7 +13,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.SnippetItem;
 import com.cocode.vcode.ide.databinding.BottomSheetCreateSnippetBinding;
 import com.cocode.vcode.ide.utils.FontManager;
@@ -87,7 +87,7 @@ public class CreateSnippetBottomSheet extends BottomSheetDialogFragment {
                 if (listener != null) listener.onSaveSnippet(existingSnippet, true);
             } else {
                 // Create a new model for Create Mode
-                SnippetItem newItem = new SnippetItem(title, code, Language.TEXT);
+                SnippetItem newItem = new SnippetItem(title, code, FileType.TEXT);
                 if (listener != null) listener.onSaveSnippet(newItem, false);
             }
             dismiss();

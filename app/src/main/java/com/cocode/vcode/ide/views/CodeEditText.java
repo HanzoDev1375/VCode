@@ -29,7 +29,7 @@ import com.cocode.vcode.ide.core.autocomplete.CssAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.HtmlAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.JsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.JsonAutoCompleteEngine;
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.core.parser.BracketMatcher;
 import com.cocode.vcode.ide.core.parser.HtmlTagParser;
 import com.cocode.vcode.ide.core.parser.IndentationEngine;
@@ -76,7 +76,7 @@ public class CodeEditText extends AppCompatEditText {
     private final boolean autoCloseHtmlTags = true;
     private SyntaxHighlighter syntaxHighlighter;
     private AutoCompleteEngine autoCompleteEngine;
-    private Language language = Language.TEXT;
+    private FileType fileType = FileType.TEXT;
     private boolean autoCloseBrackets = true;
     private boolean autoIndent = true;
     private Paint lineHighlightPaint;
@@ -182,7 +182,7 @@ public class CodeEditText extends AppCompatEditText {
                     if (autoCloseBrackets) {
                         handleAutoClose(s, start, typed);
                     }
-                    if (autoCloseHtmlTags && language == Language.HTML && typed == '>') {
+                    if (autoCloseHtmlTags && fileType == FileType.HTML && typed == '>') {
                         handleAutoCloseHtmlTag(start + 1);
                     }
                     if (typed == '\n') {
@@ -277,7 +277,7 @@ public class CodeEditText extends AppCompatEditText {
     private void handleAutoIndent(String text, int newlineIndex) {
         if (!autoIndent || indentEngine == null) return;
 
-        String innerIndent = indentEngine.getIndentForNewLine(text, newlineIndex, language);
+        String innerIndent = indentEngine.getIndentForNewLine(text, newlineIndex, fileType);
         if (innerIndent == null) innerIndent = "";
 
         boolean isBracketSplit = false;
@@ -682,19 +682,19 @@ public class CodeEditText extends AppCompatEditText {
         this.autoIndent = autoIndent;
     }
 
-    public Language getLanguage() {
-        return language;
+    public FileType getFileType() {
+        return fileType;
     }
 
     /**
      * Updates target highlights and maps applicable sub-completions engines matching source extensions.
      */
-    public void setLanguage(Language language) {
-        this.language = language;
+    public void setFileType(FileType fileType) {
+        this.fileType = fileType;
 
-        if (language != null) {
+        if (fileType != null) {
             Context ctx = getContext();
-            switch (language) {
+            switch (fileType) {
                 case HTML:
                     this.syntaxHighlighter = new HtmlSyntaxHighlighter(ctx);
                     this.autoCompleteEngine = new HtmlAutoCompleteEngine(ctx);
@@ -711,6 +711,10 @@ public class CodeEditText extends AppCompatEditText {
                     this.syntaxHighlighter = new JsonSyntaxHighlighter(ctx);
                     this.autoCompleteEngine = new JsonAutoCompleteEngine(ctx);
                     break;
+                case SVG:
+                    this.syntaxHighlighter = new SvgSyntaxHighlighter(ctx);
+                    this.autoCompleteEngine = null;
+                    break;
                 default:
                     this.syntaxHighlighter = null;
                     this.autoCompleteEngine = null;
@@ -718,13 +722,6 @@ public class CodeEditText extends AppCompatEditText {
             }
         }
         scheduleHighlight();
-    }
-
-    public void setAssetType(com.cocode.vcode.ide.data.model.AssetType assetType) {
-        if (assetType == com.cocode.vcode.ide.data.model.AssetType.SVG) {
-            this.syntaxHighlighter = new SvgSyntaxHighlighter(getContext());
-            scheduleHighlight();
-        }
     }
 
     public void setOnScrollChangeListener(OnScrollChangeListener listener) {

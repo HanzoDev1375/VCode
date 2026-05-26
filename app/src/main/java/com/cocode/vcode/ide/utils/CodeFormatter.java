@@ -5,7 +5,7 @@ import com.cocode.vcode.ide.core.formatter.CssFormatter;
 import com.cocode.vcode.ide.core.formatter.HtmlFormatter;
 import com.cocode.vcode.ide.core.formatter.JsFormatter;
 import com.cocode.vcode.ide.core.formatter.JsonFormatter;
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 
 import java.util.EnumMap;
 import java.util.Map;
@@ -18,13 +18,13 @@ import java.util.Map;
 public class CodeFormatter {
 
     // An optimized map lookup structure mapped to language enum keys
-    private static final Map<Language, BaseFormatter> FORMATTERS = new EnumMap<>(Language.class);
+    private static final Map<FileType, BaseFormatter> FORMATTERS = new EnumMap<>(FileType.class);
 
     static {
-        FORMATTERS.put(Language.JSON, new JsonFormatter());
-        FORMATTERS.put(Language.HTML, new HtmlFormatter());
-        FORMATTERS.put(Language.CSS, new CssFormatter());
-        FORMATTERS.put(Language.JAVASCRIPT, new JsFormatter());
+        FORMATTERS.put(FileType.JSON, new JsonFormatter());
+        FORMATTERS.put(FileType.HTML, new HtmlFormatter());
+        FORMATTERS.put(FileType.CSS, new CssFormatter());
+        FORMATTERS.put(FileType.JAVASCRIPT, new JsFormatter());
     }
 
     /**
@@ -33,7 +33,7 @@ public class CodeFormatter {
      * @param language The targeted language configuration identifier.
      * @return The beautified structural code string.
      */
-    public static String format(String code, Language language) {
+    public static String format(String code, FileType language) {
         // Return original string immediately if empty or null to avoid unneeded allocation steps
         if (code == null || code.trim().isEmpty()) return code;
 

@@ -1,6 +1,6 @@
 package com.cocode.vcode.ide.data.model;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 
 /**
  * Data object container mapping user-defined boilerplate code pieces.
@@ -10,25 +10,25 @@ public class SnippetItem {
     private String id;
     private String title;
     private String content;
-    private Language language;
+    private FileType fileType;
 
     /**
      * Three-argument constructor initializing newly authored snippet templates before disk persistence allocation.
      */
-    public SnippetItem(String title, String content, Language language) {
+    public SnippetItem(String title, String content, FileType fileType) {
         this.title = title;
         this.content = content;
-        this.language = language;
+        this.fileType = fileType;
     }
 
     /**
      * Four-argument constructor handling direct indexing from localized repository storage channels.
      */
-    public SnippetItem(String id, String title, String content, Language language) {
+    public SnippetItem(String id, String title, String content, FileType fileType) {
         this.id = id;
         this.title = title;
         this.content = content;
-        this.language = language;
+        this.fileType = fileType;
     }
 
     public String getId() {
@@ -55,11 +55,11 @@ public class SnippetItem {
         this.content = content;
     }
 
-    public Language getLanguage() {
-        return language;
+    public FileType getFileType() {
+        return fileType;
     }
 
-    public void setLanguage(Language language) {
-        this.language = language;
+    public void setFileType(FileType fileType) {
+        this.fileType = fileType;
     }
 }

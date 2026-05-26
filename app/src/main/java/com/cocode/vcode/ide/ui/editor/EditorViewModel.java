@@ -4,9 +4,8 @@ import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 import androidx.lifecycle.ViewModel;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.AppSettings;
-import com.cocode.vcode.ide.data.model.AssetType;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.data.model.ProjectState;
@@ -143,17 +142,15 @@ public class EditorViewModel extends ViewModel {
                 File file = new File(projectRoot, relativePath);
                 if (file.exists() && file.isFile()) {
                     try {
-                        AssetType assetType = AssetType.fromExtension(FileUtils.getExtension(file.getName()));
+                        FileType fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
                         String content = "";
 
                         // Only read content for text-based files; binary assets are handled via URI
-                        if (assetType == null || assetType.isTextBased()) {
+                        if (fileType == null || fileType.isTextBased()) {
                             content = FileUtils.readFile(file);
                         }
 
-                        Language lang = FileUtils.getLanguage(file.getName());
-                        EditorFile ef = new EditorFile(UUID.randomUUID().toString(), file, content, lang);
-                        ef.setAssetType(assetType);
+                        EditorFile ef = new EditorFile(UUID.randomUUID().toString(), file, content, fileType);
                         ef.setCursorPosition(state.getCursorFor(relativePath));
                         ef.setScrollY(state.getScrollFor(relativePath));
                         restoredFiles.add(ef);
@@ -351,16 +348,14 @@ public class EditorViewModel extends ViewModel {
 
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
-                AssetType assetType = AssetType.fromExtension(FileUtils.getExtension(file.getName()));
+                FileType fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
                 String content = "";
 
-                if (assetType == null || assetType.isTextBased()) {
+                if (fileType == null || fileType.isTextBased()) {
                     content = FileUtils.readFile(file);
                 }
 
-                Language lang = FileUtils.getLanguage(file.getName());
-                EditorFile newFile = new EditorFile(UUID.randomUUID().toString(), file, content, lang);
-                newFile.setAssetType(assetType);
+                EditorFile newFile = new EditorFile(UUID.randomUUID().toString(), file, content, fileType);
                 newFile.markSaved();
 
                 // Restore previous cursor/scroll if available in the state object

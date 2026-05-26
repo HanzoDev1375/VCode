@@ -1,6 +1,6 @@
 package com.cocode.vcode.ide.data.model;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.utils.FileUtils;
 import java.io.File;
 import java.util.ArrayList;
@@ -43,9 +43,9 @@ public class FileNode {
     /**
      * Resolves the target programming rules map linked to this node instance.
      */
-    public Language getLanguage() {
-        if (isDirectory()) return Language.TEXT;
-        return FileUtils.getLanguage(getName());
+    public FileType getFileType() {
+        if (isDirectory()) return FileType.TEXT;
+        return FileType.fromExtension(FileUtils.getExtension(getName()));
     }
 
     public File getFile() {

@@ -10,7 +10,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.data.model.AssetType;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.databinding.ItemFileTreeNodeBinding;
 import com.cocode.vcode.ide.git.model.FileStatus;
@@ -136,17 +136,17 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
         if (ext.isEmpty()) return true; // Generic text files without extensions are allowed
 
         // Check for supported media and font types
-        AssetType assetType = AssetType.fromExtension(ext);
-        if (assetType == AssetType.IMAGE || assetType == AssetType.GIF ||
-                assetType == AssetType.ICO || assetType == AssetType.BMP ||
-                assetType == AssetType.FONT) {
+        FileType fileType = FileType.fromExtension(ext);
+        if (fileType == FileType.IMAGE || fileType == FileType.GIF ||
+                fileType == FileType.ICO || fileType == FileType.BMP ||
+                fileType == FileType.FONT) {
             return true;
         }
 
         // Support all generic text and code files dynamically.
         // If an extension isn't explicitly classified as a restricted binary asset (like Audio/Video/PDF),
         // we safely assume it's a readable text format and allow the editor to parse it.
-        return assetType == null || assetType.isTextBased();
+        return fileType == null || fileType.isTextBased();
     }
 
     @NonNull

@@ -3,7 +3,7 @@ package com.cocode.vcode.ide.utils;
 import android.content.Context;
 import android.os.Environment;
 
-import com.cocode.vcode.ide.core.language.Language;
+
 import com.cocode.vcode.ide.data.model.FileNode;
 
 import java.io.BufferedReader;
@@ -75,12 +75,6 @@ public class FileUtils {
         return fileName.substring(dot + 1).toLowerCase();
     }
 
-    /**
-     * Translates name configurations extensions into structured Language rulesets profile.
-     */
-    public static Language getLanguage(String fileName) {
-        return Language.fromExtension(getExtension(fileName));
-    }
 
     /**
      * Creates new files on the file system, failing early if an object already occupies that name.

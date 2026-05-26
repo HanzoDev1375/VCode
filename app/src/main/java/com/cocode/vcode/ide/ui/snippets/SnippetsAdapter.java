@@ -14,7 +14,7 @@ import androidx.core.content.ContextCompat;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.SnippetItem;
 import com.cocode.vcode.ide.databinding.ItemSnippetBinding;
 import com.cocode.vcode.ide.utils.FontManager;
@@ -241,14 +241,14 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
             binding.tvSnippetPreview.setText(preview);
 
             // Configure the language-specific visual badge
-            Language lang = snippet.getLanguage();
+            FileType lang = snippet.getFileType();
             if (lang != null) {
                 binding.tvLanguageBadge.setVisibility(View.VISIBLE);
                 binding.tvLanguageBadge.setText(lang.getDisplayName());
                 binding.tvLanguageBadge.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), lang.getColorResId())));
                 
                 // Use high-contrast text coloring for specifically bright backgrounds like JS Yellow
-                if (lang == Language.JAVASCRIPT) {
+                if (lang == FileType.JAVASCRIPT) {
                     binding.tvLanguageBadge.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.vcode_lang_on_js));
                 } else {
                     binding.tvLanguageBadge.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.vcode_bg_surface));

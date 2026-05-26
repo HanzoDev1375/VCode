@@ -5,7 +5,7 @@ import android.content.Context;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.Result;
 import com.cocode.vcode.ide.data.model.SnippetItem;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
@@ -100,7 +100,7 @@ public class SnippetRepository {
                 }
 
                 // Analyze template data profiles to apply automated language sorting labels
-                item.setLanguage(LanguageDetector.detect(item.getContent()));
+                item.setFileType(LanguageDetector.detect(item.getContent()));
 
                 List<SnippetItem> existing = readSnippetsFromDisk();
                 existing.add(item);
@@ -125,7 +125,7 @@ public class SnippetRepository {
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 // Re-evaluate grammar rules to align context changes correctly
-                updated.setLanguage(LanguageDetector.detect(updated.getContent()));
+                updated.setFileType(LanguageDetector.detect(updated.getContent()));
 
                 List<SnippetItem> existing = readSnippetsFromDisk();
                 boolean found = false;
@@ -191,57 +191,57 @@ public class SnippetRepository {
         // --- HTML Environment Snippets ---
         defaults.add(new SnippetItem("def_html5", "html5 (Boilerplate)",
                 "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n  <meta charset=\"UTF-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n  <title>|</title>\n</head>\n<body>\n\n</body>\n</html>",
-                Language.HTML));
+                FileType.HTML));
 
         defaults.add(new SnippetItem("def_html_link", "link (CSS Link)",
                 "<link rel=\"stylesheet\" href=\"|\">",
-                Language.HTML));
+                FileType.HTML));
 
         defaults.add(new SnippetItem("def_html_script", "script (JS Source)",
                 "<script src=\"|\"></script>",
-                Language.HTML));
+                FileType.HTML));
 
         defaults.add(new SnippetItem("def_html_img", "img (Image Tag)",
                 "<img src=\"|\" alt=\"\">",
-                Language.HTML));
+                FileType.HTML));
 
         // --- CSS Environment Snippets ---
         defaults.add(new SnippetItem("def_css_reset", "reset (CSS Reset)",
                 "* {\n  margin: 0;\n  padding: 0;\n  box-sizing: border-box;\n}\n|",
-                Language.CSS));
+                FileType.CSS));
 
         defaults.add(new SnippetItem("def_css_flex", "flex-center (Center Content)",
                 "display: flex;\njustify-content: center;\nalign-items: center;\n|",
-                Language.CSS));
+                FileType.CSS));
 
         defaults.add(new SnippetItem("def_css_mq", "media (Mobile Query)",
                 "@media (max-width: 768px) {\n  |\n}",
-                Language.CSS));
+                FileType.CSS));
 
         defaults.add(new SnippetItem("def_css_root", "root (Variables)",
                 ":root {\n  --primary-color: #|;\n  --secondary-color: #;\n}",
-                Language.CSS));
+                FileType.CSS));
 
         // --- JavaScript Environment Snippets ---
         defaults.add(new SnippetItem("def_clg", "clg (Console Log)",
                 "console.log(|);",
-                Language.JAVASCRIPT));
+                FileType.JAVASCRIPT));
 
         defaults.add(new SnippetItem("def_qs", "qs (Query Selector)",
                 "const | = document.querySelector('');",
-                Language.JAVASCRIPT));
+                FileType.JAVASCRIPT));
 
         defaults.add(new SnippetItem("def_addEventListener", "event (Click Listener)",
                 "|.addEventListener('click', (e) => {\n  \n});",
-                Language.JAVASCRIPT));
+                FileType.JAVASCRIPT));
 
         defaults.add(new SnippetItem("def_af", "af (Arrow Function)",
                 "const | = () => {\n  \n};",
-                Language.JAVASCRIPT));
+                FileType.JAVASCRIPT));
 
         defaults.add(new SnippetItem("def_fetch", "fetch (API GET)",
                 "fetch('|')\n  .then(res => res.json())\n  .then(data => {\n    console.log(data);\n  });",
-                Language.JAVASCRIPT));
+                FileType.JAVASCRIPT));
 
         return defaults;
     }
@@ -286,7 +286,7 @@ public class SnippetRepository {
         obj.put("id", item.getId());
         obj.put("title", item.getTitle());
         obj.put("content", item.getContent());
-        obj.put("language", item.getLanguage().name());
+        obj.put("fileType", item.getFileType().name());
         return obj;
     }
 
@@ -294,8 +294,7 @@ public class SnippetRepository {
         return new SnippetItem(
                 obj.optString("id", UUID.randomUUID().toString()),
                 obj.optString("title", "Untitled"),
-                obj.optString("content", ""),
-                Language.valueOf(obj.optString("language", Language.TEXT.name()))
+                FileType.valueOf(obj.optString("fileType", obj.optString("language", FileType.TEXT.name())))
         );
     }
 }

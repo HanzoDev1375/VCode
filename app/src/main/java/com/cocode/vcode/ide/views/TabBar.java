@@ -11,8 +11,7 @@ import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
-import com.cocode.vcode.ide.data.model.AssetType;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.databinding.ItemEditorTabBinding;
 import com.cocode.vcode.ide.utils.FileUtils;
@@ -136,21 +135,13 @@ public class TabBar extends HorizontalScrollView {
         String rawExt = FileUtils.getExtension(file.getFileName());
         String ext = rawExt.toUpperCase();
 
-        // 1. Check if item maps to specialized non-code assets profiles (images, audio components)
-        if (file.getAssetType() != null) {
-            AssetType assetType = file.getAssetType();
-            binding.tvLangBadge.setText(ext.isEmpty() ? assetType.name() : ext);
-            binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), assetType.getColorResId()));
+        FileType fileType = file.getFileType();
+        if (fileType != null && fileType != FileType.TEXT) {
+            binding.tvLangBadge.setText(fileType.getDisplayName().toUpperCase());
+            binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), fileType.getColorResId()));
         } else {
-            // 2. Fall back to evaluating standard source text code extension signatures
-            Language lang = file.getLanguage();
-            if (lang != null && lang != Language.TEXT) {
-                binding.tvLangBadge.setText(lang.getDisplayName().toUpperCase());
-                binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), lang.getColorResId()));
-            } else {
-                binding.tvLangBadge.setText(ext.isEmpty() ? "TXT" : ext);
-                binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), R.color.vcode_text_secondary));
-            }
+            binding.tvLangBadge.setText(ext.isEmpty() ? "TXT" : ext);
+            binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), R.color.vcode_text_secondary));
         }
 
         // Apply string truncations to protect tab layout row size constraints

@@ -17,8 +17,7 @@ import androidx.recyclerview.widget.DiffUtil;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
-import com.cocode.vcode.ide.data.model.AssetType;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.Project;
 import com.cocode.vcode.ide.databinding.ItemProjectCardBinding;
 import com.cocode.vcode.ide.utils.DateUtils;
@@ -420,14 +419,8 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
             bg.setCornerRadius(UiUtils.dpToPx(ctx, 6));
 
             int bgColorRes;
-            AssetType assetType = AssetType.fromExtension(text);
-
-            if (assetType != null) {
-                bgColorRes = assetType.getColorResId();
-            } else {
-                Language language = Language.fromExtension(text);
-                bgColorRes = language.getColorResId();
-            }
+            FileType fileType = FileType.fromExtension(text);
+            bgColorRes = fileType.getColorResId();
 
             bg.setColor(ContextCompat.getColor(ctx, bgColorRes));
             tv.setBackground(bg);

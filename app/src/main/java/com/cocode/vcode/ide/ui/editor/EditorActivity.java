@@ -26,12 +26,11 @@ import androidx.lifecycle.ViewModelProvider;
 
 import com.bumptech.glide.Glide;
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.core.parser.json.JsonError;
 import com.cocode.vcode.ide.core.parser.json.JsonValidator;
 import com.cocode.vcode.ide.core.parser.json.ValidationReport;
 import com.cocode.vcode.ide.data.model.AppSettings;
-import com.cocode.vcode.ide.data.model.AssetType;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.databinding.ActivityEditorBinding;
@@ -306,8 +305,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         if (files == null || activeIndex < 0 || activeIndex >= files.size()) return;
 
         EditorFile activeFile = files.get(activeIndex);
-        AssetType type = activeFile.getAssetType();
-        if (type != AssetType.SVG && type != AssetType.CSV) return;
+        FileType type = activeFile.getFileType();
+        if (type != FileType.SVG && type != FileType.CSV) return;
 
         boolean isPreviewMode = binding.ivTogglePreview.getTag() != null && (Boolean) binding.ivTogglePreview.getTag();
         String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
@@ -318,7 +317,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             binding.webviewPreview.loadUrl("about:blank");
             binding.editorLayout.setVisibility(View.VISIBLE);
             binding.ivTogglePreview.setTag(false);
-            binding.ivTogglePreview.setImageResource(type == AssetType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
+            binding.ivTogglePreview.setImageResource(type == FileType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
             viewModel.setPreviewState(relPath, false);
         } else {
             // Switch to preview
@@ -332,9 +331,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
     }
 
-    private void renderInlinePreview(EditorFile activeFile, AssetType type) {
+    private void renderInlinePreview(EditorFile activeFile, FileType type) {
         String content = activeFile.getContent();
-        if (type == AssetType.SVG) {
+        if (type == FileType.SVG) {
             // Render SVG
             String base64 = android.util.Base64.encodeToString(content.getBytes(), android.util.Base64.NO_WRAP);
             String html = "<!DOCTYPE html><html><body style=\"margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background-color:transparent;\">" +
@@ -342,7 +341,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     "</body></html>";
             binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             binding.webviewPreview.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-        } else if (type == AssetType.CSV) {
+        } else if (type == FileType.CSV) {
             // Render CSV as HTML Table
             StringBuilder htmlBuilder = new StringBuilder();
             int colorInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_text_primary);
@@ -467,17 +466,17 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                         binding.findReplaceBar.slideUp();
                     binding.jsonStatusBar.setVisibility(View.GONE);
 
-                    AssetType type = activeFile.getAssetType();
-                    if (type == AssetType.IMAGE || type == AssetType.GIF || type == AssetType.ICO || type == AssetType.BMP) {
+                    FileType type = activeFile.getFileType();
+                    if (type == FileType.IMAGE || type == FileType.GIF || type == FileType.ICO || type == FileType.BMP) {
                         binding.layoutFontViewer.setVisibility(View.GONE);
                         binding.ivImageViewer.setVisibility(View.VISIBLE);
 
-                        if (type == AssetType.GIF) {
+                        if (type == FileType.GIF) {
                             Glide.with(EditorActivity.this).asGif().load(activeFile.getFile()).into(binding.ivImageViewer);
                         } else {
                             binding.ivImageViewer.setImageURI(Uri.fromFile(activeFile.getFile()));
                         }
-                    } else if (type == AssetType.FONT) {
+                    } else if (type == FileType.FONT) {
                         binding.ivImageViewer.setVisibility(View.GONE);
                         binding.layoutFontViewer.setVisibility(View.VISIBLE);
                         binding.tvFontName.setText(activeFile.getFile().getName());
@@ -505,8 +504,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     binding.editorLayout.setVisibility(View.VISIBLE);
 
                     // Setup toggle button for SVG / CSV
-                    AssetType textType = activeFile.getAssetType();
-                    if (textType == AssetType.SVG || textType == AssetType.CSV) {
+                    FileType textType = activeFile.getFileType();
+                    if (textType == FileType.SVG || textType == FileType.CSV) {
                         binding.ivTogglePreview.setVisibility(View.VISIBLE);
                         
                         boolean isPreview = viewModel.getPreviewState(relPath);
@@ -519,7 +518,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                             renderInlinePreview(activeFile, textType);
                         } else {
                             binding.webviewPreview.loadUrl("about:blank");
-                            binding.ivTogglePreview.setImageResource(textType == AssetType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
+                            binding.ivTogglePreview.setImageResource(textType == FileType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
                         }
                     } else {
                         binding.webviewPreview.loadUrl("about:blank");
@@ -539,8 +538,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                             // Avoid triggering the TextWatcher while loading new file content
                             codeEditText.removeTextChangedListener(editorTextWatcher);
                             codeEditText.setTag(activeFile.getId());
-                            codeEditText.setLanguage(activeFile.getLanguage());
-                            codeEditText.setAssetType(activeFile.getAssetType());
+                            codeEditText.setFileType(activeFile.getFileType());
                             codeEditText.setText(activeFile.getContent());
 
                             // Restore cursor and scroll position
@@ -612,7 +610,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         if (settings != null && settings.jsonValidateRealtime && files != null && activeIdx != null && activeIdx >= 0 && activeIdx < files.size()) {
             EditorFile file = files.get(activeIdx);
-            if (file.getLanguage() == Language.JSON) {
+            if (file.getFileType() == FileType.JSON) {
                 binding.jsonStatusBar.setVisibility(View.VISIBLE);
                 binding.jsonStatusBar.showValidating();
                 jsonValidationHandler.removeCallbacksAndMessages(null);
@@ -833,7 +831,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
 
         String rawCode = java.util.Objects.requireNonNull(codeEditText.getText()).toString();
-        Language lang = activeFile.getLanguage();
+        FileType lang = activeFile.getFileType();
 
         Toast.makeText(this, "Formatting...", Toast.LENGTH_SHORT).show();
         ExecutorProvider.getInstance().runOnIo(() -> {

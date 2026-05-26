@@ -1,6 +1,6 @@
 package com.cocode.vcode.ide.utils;
 
-import com.cocode.vcode.ide.core.language.Language;
+import com.cocode.vcode.ide.core.model.FileType;
 
 import java.util.regex.Pattern;
 
@@ -20,31 +20,31 @@ public class LanguageDetector {
      * @param code The unmapped raw script text sequence.
      * @return The inferred destination Language enum configuration target.
      */
-    public static Language detect(String code) {
-        if (code == null || code.trim().isEmpty()) return Language.TEXT;
+    public static FileType detect(String code) {
+        if (code == null || code.trim().isEmpty()) return FileType.TEXT;
 
         String content = code.trim();
 
         // 1. Check for HTML elements signatures
         if (HTML_PATTERN.matcher(content).matches()) {
-            return Language.HTML;
+            return FileType.HTML;
         }
 
         // 2. Look for open and close braces configuration shapes descriptive of JSON dictionaries data fields
         if ((content.startsWith("{") && content.endsWith("}")) || (content.startsWith("[") && content.endsWith("]"))) {
-            return Language.JSON;
+            return FileType.JSON;
         }
 
         // 3. Look for standard CSS rule blocks assignments markers
         if (CSS_BLOCK.matcher(content).matches() || content.contains("@media")) {
-            return Language.CSS;
+            return FileType.CSS;
         }
 
         // 4. Trace programming keywords or functional arrow symbols common to script scopes
         if (JS_KEYWORDS.matcher(content).matches() || content.contains("=>")) {
-            return Language.JAVASCRIPT;
+            return FileType.JAVASCRIPT;
         }
 
-        return Language.TEXT; // Catch-all choice default fallback mode
+        return FileType.TEXT; // Catch-all choice default fallback mode
     }
 }
