@@ -24,4 +24,14 @@
     <color name="vcode_color_json_colon">#7B82A0</color>
     <color name="vcode_color_json_comma">#7B82A0</color>
     <color name="vcode_color_comment">#565F89</color>
+    
+    <!-- Markdown Syntax Colors -->
+    <color name="vcode_color_md_header">#7AA2F7</color>
+    <color name="vcode_color_md_bold">#F7768E</color>
+    <color name="vcode_color_md_italic">#BB9AF7</color>
+    <color name="vcode_color_md_strikethrough">#565F89</color>
+    <color name="vcode_color_md_code">#9ECE6A</color>
+    <color name="vcode_color_md_quote">#7DCFFF</color>
+    <color name="vcode_color_md_list">#FF9E64</color>
+    <color name="vcode_color_md_link">#89DCEB</color>
 </resources>

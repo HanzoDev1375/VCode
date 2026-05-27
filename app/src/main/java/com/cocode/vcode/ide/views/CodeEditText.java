@@ -37,6 +37,7 @@ import com.cocode.vcode.ide.core.syntax.CssSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.HtmlSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.JsSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.JsonSyntaxHighlighter;
+import com.cocode.vcode.ide.core.syntax.MarkdownSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.SvgSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.SyntaxHighlighter;
 import com.cocode.vcode.ide.data.model.AppSettings;
@@ -362,12 +363,18 @@ public class CodeEditText extends AppCompatEditText {
 
     private String getClosingPair(char open) {
         switch (open) {
-            case '(': return ")";
-            case '[': return "]";
-            case '{': return "}";
-            case '"': return "\"";
-            case '\'': return "'";
-            default: return null;
+            case '(':
+                return ")";
+            case '[':
+                return "]";
+            case '{':
+                return "}";
+            case '"':
+                return "\"";
+            case '\'':
+                return "'";
+            default:
+                return null;
         }
     }
 
@@ -710,6 +717,10 @@ public class CodeEditText extends AppCompatEditText {
                 case JSON:
                     this.syntaxHighlighter = new JsonSyntaxHighlighter(ctx);
                     this.autoCompleteEngine = new JsonAutoCompleteEngine(ctx);
+                    break;
+                case MARKDOWN:
+                    this.syntaxHighlighter = new MarkdownSyntaxHighlighter(ctx);
+                    this.autoCompleteEngine = null;
                     break;
                 case SVG:
                     this.syntaxHighlighter = new SvgSyntaxHighlighter(ctx);
