@@ -20,9 +20,21 @@
 
     <TextView
         android:id="@+id/tv_title"
-        android:layout_width="wrap_content"
+        android:layout_width="0dp"
+        android:layout_weight="1"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
         android:textColor="?attr/colorOnSurface"
         android:textSize="15sp" />
+
+    <com.google.android.material.materialswitch.MaterialSwitch
+        android:id="@+id/switch_toggle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="8dp"
+        android:scaleX="0.75"
+        android:scaleY="0.75"
+        android:minHeight="0dp"
+        android:minWidth="0dp"
+        android:visibility="gone" />
 </LinearLayout>

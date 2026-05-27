@@ -75,6 +75,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     private LocalWebServer localWebServer;
     private EditorViewModel viewModel;
     private CodeEditText codeEditText;
+    private boolean isReadOnly = false;
 
     /**
      * Watches for text changes in the editor to sync content with the ViewModel
@@ -549,6 +550,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                             codeEditText.scrollTo(0, activeFile.getScrollY());
                             codeEditText.addTextChangedListener(editorTextWatcher);
                             validateJsonIfRequired(activeFile.getContent());
+                            applyReadOnlyState();
                         }
                     }
                 }
@@ -678,6 +680,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         // Add menu items with icons and actions
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
+        addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
+            isReadOnly = !isReadOnly;
+            applyReadOnlyState();
+        });
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
@@ -721,6 +727,34 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             action.run();
         });
         container.addView(itemBinding.getRoot());
+    }
+
+    private void addPopupToggleItem(LinearLayout container, PopupWindow popup, int iconRes, String title, boolean isChecked, Runnable onToggle) {
+        ItemCustomPopupBinding itemBinding = ItemCustomPopupBinding.inflate(getLayoutInflater(), container, false);
+        itemBinding.ivIcon.setImageResource(iconRes);
+        itemBinding.tvTitle.setText(title);
+        itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(this));
+        itemBinding.switchToggle.setVisibility(View.VISIBLE);
+        itemBinding.switchToggle.setChecked(isChecked);
+
+        itemBinding.getRoot().setOnClickListener(v -> {
+            itemBinding.switchToggle.setChecked(!itemBinding.switchToggle.isChecked());
+            onToggle.run();
+            popup.dismiss();
+        });
+        itemBinding.switchToggle.setOnClickListener(v -> {
+            onToggle.run();
+            popup.dismiss();
+        });
+        container.addView(itemBinding.getRoot());
+    }
+    
+    private void applyReadOnlyState() {
+        if (codeEditText != null) {
+            codeEditText.setFocusable(!isReadOnly);
+            codeEditText.setFocusableInTouchMode(!isReadOnly);
+            codeEditText.setCursorVisible(!isReadOnly);
+        }
     }
 
     /**
