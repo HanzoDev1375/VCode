@@ -213,6 +213,11 @@ public class ProjectsActivity extends BaseActivity {
      * Initializes click and text-change listeners for UI interactivity.
      */
     private void setupListeners() {
+        /*
+        binding.tvWorkspaceOverview.setOnClickListener(v -> {
+            throw new RuntimeException("Error");
+        });
+         */
         binding.fabAddProject.setOnClickListener(v -> showNewProjectSheet());
 
         binding.iconSettings.setOnClickListener(v -> startActivity(new Intent(this, SettingsActivity.class)));

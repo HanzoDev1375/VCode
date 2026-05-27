@@ -5,10 +5,22 @@ import androidx.appcompat.app.AppCompatDelegate;
 import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.repository.SettingsRepository;
 
+import android.content.Intent;
+import android.util.Log;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import com.cocode.vcode.ide.ui.debug.DebugActivity;
+
 public class VCodeApplication extends Application {
     @Override
     public void onCreate() {
         super.onCreate();
+
+        // Setup custom crash handler
+        Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {
+            Log.e("VCodeApplication", "Uncaught exception", throwable);
+            handleUncaughtException(thread, throwable);
+        });
 
         // Force the theme to load the exact millisecond the app launches
         SettingsRepository repo = new SettingsRepository(this);
@@ -19,5 +31,21 @@ public class VCodeApplication extends Application {
         else if (settings.getTheme() == AppSettings.Theme.LIGHT) mode = AppCompatDelegate.MODE_NIGHT_NO;
 
         AppCompatDelegate.setDefaultNightMode(mode);
+    }
+
+    private void handleUncaughtException(Thread thread, Throwable throwable) {
+        StringWriter sw = new StringWriter();
+        PrintWriter pw = new PrintWriter(sw);
+        throwable.printStackTrace(pw);
+        String stackTrace = sw.toString();
+
+        Intent intent = new Intent(this, DebugActivity.class);
+        intent.putExtra(DebugActivity.EXTRA_CRASH_LOG, stackTrace);
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+        startActivity(intent);
+
+        // Kill the current process
+        android.os.Process.killProcess(android.os.Process.myPid());
+        System.exit(1);
     }
 }

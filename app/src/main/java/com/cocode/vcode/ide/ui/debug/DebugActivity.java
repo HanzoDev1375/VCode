@@ -1,0 +1,72 @@
+package com.cocode.vcode.ide.ui.debug;
+
+import android.content.ClipData;
+import android.content.ClipboardManager;
+import android.content.Context;
+import android.content.Intent;
+import android.os.Bundle;
+import android.view.View;
+import android.widget.Button;
+import android.widget.TextView;
+import android.widget.Toast;
+
+import androidx.activity.EdgeToEdge;
+import androidx.annotation.Nullable;
+import androidx.appcompat.app.AppCompatActivity;
+import androidx.core.view.WindowCompat;
+
+import com.cocode.vcode.ide.R;
+import com.cocode.vcode.ide.ui.projects.ProjectsActivity;
+
+import com.cocode.vcode.ide.databinding.ActivityDebugBinding;
+import com.cocode.vcode.ide.utils.FontManager;
+import com.cocode.vcode.ide.utils.UiUtils;
+
+public class DebugActivity extends AppCompatActivity {
+
+    public static final String EXTRA_CRASH_LOG = "extra_crash_log";
+    private ActivityDebugBinding binding;
+
+    @Override
+    protected void onCreate(@Nullable Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        EdgeToEdge.enable(this);
+        binding = ActivityDebugBinding.inflate(getLayoutInflater());
+        setContentView(binding.getRoot());
+
+        UiUtils.applySystemBarInsets(binding.getRoot());
+
+        // Apply custom fonts
+        FontManager fontManager = FontManager.getInstance();
+        binding.appBarTitle.setTypeface(fontManager.getUiSemiBold(this));
+        binding.tvAnUnexpectedErrorOccurred.setTypeface(fontManager.getUiMedium(this));
+        binding.tvCrashLog.setTypeface(fontManager.getCodeFont(this));
+        binding.btnCopyError.setTypeface(fontManager.getUiMedium(this));
+        binding.btnRestartApp.setTypeface(fontManager.getUiMedium(this));
+
+        String crashLog = getIntent().getStringExtra(EXTRA_CRASH_LOG);
+        if (crashLog == null || crashLog.isEmpty()) {
+            crashLog = "No stack trace provided.";
+        }
+        
+        binding.tvCrashLog.setText(crashLog);
+
+        String finalCrashLog = crashLog;
+        binding.btnCopyError.setOnClickListener(v -> {
+            ClipboardManager clipboard = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            ClipData clip = ClipData.newPlainText("Crash Log", finalCrashLog);
+            if (clipboard != null) {
+                clipboard.setPrimaryClip(clip);
+                Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        binding.btnRestartApp.setOnClickListener(v -> {
+            Intent intent = new Intent(this, ProjectsActivity.class);
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+            startActivity(intent);
+            finish();
+            Runtime.getRuntime().exit(0);
+        });
+    }
+}

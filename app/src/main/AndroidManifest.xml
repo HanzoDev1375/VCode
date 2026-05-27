@@ -56,6 +56,12 @@
             android:name=".ui.settings.SettingsActivity"
             android:exported="false" />
 
+        <activity
+            android:name=".ui.debug.DebugActivity"
+            android:exported="false"
+            android:process=":crash_reporter"
+            android:theme="@style/Theme.VCode" />
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"
