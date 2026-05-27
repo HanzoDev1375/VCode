@@ -19,9 +19,12 @@ import com.cocode.vcode.ide.git.repository.GitRepository;
 import com.cocode.vcode.ide.ui.commitdetails.CommitDetailsActivity;
 import com.cocode.vcode.ide.ui.commitdetails.CommitDetailsViewModel;
 import com.cocode.vcode.ide.ui.git.GitViewModel;
+import com.cocode.vcode.ide.ui.editor.EditorActivity;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
+import android.content.Intent;
+import java.io.File;
 
 /**
  * DiffViewerBottomSheet provides a line-by-line visual comparison of file changes.
@@ -70,6 +73,24 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
         binding.tvDiffFilename.setText(fileItem.getFileName());
         binding.tvDiffFilename.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
         binding.btnCloseDiff.setOnClickListener(v -> dismiss());
+        
+        binding.btnGoToFile.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
+        if (getActivity() instanceof com.cocode.vcode.ide.ui.git.GitActivity) {
+            binding.btnGoToFile.setVisibility(View.VISIBLE);
+            binding.btnGoToFile.setOnClickListener(v -> {
+                GitRepository repository = new ViewModelProvider(requireActivity()).get(GitViewModel.class).getRepository();
+                if (repository != null && repository.getRepoDir() != null) {
+                    File fileToOpen = new File(repository.getRepoDir(), fileItem.getPath());
+                    Intent intent = new Intent(requireContext(), EditorActivity.class);
+                    intent.putExtra(EditorActivity.EXTRA_OPEN_FILE_PATH, fileToOpen.getAbsolutePath());
+                    intent.addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                    startActivity(intent);
+                    dismiss();
+                }
+            });
+        } else {
+            binding.btnGoToFile.setVisibility(View.GONE);
+        }
 
         // Asynchronously load the diff data from the repository
         loadDiff();

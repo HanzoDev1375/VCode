@@ -69,6 +69,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
     private FileTreeAdapter adapter;
     private FileSelectionListener selectionListener;
+    private File selectedImportDestination = null;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -108,8 +109,8 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
         // Wire up interaction listeners
         binding.btnRefresh.setOnClickListener(v -> viewModel.refreshFileTree());
-        binding.btnImportFiles.setOnClickListener(v -> importFilesLauncher.launch("*/*"));
-        binding.btnImportFolder.setOnClickListener(v -> importFolderLauncher.launch(null));
+        binding.btnImportFiles.setOnClickListener(v -> showImportDestinationDialog(() -> importFilesLauncher.launch("*/*")));
+        binding.btnImportFolder.setOnClickListener(v -> showImportDestinationDialog(() -> importFolderLauncher.launch(null)));
     }
 
     /**
@@ -151,7 +152,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
      * Copies a list of selected system URIs into the project root directory.
      */
     private void copyUrisToProject(List<Uri> uris) {
-        File root = viewModel.getProjectRoot();
+        File root = selectedImportDestination != null ? selectedImportDestination : viewModel.getProjectRoot();
         if (root == null) return;
 
         Toast.makeText(getContext(), "Importing " + uris.size() + " files...", Toast.LENGTH_SHORT).show();
@@ -175,7 +176,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
      * Copies an entire directory structure from a system SAF Uri into the project root.
      */
     private void copyFolderToProject(Uri treeUri) {
-        File root = viewModel.getProjectRoot();
+        File root = selectedImportDestination != null ? selectedImportDestination : viewModel.getProjectRoot();
         if (root == null) return;
 
         Toast.makeText(getContext(), "Importing folder...", Toast.LENGTH_SHORT).show();
@@ -195,6 +196,52 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                 viewModel.refreshFileTree();
             });
         });
+    }
+
+    private void showImportDestinationDialog(Runnable onConfirmed) {
+        if (viewModel.getFileTree().getValue() == null || viewModel.getProjectRoot() == null) {
+            Toast.makeText(getContext(), "Project tree not loaded yet", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        View dialogView = getLayoutInflater().inflate(com.cocode.vcode.ide.R.layout.dialog_import_destination, null);
+        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
+                .setView(dialogView)
+                .create();
+        
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
+        }
+
+        android.widget.TextView tvTitle = dialogView.findViewById(com.cocode.vcode.ide.R.id.tv_dialog_title);
+        tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
+
+        androidx.recyclerview.widget.RecyclerView rvFolders = dialogView.findViewById(com.cocode.vcode.ide.R.id.rv_destination_folders);
+        rvFolders.setLayoutManager(new LinearLayoutManager(getContext()));
+        
+        File[] selected = new File[]{viewModel.getProjectRoot()};
+
+        DestinationAdapter destAdapter = new DestinationAdapter(file -> {
+            selected[0] = file;
+        }, 16, getResources().getDisplayMetrics().density);
+
+        rvFolders.setAdapter(destAdapter);
+        destAdapter.setTree(viewModel.getProjectRoot(), viewModel.getProjectName(), viewModel.getFileTree().getValue());
+
+        com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_cancel);
+        com.google.android.material.button.MaterialButton btnConfirm = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_confirm);
+        
+        btnCancel.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
+        btnConfirm.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
+
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        btnConfirm.setOnClickListener(v -> {
+            selectedImportDestination = selected[0];
+            dialog.dismiss();
+            onConfirmed.run();
+        });
+
+        dialog.show();
     }
 
     /**

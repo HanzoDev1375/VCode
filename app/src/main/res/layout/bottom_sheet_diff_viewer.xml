@@ -24,6 +24,15 @@
             android:textColor="?attr/colorOnSurface"
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_go_to_file"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="Go to file"
+            android:textColor="?attr/colorPrimary"
+            android:layout_marginEnd="8dp" />
+
         <ImageView
             android:id="@+id/btn_close_diff"
             android:layout_width="32dp"

@@ -1,6 +1,8 @@
 package com.cocode.vcode.ide.ui.sheets;
 
 import android.content.Context;
+import android.content.Intent;
+import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -18,7 +20,7 @@ import androidx.core.content.ContextCompat;
 
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.git.core.GitCredentialStore;
-import com.cocode.vcode.ide.git.core.GitManager;
+import com.cocode.vcode.ide.ui.git.GitCloneService;
 import com.cocode.vcode.ide.ui.projects.ProjectsViewModel;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FileUtils;
@@ -26,22 +28,11 @@ import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.progressindicator.CircularProgressIndicator;
 
-import org.json.JSONObject;
-
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileOutputStream;
-import java.io.OutputStreamWriter;
-import java.nio.charset.StandardCharsets;
 import java.util.UUID;
 
-/**
- * GitCloneBottomSheet manages the workflow for cloning a remote repository.
- * It provides a form for URL and project name input, then switches to a progress
- * view to report real-time JGit cloning status. Upon completion, it automatically
- * generates the required project metadata.
- */
 public class GitCloneBottomSheet extends BottomSheetDialogFragment {
 
     private final ProjectsViewModel projectsViewModel;
@@ -53,14 +44,14 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
     private MaterialButton btnExecuteClone;
     private TextView tvProgressTask;
     private TextView tvProgressDetails;
+    private TextView tvProgressPercentage;
+    private CircularProgressIndicator progressIndicator;
+    private MaterialButton btnRunBackground;
 
     public GitCloneBottomSheet(ProjectsViewModel viewModel) {
         this.projectsViewModel = viewModel;
     }
 
-    /**
-     * Static helper to instantiate and display the cloning bottom sheet.
-     */
     public static void show(androidx.fragment.app.FragmentManager manager, ProjectsViewModel viewModel) {
         new GitCloneBottomSheet(viewModel).show(manager, "GitCloneBottomSheet");
     }
@@ -74,7 +65,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        setCancelable(true); // Allow dismissal while the form is visible
+        setCancelable(true);
 
         layoutForm = view.findViewById(R.id.layout_form);
         layoutProgress = view.findViewById(R.id.layout_progress);
@@ -83,8 +74,10 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         btnExecuteClone = view.findViewById(R.id.btn_execute_clone);
         tvProgressTask = view.findViewById(R.id.tv_progress_task);
         tvProgressDetails = view.findViewById(R.id.tv_progress_details);
+        tvProgressPercentage = view.findViewById(R.id.tv_progress_percentage);
+        progressIndicator = view.findViewById(R.id.progress_indicator);
+        btnRunBackground = view.findViewById(R.id.btn_run_background);
 
-        // Apply visual styling to input fields
         UiUtils.setViewRounded(etRepoUrl, UiUtils.dpToPx(requireContext(), 10), ContextCompat.getColor(requireContext(), R.color.vcode_bg_elevated));
         UiUtils.setViewRounded(etProjectName, UiUtils.dpToPx(requireContext(), 10), ContextCompat.getColor(requireContext(), R.color.vcode_bg_elevated));
 
@@ -92,11 +85,15 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         setupAutoNamingFallback();
 
         btnExecuteClone.setOnClickListener(v -> initiateRepositoryCloneWorkflow());
+        btnRunBackground.setOnClickListener(v -> dismiss());
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 100);
+            }
+        }
     }
 
-    /**
-     * Applies the branding fonts to all textual components in the sheet.
-     */
     private void applyTypography(View view) {
         Context context = requireContext();
         FontManager fm = FontManager.getInstance();
@@ -111,12 +108,10 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         btnExecuteClone.setTypeface(fm.getUiSemiBold(context));
         tvProgressTask.setTypeface(fm.getUiSemiBold(context));
         tvProgressDetails.setTypeface(fm.getUiMedium(context));
+        tvProgressPercentage.setTypeface(fm.getUiSemiBold(context));
+        btnRunBackground.setTypeface(fm.getUiMedium(context));
     }
 
-    /**
-     * Attaches a listener to the URL field to automatically suggest a project name
-     * extracted from the repository URL if the name field is empty.
-     */
     private void setupAutoNamingFallback() {
         etRepoUrl.addTextChangedListener(new TextWatcher() {
             @Override
@@ -128,11 +123,9 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
             @Override
             public void afterTextChanged(Editable s) {
                 String url = s.toString().trim();
-                // Clean up .git suffix
                 if (url.endsWith(".git")) {
                     url = url.substring(0, url.length() - 4);
                 }
-                // Extract the last path segment as the project name
                 int lastSlash = url.lastIndexOf('/');
                 if (lastSlash >= 0 && lastSlash < url.length() - 1) {
                     String candidateName = url.substring(lastSlash + 1);
@@ -144,10 +137,6 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
-    /**
-     * Validates input and triggers the background JGit clone operation.
-     * Manages UI state transitions between form and progress indicator.
-     */
     private void initiateRepositoryCloneWorkflow() {
         String repoUrl = etRepoUrl.getText().toString().trim();
         String projectName = etProjectName.getText().toString().trim();
@@ -161,7 +150,6 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
             return;
         }
 
-        // Lock UI to prevent premature dismissal or concurrent clone attempts
         setCancelable(false);
         layoutForm.setVisibility(View.GONE);
         layoutProgress.setVisibility(View.VISIBLE);
@@ -171,132 +159,81 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         File rootDir = FileUtils.getProjectsDir(context);
         File targetProjectDirectory = new File(rootDir, projectId);
 
-        // Fetch authenticated workspace profile metrics for the JGit operation
         GitCredentialStore store = new GitCredentialStore();
         String gitUser = store.getUsername(context);
         String gitToken;
         try {
             gitToken = store.getToken(context);
         } catch (Exception e) {
-            // Logically critical: Handle missing PAT by failing clone attempt
             notifyFailure("Authentication token not found. Please log in to GitHub.");
             return;
         }
 
-        String finalGitToken = gitToken;
-        ExecutorProvider.getInstance().runOnIo(() -> {
-            // Execute JGit clone with real-time progress callbacks
-            var result = GitManager.cloneRepo(repoUrl, targetProjectDirectory, gitUser, finalGitToken, new GitManager.CloneProgressCallback() {
-                @Override
-                public void onProgress(String task, int done, int total) {
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (isAdded()) {
-                            tvProgressTask.setText(task);
-                            tvProgressDetails.setText(done + " / " + total + " operations completed.");
+        GitCloneService.setListener(new GitCloneService.CloneListener() {
+            @Override
+            public void onProgress(String task, int done, int total, int percentage) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (isAdded()) {
+                        tvProgressTask.setText(task);
+                        if (total > 0) {
+                            progressIndicator.setIndeterminate(false);
+                            progressIndicator.setProgressCompat(percentage, true);
+                            tvProgressPercentage.setText(percentage + "%");
+                            tvProgressDetails.setText(done + " / " + total + " completed.");
+                        } else {
+                            progressIndicator.setIndeterminate(true);
+                            tvProgressPercentage.setText("0%");
+                            tvProgressDetails.setText("Working...");
                         }
-                    });
-                }
-
-                @Override
-                public void onUpdate(int completed) {
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (isAdded()) {
-                            tvProgressDetails.setText(completed + " structural entities synchronized.");
-                        }
-                    });
-                }
-
-                @Override
-                public void onTaskDone() {
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (isAdded()) {
-                            tvProgressDetails.setText("Task partition successfully complete.");
-                        }
-                    });
-                }
-            });
-
-            if (result.isSuccess()) {
-                try {
-                    // Assemble the project metadata layer post-clone
-                    long timestamp = System.currentTimeMillis();
-                    JSONObject metadata = new JSONObject();
-                    metadata.put("id", projectId);
-                    metadata.put("name", projectName);
-                    metadata.put("createdAt", timestamp);
-                    metadata.put("lastModifiedAt", timestamp);
-
-                    // Auto-detect the primary entry point file
-                    String mainFile = getMainFile(targetProjectDirectory);
-                    metadata.put("mainFile", mainFile);
-                    metadata.put("fileCount", FileUtils.countFilesInDir(targetProjectDirectory));
-
-                    // Persist metadata to disk
-                    File metaFile = new File(targetProjectDirectory, "project_meta.json");
-                    try (BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(new FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
-                        writer.write(metadata.toString(2));
                     }
+                });
+            }
 
-                    // Cache the remote URL for future sync operations
-                    context.getSharedPreferences("vcode_git_remote_credentials", Context.MODE_PRIVATE)
-                            .edit()
-                            .putString(targetProjectDirectory.getAbsolutePath() + "_url", repoUrl)
-                            .apply();
+            @Override
+            public void onUpdate(int completed) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (isAdded()) {
+                        tvProgressDetails.setText(completed + " entities synchronized.");
+                    }
+                });
+            }
 
-                    // Notify success and refresh the main project list
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (isAdded()) {
-                            Toast.makeText(context, "Workspace cloned successfully!", Toast.LENGTH_SHORT).show();
-                            projectsViewModel.loadProjects();
-                            dismiss();
-                        }
-                    });
+            @Override
+            public void onSuccess() {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (isAdded()) {
+                        Toast.makeText(context, "Workspace cloned successfully!", Toast.LENGTH_SHORT).show();
+                        projectsViewModel.loadProjects();
+                        dismiss();
+                    }
+                });
+            }
 
-                } catch (Exception e) {
-                    // Handle post-clone assembly errors cleanly by wiping the corrupt directory
-                    FileUtils.deleteRecursive(targetProjectDirectory);
-                    notifyFailure(e.getMessage());
-                }
-            } else {
-                // Wipe data block traces to prevent dirty workspace generation splits on failed clone
-                FileUtils.deleteRecursive(targetProjectDirectory);
-                notifyFailure(result.getMessage());
+            @Override
+            public void onFailure(String error) {
+                notifyFailure(error);
             }
         });
+
+        Intent serviceIntent = new Intent(context, GitCloneService.class);
+        serviceIntent.setAction(GitCloneService.ACTION_START_CLONE);
+        serviceIntent.putExtra(GitCloneService.EXTRA_REPO_URL, repoUrl);
+        serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_NAME, projectName);
+        serviceIntent.putExtra(GitCloneService.EXTRA_TARGET_DIR, targetProjectDirectory.getAbsolutePath());
+        serviceIntent.putExtra(GitCloneService.EXTRA_GIT_USER, gitUser);
+        serviceIntent.putExtra(GitCloneService.EXTRA_GIT_TOKEN, gitToken);
+        serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_ID, projectId);
+        
+        ContextCompat.startForegroundService(context, serviceIntent);
     }
 
-    /**
-     * Scans the cloned directory for a suitable "main" file (e.g., index.html).
-     * @param targetProjectDirectory The cloned repository root.
-     * @return The filename of the detected main file.
-     */
-    @NonNull
-    private String getMainFile(File targetProjectDirectory) {
-        String mainFile = "index.html";
-        if (!new File(targetProjectDirectory, mainFile).exists()) {
-            File[] trackingCollection = targetProjectDirectory.listFiles();
-            if (trackingCollection != null) {
-                for (File innerFile : trackingCollection) {
-                    if (innerFile.isFile() && !innerFile.getName().startsWith(".")) {
-                        mainFile = innerFile.getName();
-                        break;
-                    }
-                }
-            }
-        }
-        return mainFile;
-    }
-
-    /**
-     * Resets the UI to the form state and displays a failure notification.
-     */
     private void notifyFailure(String traceMessage) {
         ExecutorProvider.getInstance().runOnMain(() -> {
             if (isAdded()) {
                 setCancelable(true);
                 layoutProgress.setVisibility(View.GONE);
                 layoutForm.setVisibility(View.VISIBLE);
-                Toast.makeText(getContext(), "Clone Transaction Aborted: " + traceMessage, Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), "Clone Failed: " + traceMessage, Toast.LENGTH_LONG).show();
             }
         });
     }

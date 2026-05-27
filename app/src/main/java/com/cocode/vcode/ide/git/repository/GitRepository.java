@@ -38,6 +38,7 @@ import java.util.Set;
 public class GitRepository {
     private Git git;
     private String configuredDefaultBranch = "main";
+    private File repoDir;
 
     /**
      * Configures the initial tracking branch naming preference used during fresh repository setups.
@@ -54,6 +55,7 @@ public class GitRepository {
      * @param projectDir The root folder tracking active project files.
      */
     public void openRepository(File projectDir) throws Exception {
+        this.repoDir = projectDir;
         File gitDir = new File(projectDir, ".git");
         if (gitDir.exists()) {
             git = Git.open(projectDir);
@@ -64,6 +66,10 @@ public class GitRepository {
                     .call();
         }
         ensureInternalFilesIgnored(gitDir);
+    }
+
+    public File getRepoDir() {
+        return repoDir;
     }
 
     /**

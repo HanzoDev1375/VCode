@@ -69,6 +69,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     public static final String EXTRA_PROJECT_ID = "extra_project_id";
     /** Intent extra for the user-friendly project name. */
     public static final String EXTRA_PROJECT_NAME = "extra_project_name";
+    /** Intent extra to open a specific absolute file path on launch or via onNewIntent. */
+    public static final String EXTRA_OPEN_FILE_PATH = "extra_open_file_path";
 
     private final android.os.Handler jsonValidationHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private ActivityEditorBinding binding;
@@ -175,6 +177,27 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 navigateWithUnsavedCheck(EditorActivity.this::finish);
             }
         });
+        
+        handleOpenFileIntent(getIntent());
+    }
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleOpenFileIntent(intent);
+    }
+
+    private void handleOpenFileIntent(Intent intent) {
+        if (intent != null && intent.hasExtra(EXTRA_OPEN_FILE_PATH)) {
+            String path = intent.getStringExtra(EXTRA_OPEN_FILE_PATH);
+            if (path != null) {
+                File file = new File(path);
+                if (file.exists() && file.isFile()) {
+                    onFileSelected(new com.cocode.vcode.ide.data.model.FileNode(file, 0));
+                }
+            }
+        }
     }
 
     /**

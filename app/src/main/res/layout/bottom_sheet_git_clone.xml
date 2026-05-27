@@ -134,12 +134,28 @@
         android:visibility="gone"
         tools:visibility="visible">
 
-        <com.google.android.material.progressindicator.CircularProgressIndicator
-            android:id="@+id/progress_indicator"
+        <FrameLayout
             android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:indeterminate="true"
-            app:indicatorColor="?attr/colorPrimary"/>
+            android:layout_height="wrap_content">
+
+            <com.google.android.material.progressindicator.CircularProgressIndicator
+                android:id="@+id/progress_indicator"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                app:indicatorSize="64dp"
+                app:indicatorColor="?attr/colorPrimary"/>
+
+            <TextView
+                android:id="@+id/tv_progress_percentage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:text="0%"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorPrimary"/>
+        </FrameLayout>
 
         <TextView
             android:id="@+id/tv_progress_task"
@@ -159,6 +175,15 @@
             android:gravity="center"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant"/>
+            
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_run_background"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="20dp"
+            android:text="Run in Background"
+            android:textColor="?attr/colorPrimary" />
     </LinearLayout>
 
 </LinearLayout>
