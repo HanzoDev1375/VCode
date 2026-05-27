@@ -330,7 +330,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         EditorFile activeFile = files.get(activeIndex);
         FileType type = activeFile.getFileType();
-        if (type != FileType.SVG && type != FileType.CSV) return;
+        if (type != FileType.SVG && type != FileType.CSV && type != FileType.MARKDOWN) return;
 
         boolean isPreviewMode = binding.ivTogglePreview.getTag() != null && (Boolean) binding.ivTogglePreview.getTag();
         String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
@@ -341,7 +341,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             binding.webviewPreview.loadUrl("about:blank");
             binding.editorLayout.setVisibility(View.VISIBLE);
             binding.ivTogglePreview.setTag(false);
-            binding.ivTogglePreview.setImageResource(type == FileType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
+            
+            int iconRes = R.drawable.ic_image_icon;
+            if (type == FileType.CSV) iconRes = R.drawable.ic_csv_icon;
+            else if (type == FileType.MARKDOWN) iconRes = R.drawable.ic_md_icon;
+            
+            binding.ivTogglePreview.setImageResource(iconRes);
             viewModel.setPreviewState(relPath, false);
         } else {
             // Switch to preview
@@ -400,6 +405,37 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
             binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
             binding.webviewPreview.loadDataWithBaseURL(null, htmlBuilder.toString(), "text/html", "utf-8", null);
+        } else if (type == FileType.MARKDOWN) {
+            int colorInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_text_primary);
+            String hexColor = String.format("#%06X", (0xFFFFFF & colorInt));
+            int surfaceInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_bg_surface);
+            String surfaceColor = String.format("#%06X", (0xFFFFFF & surfaceInt));
+
+            String encodedContent = android.util.Base64.encodeToString(content.getBytes(), android.util.Base64.NO_WRAP);
+
+            String html = "<!DOCTYPE html><html><head>" +
+                    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
+                    "<script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script>" +
+                    "<style>" +
+                    "body { font-family: sans-serif; color: " + hexColor + "; background-color: transparent; padding: 16px; line-height: 1.6; word-wrap: break-word; }" +
+                    "pre { background: " + surfaceColor + "66; padding: 10px; border-radius: 5px; overflow-x: auto; }" +
+                    "code { background: " + surfaceColor + "66; padding: 2px 4px; border-radius: 3px; font-family: monospace; }" +
+                    "img { max-width: 100%; height: auto; }" +
+                    "blockquote { border-left: 4px solid " + hexColor + "55; margin: 0; padding-left: 16px; color: " + hexColor + "CC; }" +
+                    "table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }" +
+                    "th, td { border: 1px solid " + hexColor + "33; padding: 8px; text-align: left; }" +
+                    "th { background-color: " + surfaceColor + "; }" +
+                    "a { color: #89DCEB; text-decoration: none; }" +
+                    "</style></head><body>" +
+                    "<div id=\"content\"></div>" +
+                    "<script>" +
+                    "document.getElementById('content').innerHTML = marked.parse(decodeURIComponent(escape(window.atob('" + encodedContent + "'))));" +
+                    "</script>" +
+                    "</body></html>";
+
+            binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
+            binding.webviewPreview.getSettings().setJavaScriptEnabled(true);
+            binding.webviewPreview.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
         }
     }
 
@@ -479,11 +515,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
 
                 // Reset webview inline preview state
-                binding.webviewPreview.setVisibility(View.GONE);
                 binding.ivTogglePreview.setTag(false);
 
                 // Determine if we should show the code editor or a specialized asset viewer
                 if (activeFile.isBinaryAsset()) {
+                    binding.webviewPreview.setVisibility(View.GONE);
                     binding.webviewPreview.loadUrl("about:blank");
                     binding.editorLayout.setVisibility(View.GONE);
                     if (binding.findReplaceBar.getVisibility() == View.VISIBLE)
@@ -525,11 +561,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     // Show standard code editor for text-based files
                     binding.ivImageViewer.setVisibility(View.GONE);
                     binding.layoutFontViewer.setVisibility(View.GONE);
-                    binding.editorLayout.setVisibility(View.VISIBLE);
 
-                    // Setup toggle button for SVG / CSV
+                    // Setup toggle button for SVG / CSV / MARKDOWN
                     FileType textType = activeFile.getFileType();
-                    if (textType == FileType.SVG || textType == FileType.CSV) {
+                    if (textType == FileType.SVG || textType == FileType.CSV || textType == FileType.MARKDOWN) {
                         binding.ivTogglePreview.setVisibility(View.VISIBLE);
                         
                         boolean isPreview = viewModel.getPreviewState(relPath);
@@ -537,14 +572,23 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                         
                         if (isPreview) {
                             binding.editorLayout.setVisibility(View.GONE);
-                            binding.webviewPreview.setVisibility(View.INVISIBLE);
+                            if (binding.webviewPreview.getVisibility() != View.VISIBLE) {
+                                binding.webviewPreview.setVisibility(View.INVISIBLE);
+                            }
                             binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
                             renderInlinePreview(activeFile, textType);
                         } else {
+                            binding.editorLayout.setVisibility(View.VISIBLE);
+                            binding.webviewPreview.setVisibility(View.GONE);
                             binding.webviewPreview.loadUrl("about:blank");
-                            binding.ivTogglePreview.setImageResource(textType == FileType.SVG ? R.drawable.ic_image_icon : R.drawable.ic_csv_icon);
+                            int iconRes = R.drawable.ic_image_icon;
+                            if (textType == FileType.CSV) iconRes = R.drawable.ic_csv_icon;
+                            else if (textType == FileType.MARKDOWN) iconRes = R.drawable.ic_md_icon;
+                            binding.ivTogglePreview.setImageResource(iconRes);
                         }
                     } else {
+                        binding.editorLayout.setVisibility(View.VISIBLE);
+                        binding.webviewPreview.setVisibility(View.GONE);
                         binding.webviewPreview.loadUrl("about:blank");
                         binding.ivTogglePreview.setVisibility(View.GONE);
                     }
