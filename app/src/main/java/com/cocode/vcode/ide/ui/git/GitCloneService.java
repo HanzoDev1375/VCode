@@ -1,6 +1,5 @@
 package com.cocode.vcode.ide.ui.git;
 
-import android.app.Notification;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
@@ -112,7 +111,7 @@ public class GitCloneService extends Service {
         notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Cloning Repository")
                 .setContentText("Initializing...")
-                .setSmallIcon(R.mipmap.ic_launcher) // Use default launcher icon as placeholder, R.drawable.ic_git might not exist
+                .setSmallIcon(R.drawable.vcode_logo_notification)
                 .setContentIntent(pendingIntent)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
@@ -122,7 +121,7 @@ public class GitCloneService extends Service {
     }
 
     private void updateNotification(String task, int done, int total) {
-        int percentage = 0;
+        int percentage;
         if (total > 0) {
             percentage = (int) (((float) done / total) * 100);
             notificationBuilder.setProgress(100, percentage, false);
@@ -138,13 +137,24 @@ public class GitCloneService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(success ? "Clone Successful" : "Clone Failed")
                 .setContentText(message)
-                .setSmallIcon(R.mipmap.ic_launcher)
+                .setSmallIcon(R.drawable.vcode_logo_notification)
                 .setAutoCancel(true)
                 .setOngoing(false)
                 .setProgress(0, 0, false);
 
         notificationManager.notify(NOTIFICATION_ID + 1, builder.build());
-        stopForeground(STOP_FOREGROUND_REMOVE);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.N) {
+            stopForeground(STOP_FOREGROUND_REMOVE);
+        }
+
+        Intent completeIntent = new Intent("com.cocode.vcode.ide.ACTION_CLONE_COMPLETE");
+        completeIntent.setPackage(getPackageName());
+        sendBroadcast(completeIntent);
+        
+        if (com.cocode.vcode.ide.ui.projects.ProjectsViewModel.onCloneCompleteListener != null) {
+            com.cocode.vcode.ide.ui.projects.ProjectsViewModel.onCloneCompleteListener.run();
+        }
+        
         stopSelf();
     }
 

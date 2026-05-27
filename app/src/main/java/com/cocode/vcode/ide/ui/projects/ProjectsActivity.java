@@ -60,9 +60,20 @@ public class ProjectsActivity extends BaseActivity {
     private static final int REQUEST_CODE_STORAGE_PERMISSION = 1001;
     private ActivityProjectsBinding binding;
     private ProjectsViewModel viewModel;
+    private final android.content.BroadcastReceiver cloneCompleteReceiver = new android.content.BroadcastReceiver() {
+        @Override
+        public void onReceive(android.content.Context context, Intent intent) {
+            if ("com.cocode.vcode.ide.ACTION_CLONE_COMPLETE".equals(intent.getAction()) && viewModel != null) {
+                binding.getRoot().post(() -> {
+                    viewModel.loadProjects();
+                });
+            }
+        }
+    };
     private ProjectsAdapter adapter;
-
-    /** Cached list of all projects for local filtering/searching. */
+    /**
+     * Cached list of all projects for local filtering/searching.
+     */
     private List<Project> allProjects = new ArrayList<>();
 
     @Override
@@ -78,6 +89,15 @@ public class ProjectsActivity extends BaseActivity {
         // Initialize ViewModel
         ProjectsViewModelFactory factory = new ProjectsViewModelFactory(this);
         viewModel = new ViewModelProvider(this, factory).get(ProjectsViewModel.class);
+
+        ProjectsViewModel.onCloneCompleteListener = () -> {
+            binding.getRoot().post(() -> {
+                if (!isFinishing() && !isDestroyed()) {
+                    Toast.makeText(this, "Cloned successfully!", Toast.LENGTH_SHORT).show();
+                    viewModel.loadProjects();
+                }
+            });
+        };
 
         // Configure the project list adapter with interaction callbacks
         adapter = new ProjectsAdapter(new ProjectsAdapter.ProjectClickListener() {
@@ -136,6 +156,22 @@ public class ProjectsActivity extends BaseActivity {
         super.onResume();
         // Re-evaluate storage permissions and project list when returning to this screen
         refreshUIState();
+
+        registerReceiver(cloneCompleteReceiver, new android.content.IntentFilter("com.cocode.vcode.ide.ACTION_CLONE_COMPLETE"), android.content.Context.RECEIVER_NOT_EXPORTED);
+    }
+
+    @Override
+    protected void onDestroy() {
+        super.onDestroy();
+        if (ProjectsViewModel.onCloneCompleteListener != null) {
+            ProjectsViewModel.onCloneCompleteListener = null;
+        }
+    }
+
+    @Override
+    protected void onPause() {
+        super.onPause();
+        unregisterReceiver(cloneCompleteReceiver);
     }
 
     /**
@@ -225,7 +261,8 @@ public class ProjectsActivity extends BaseActivity {
         // Real-time project filtering based on the search query
         binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -233,7 +270,8 @@ public class ProjectsActivity extends BaseActivity {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         binding.iconGithubClone.setOnClickListener(v -> {
@@ -261,7 +299,8 @@ public class ProjectsActivity extends BaseActivity {
                                 ExecutorProvider.getInstance().runOnMain(() -> {
                                     try {
                                         updater.onResult(true, null);
-                                    } catch (Exception ignored) {}
+                                    } catch (Exception ignored) {
+                                    }
                                     Toast.makeText(ProjectsActivity.this, "Logged into GitHub as " + username, Toast.LENGTH_SHORT).show();
                                 });
                             } catch (Exception e) {
@@ -269,7 +308,8 @@ public class ProjectsActivity extends BaseActivity {
                                 ExecutorProvider.getInstance().runOnMain(() -> {
                                     try {
                                         updater.onResult(false, e.getMessage() != null ? e.getMessage() : "Authentication failed.");
-                                    } catch (Exception ignored) {}
+                                    } catch (Exception ignored) {
+                                    }
                                 });
                             }
                         })
@@ -287,10 +327,10 @@ public class ProjectsActivity extends BaseActivity {
             binding.progressLoading.setVisibility(View.GONE);
             if (result.isSuccess() && result.getData() != null) {
                 allProjects = result.getData();
-                
+
                 // Refresh the adapter with the new dataset, maintaining current search filters
                 filterProjects(binding.etSearch.getText().toString());
-                
+
                 // Update workspace overview statistics
                 binding.tvTotalProjectsCount.setText(String.valueOf(allProjects.size()));
                 calculateCommitsToday(allProjects);
@@ -303,6 +343,7 @@ public class ProjectsActivity extends BaseActivity {
 
     /**
      * Filters the project list based on a case-insensitive name match.
+     *
      * @param query The search text.
      */
     private void filterProjects(String query) {
@@ -323,6 +364,7 @@ public class ProjectsActivity extends BaseActivity {
 
     /**
      * Manages the visibility and animation of the empty state vs the project list.
+     *
      * @param isEmpty Whether the current project list (after filtering) is empty.
      */
     private void updateEmptyStateVisibility(boolean isEmpty) {
@@ -378,6 +420,7 @@ public class ProjectsActivity extends BaseActivity {
 
     /**
      * Asynchronously scans all projects to calculate the total number of Git commits made today.
+     *
      * @param projects The list of projects to analyze.
      */
     private void calculateCommitsToday(List<Project> projects) {
@@ -409,7 +452,8 @@ public class ProjectsActivity extends BaseActivity {
                             }
                         }
                     }
-                } catch (Exception ignored) {}
+                } catch (Exception ignored) {
+                }
             }
 
             final int finalCount = count;

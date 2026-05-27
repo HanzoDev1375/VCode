@@ -53,7 +53,7 @@
     <string name="html_css_js">HTML+CSS+JS</string>
     <string name="html">HTML</string>
     <string name="initialize_git_repository">Initialize Git Repository</string>
-    <string name="automatically_creates_a_git_folder_nand_initial_commit">Automatically creates a .git folder\nand initial commit</string>
+    <string name="automatically_creates_a_git_folder_nand_initial_commit">Automatically creates a .git folder</string>
 
     <!--    Bottom Sheet: Rename Project/File/Folder/Branch-->
     <string name="vcode_rename_project">Rename Project</string>

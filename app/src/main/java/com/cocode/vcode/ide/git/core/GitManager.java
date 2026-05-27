@@ -58,6 +58,10 @@ public class GitManager {
                                     username != null ? username : "token",
                                     token != null ? token : ""))
                     .setProgressMonitor(new org.eclipse.jgit.lib.ProgressMonitor() {
+                        private int totalWork;
+                        private int completedWork;
+                        private String currentTask;
+                        private long lastUpdateTime;
 
                         @Override
                         public void start(int totalTasks) {
@@ -65,12 +69,24 @@ public class GitManager {
 
                         @Override
                         public void beginTask(String title, int total) {
+                            this.currentTask = title;
+                            this.totalWork = total;
+                            this.completedWork = 0;
+                            this.lastUpdateTime = System.currentTimeMillis();
                             if (callback != null) callback.onProgress(title, 0, total);
                         }
 
                         @Override
                         public void update(int completed) {
-                            if (callback != null) callback.onUpdate(completed);
+                            this.completedWork += completed;
+                            if (callback != null) {
+                                long now = System.currentTimeMillis();
+                                if (now - lastUpdateTime > 200 || completedWork == totalWork) {
+                                    callback.onProgress(currentTask, completedWork, totalWork);
+                                    callback.onUpdate(completedWork);
+                                    lastUpdateTime = now;
+                                }
+                            }
                         }
 
                         @Override

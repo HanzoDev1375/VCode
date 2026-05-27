@@ -202,7 +202,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
             public void onSuccess() {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (isAdded()) {
-                        Toast.makeText(context, "Workspace cloned successfully!", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Cloned successfully!", Toast.LENGTH_SHORT).show();
                         projectsViewModel.loadProjects();
                         dismiss();
                     }

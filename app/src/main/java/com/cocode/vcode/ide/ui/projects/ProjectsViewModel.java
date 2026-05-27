@@ -19,6 +19,8 @@ import java.util.List;
  */
 public class ProjectsViewModel extends ViewModel {
 
+    public static Runnable onCloneCompleteListener;
+
     private final ProjectRepository projectRepo;
     private final SettingsRepository settingsRepo;
 
