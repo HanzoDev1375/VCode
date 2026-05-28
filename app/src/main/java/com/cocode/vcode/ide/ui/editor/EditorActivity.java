@@ -6,9 +6,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Editable;
 import android.text.Layout;
-import android.text.TextWatcher;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
@@ -18,18 +16,15 @@ import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.activity.OnBackPressedCallback;
+import androidx.annotation.NonNull;
 import androidx.appcompat.app.AlertDialog;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.view.GravityCompat;
 import androidx.fragment.app.FragmentTransaction;
 import androidx.lifecycle.ViewModelProvider;
 
-import com.bumptech.glide.Glide;
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.core.model.FileType;
-import com.cocode.vcode.ide.core.parser.json.JsonError;
-import com.cocode.vcode.ide.core.parser.json.JsonValidator;
-import com.cocode.vcode.ide.core.parser.json.ValidationReport;
 import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.data.model.FileNode;
@@ -37,6 +32,9 @@ import com.cocode.vcode.ide.databinding.ActivityEditorBinding;
 import com.cocode.vcode.ide.databinding.ItemCustomPopupBinding;
 import com.cocode.vcode.ide.databinding.LayoutCustomPopupBinding;
 import com.cocode.vcode.ide.ui.base.BaseActivity;
+import com.cocode.vcode.ide.ui.editor.viewer.IEditorCallback;
+import com.cocode.vcode.ide.ui.editor.viewer.IFileViewer;
+import com.cocode.vcode.ide.ui.editor.viewer.ViewerManager;
 import com.cocode.vcode.ide.ui.filetree.FileTreeFragment;
 import com.cocode.vcode.ide.ui.git.GitActivity;
 import com.cocode.vcode.ide.ui.preview.PreviewActivity;
@@ -45,7 +43,6 @@ import com.cocode.vcode.ide.ui.sheets.GoToLineBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.SnippetsBottomSheet;
 import com.cocode.vcode.ide.utils.CodeFormatter;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
-import com.cocode.vcode.ide.utils.FileUtils;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.LocalWebServer;
 import com.cocode.vcode.ide.utils.ProjectFileRecovery;
@@ -55,53 +52,19 @@ import com.cocode.vcode.ide.views.CodeEditText;
 import java.io.File;
 import java.util.List;
 
-/**
- * EditorActivity is the core workspace of the VCode IDE.
- * It manages the code editor, file tabs, project structure, local preview server,
- * and integration with various tools like Git, Search, and Snippets.
- * This activity is always scoped to a single project.
- */
-public class EditorActivity extends BaseActivity implements FileTreeFragment.FileSelectionListener {
+public class EditorActivity extends BaseActivity implements FileTreeFragment.FileSelectionListener, IEditorCallback {
 
-    /** Intent extra for the absolute path to the project directory. */
     public static final String EXTRA_PROJECT_PATH = "extra_project_path";
-    /** Intent extra for the unique project identifier. */
     public static final String EXTRA_PROJECT_ID = "extra_project_id";
-    /** Intent extra for the user-friendly project name. */
     public static final String EXTRA_PROJECT_NAME = "extra_project_name";
-    /** Intent extra to open a specific absolute file path on launch or via onNewIntent. */
     public static final String EXTRA_OPEN_FILE_PATH = "extra_open_file_path";
 
-    private final android.os.Handler jsonValidationHandler = new android.os.Handler(android.os.Looper.getMainLooper());
     private ActivityEditorBinding binding;
     private LocalWebServer localWebServer;
     private EditorViewModel viewModel;
-    private CodeEditText codeEditText;
+    private ViewerManager viewerManager;
+    private IFileViewer activeViewer;
     private boolean isReadOnly = false;
-
-    /**
-     * Watches for text changes in the editor to sync content with the ViewModel
-     * and trigger real-time features like JSON validation.
-     */
-    private final TextWatcher editorTextWatcher = new TextWatcher() {
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
-
-        @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {}
-
-        @Override
-        public void afterTextChanged(Editable s) {
-            // Guard against programmatic changes to avoid infinite loops
-            if (codeEditText != null && codeEditText.getTag() != null) {
-                String content = s.toString();
-                // Persist the current state to the ViewModel
-                viewModel.updateActiveFileContent(content, codeEditText.getSelectionStart(), codeEditText.getScrollY());
-                // Trigger validation if the file is a JSON file
-                validateJsonIfRequired(content);
-            }
-        }
-    };
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -110,10 +73,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         binding = ActivityEditorBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Configure system UI insets for a true edge-to-edge experience
         UiUtils.applySystemBarInsets(binding.drawerLayout, binding.mainContent, binding.drawerContainer);
 
-        // Extract project details from the launch intent
         String projectPath = getIntent().getStringExtra(EXTRA_PROJECT_PATH);
         String projectId = getIntent().getStringExtra(EXTRA_PROJECT_ID);
         String projectName = getIntent().getStringExtra(EXTRA_PROJECT_NAME);
@@ -124,45 +85,26 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             return;
         }
 
-        // Fallback logic for project metadata if partial data is provided
         if (projectId == null) projectId = projectPath.substring(projectPath.lastIndexOf("/") + 1);
         if (projectName == null) projectName = "Project";
 
-        // Initialize ViewModel with its factory for dependency injection
         EditorViewModelFactory factory = new EditorViewModelFactory(this);
         viewModel = new ViewModelProvider(this, factory).get(EditorViewModel.class);
+        viewerManager = new ViewerManager();
 
-        // Cache the reference to the internal code editor view
-        codeEditText = binding.editorLayout.getCodeEditText();
-
-        // Configure WebView Client for flicker-free transitions
-        binding.webviewPreview.setWebViewClient(new android.webkit.WebViewClient() {
-            @Override
-            public void onPageFinished(android.webkit.WebView view, String url) {
-                super.onPageFinished(view, url);
-                if (binding.ivTogglePreview.getTag() != null && (Boolean) binding.ivTogglePreview.getTag()) {
-                    binding.webviewPreview.setVisibility(View.VISIBLE);
-                }
-            }
-        });
-
-        // Apply specialized UI fonts
         binding.tvProjectName.setText(projectName);
         binding.tvProjectName.setTypeface(FontManager.getInstance().getUiSemiBold(this));
         binding.tvOpenFileFromTree.setTypeface(FontManager.getInstance().getUiMedium(this));
 
-        // Ensure project directory and metadata are initialized
         File projectDirectory = new File(projectPath);
         ProjectFileRecovery.ensureProjectFilesExist(projectDirectory);
         viewModel.initProject(projectDirectory, projectId, projectName);
 
-        // Initialize UI components and reactive streams
         setupFragments();
         setupFloatingPreviewStyles();
         setupListeners();
         setupObservers();
 
-        // Custom back press logic to handle drawer and search bar dismissal before exiting
         getOnBackPressedDispatcher().addCallback(this, new OnBackPressedCallback(true) {
             @Override
             public void handleOnBackPressed() {
@@ -182,7 +124,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     }
 
     @Override
-    protected void onNewIntent(Intent intent) {
+    protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
         handleOpenFileIntent(intent);
@@ -194,15 +136,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             if (path != null) {
                 File file = new File(path);
                 if (file.exists() && file.isFile()) {
-                    onFileSelected(new com.cocode.vcode.ide.data.model.FileNode(file, 0));
+                    onFileSelected(new FileNode(file, 0));
                 }
             }
         }
     }
 
-    /**
-     * Injects the FileTreeFragment into the navigation drawer if not already present.
-     */
     private void setupFragments() {
         if (getSupportFragmentManager().findFragmentById(binding.drawerContainer.getId()) == null) {
             FileTreeFragment fileTreeFragment = new FileTreeFragment();
@@ -212,16 +151,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
     }
 
-    /**
-     * Configures the visual style of the floating preview button, including
-     * dynamic color resolution and transparency for a glass-morphism effect.
-     */
     private void setupFloatingPreviewStyles() {
         TypedValue value = new TypedValue();
         getTheme().resolveAttribute(androidx.appcompat.R.attr.colorPrimary, value, true);
         int baseColor = value.data;
-
-        // Apply a subtle 85% opacity to the primary accent color
         int glassAccentColor = (baseColor & 0x00FFFFFF) | 0xD9000000;
 
         GradientDrawable ovalDrawable = new GradientDrawable();
@@ -231,12 +164,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         binding.ivTogglePreview.setBackground(ovalDrawable);
     }
 
-    /**
-     * Attaches click and interaction listeners to the main UI components.
-     */
     private void setupListeners() {
         binding.btnMenu.setOnClickListener(v -> {
             UiUtils.hideKeyboard(this);
+            CodeEditText codeEditText = getActiveCodeEditor();
             if (codeEditText != null) {
                 codeEditText.clearFocus();
             }
@@ -244,10 +175,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         });
 
         binding.btnUndo.setOnClickListener(v -> {
+            CodeEditText codeEditText = getActiveCodeEditor();
             if (codeEditText != null && codeEditText.canUndo()) codeEditText.undo();
         });
 
         binding.btnRedo.setOnClickListener(v -> {
+            CodeEditText codeEditText = getActiveCodeEditor();
             if (codeEditText != null && codeEditText.canRedo()) codeEditText.redo();
         });
 
@@ -276,18 +209,16 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             saveCurrentEditorState();
             handleTabClose(index);
         });
-
-        if (codeEditText != null) {
-            codeEditText.addTextChangedListener(editorTextWatcher);
-        }
     }
 
-    /**
-     * Orchestrates the local server lifecycle for project previews.
-     * Starts the server for HTML files and manages the run/stop state UI.
-     */
+    private CodeEditText getActiveCodeEditor() {
+        if (activeViewer != null) {
+            return activeViewer.getCodeEditor();
+        }
+        return null;
+    }
+
     private void handleRunAction() {
-        // Toggle server state if currently running
         if (localWebServer != null && localWebServer.isRunning()) {
             localWebServer.stop();
             binding.btnRun.setImageResource(R.drawable.ic_play);
@@ -304,144 +235,35 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             return;
         }
 
-        EditorFile activeFile = files.get(activeIndex);
-
-        // Initialize and start the local web server scoped to the project root
         if (localWebServer == null) {
             localWebServer = new LocalWebServer(viewModel.getProjectRoot());
         }
         localWebServer.start();
         binding.btnRun.setImageResource(R.drawable.ic_stop);
         binding.ivViewPreview.setVisibility(View.VISIBLE);
-
-        // Automatically trigger the preview view
         executeActiveFilePreviewIntent();
     }
 
-    /**
-     * Dispatches an intent to launch the preview interface, either in-app
-     * or via an external browser, depending on user preferences.
-     */
     private void toggleInlinePreview() {
         int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
-
         if (files == null || activeIndex < 0 || activeIndex >= files.size()) return;
 
         EditorFile activeFile = files.get(activeIndex);
         FileType type = activeFile.getFileType();
         if (type != FileType.SVG && type != FileType.CSV && type != FileType.MARKDOWN) return;
 
-        boolean isPreviewMode = binding.ivTogglePreview.getTag() != null && (Boolean) binding.ivTogglePreview.getTag();
         String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
-
-        if (isPreviewMode) {
-            // Switch back to editor
-            binding.webviewPreview.setVisibility(View.GONE);
-            binding.webviewPreview.loadUrl("about:blank");
-            binding.editorLayout.setVisibility(View.VISIBLE);
-            binding.ivTogglePreview.setTag(false);
-            
-            int iconRes = R.drawable.ic_image_icon;
-            if (type == FileType.CSV) iconRes = R.drawable.ic_csv_icon;
-            else if (type == FileType.MARKDOWN) iconRes = R.drawable.ic_md_icon;
-            
-            binding.ivTogglePreview.setImageResource(iconRes);
-            viewModel.setPreviewState(relPath, false);
-        } else {
-            // Switch to preview
-            binding.editorLayout.setVisibility(View.GONE);
-            binding.webviewPreview.setVisibility(View.INVISIBLE);
-            binding.ivTogglePreview.setTag(true);
-            binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
-            viewModel.setPreviewState(relPath, true);
-
-            renderInlinePreview(activeFile, type);
-        }
-    }
-
-    private void renderInlinePreview(EditorFile activeFile, FileType type) {
-        String content = activeFile.getContent();
-        if (type == FileType.SVG) {
-            // Render SVG
-            String base64 = android.util.Base64.encodeToString(content.getBytes(), android.util.Base64.NO_WRAP);
-            String html = "<!DOCTYPE html><html><body style=\"margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background-color:transparent;\">" +
-                    "<img src=\"data:image/svg+xml;base64," + base64 + "\" style=\"max-width:100%;max-height:100%;\" />" +
-                    "</body></html>";
-            binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            binding.webviewPreview.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-        } else if (type == FileType.CSV) {
-            // Render CSV as HTML Table
-            StringBuilder htmlBuilder = new StringBuilder();
-            int colorInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_text_primary);
-            String hexColor = String.format("#%06X", (0xFFFFFF & colorInt));
-            int surfaceInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_bg_surface);
-            String surfaceColor = String.format("#%06X", (0xFFFFFF & surfaceInt));
-
-            htmlBuilder.append("<!DOCTYPE html><html><head><style>")
-                    .append("body { font-family: sans-serif; color: ").append(hexColor).append("; background-color: transparent; padding: 16px; margin: 0; }")
-                    .append("table { width: 100%; border-collapse: collapse; margin-top: 10px; box-shadow: 0 4px 8px rgba(0,0,0,0.1); }")
-                    .append("th, td { padding: 12px 15px; border: 1px solid ").append(hexColor).append("33; text-align: left; }")
-                    .append("th { background-color: ").append(surfaceColor).append("; font-weight: bold; }")
-                    .append("tr:nth-child(even) { background-color: ").append(surfaceColor).append("66; }")
-                    .append("</style></head><body><table>");
-
-            String[] lines = content.split("\n");
-            for (int i = 0; i < lines.length; i++) {
-                String line = lines[i].trim();
-                if (line.isEmpty()) continue;
-                String[] cols = line.split(",");
-                htmlBuilder.append("<tr>");
-                for (String col : cols) {
-                    if (i == 0) {
-                        htmlBuilder.append("<th>").append(android.text.TextUtils.htmlEncode(col.trim())).append("</th>");
-                    } else {
-                        htmlBuilder.append("<td>").append(android.text.TextUtils.htmlEncode(col.trim())).append("</td>");
-                    }
-                }
-                htmlBuilder.append("</tr>");
-            }
-            htmlBuilder.append("</table></body></html>");
-
-            binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            binding.webviewPreview.loadDataWithBaseURL(null, htmlBuilder.toString(), "text/html", "utf-8", null);
-        } else if (type == FileType.MARKDOWN) {
-            int colorInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_text_primary);
-            String hexColor = String.format("#%06X", (0xFFFFFF & colorInt));
-            int surfaceInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_bg_surface);
-            String surfaceColor = String.format("#%06X", (0xFFFFFF & surfaceInt));
-
-            String encodedContent = android.util.Base64.encodeToString(content.getBytes(), android.util.Base64.NO_WRAP);
-
-            String html = "<!DOCTYPE html><html><head>" +
-                    "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
-                    "<script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script>" +
-                    "<style>" +
-                    "body { font-family: sans-serif; color: " + hexColor + "; background-color: transparent; padding: 16px; line-height: 1.6; word-wrap: break-word; }" +
-                    "pre { background: " + surfaceColor + "66; padding: 10px; border-radius: 5px; overflow-x: auto; }" +
-                    "code { background: " + surfaceColor + "66; padding: 2px 4px; border-radius: 3px; font-family: monospace; }" +
-                    "img { max-width: 100%; height: auto; }" +
-                    "blockquote { border-left: 4px solid " + hexColor + "55; margin: 0; padding-left: 16px; color: " + hexColor + "CC; }" +
-                    "table { border-collapse: collapse; width: 100%; margin-bottom: 16px; }" +
-                    "th, td { border: 1px solid " + hexColor + "33; padding: 8px; text-align: left; }" +
-                    "th { background-color: " + surfaceColor + "; }" +
-                    "a { color: #89DCEB; text-decoration: none; }" +
-                    "</style></head><body>" +
-                    "<div id=\"content\"></div>" +
-                    "<script>" +
-                    "document.getElementById('content').innerHTML = marked.parse(decodeURIComponent(escape(window.atob('" + encodedContent + "'))));" +
-                    "</script>" +
-                    "</body></html>";
-
-            binding.webviewPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-            binding.webviewPreview.getSettings().setJavaScriptEnabled(true);
-            binding.webviewPreview.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-        }
+        boolean isPreviewMode = viewModel.getPreviewState(relPath);
+        
+        viewModel.setPreviewState(relPath, !isPreviewMode);
+        
+        // This will trigger getSettingsLiveData or we can just force the update manually:
+        updateActiveViewer(activeFile, !isPreviewMode);
     }
 
     private void executeActiveFilePreviewIntent() {
         String serverUrl = localWebServer.getUrl("");
-
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
         boolean openInApp = settings == null || settings.openPreviewInApp;
 
@@ -459,259 +281,101 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
     }
 
-    /**
-     * Initializes LiveData observers to react to data and state changes in the ViewModel.
-     */
     private void setupObservers() {
-        // Observe settings changes and update editor configuration accordingly
         viewModel.getSettingsLiveData().observe(this, settings -> {
             if (settings == null) return;
-
-            // Apply global theme
             int mode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
             if (settings.theme == AppSettings.Theme.DARK) mode = AppCompatDelegate.MODE_NIGHT_YES;
-            else if (settings.theme == AppSettings.Theme.LIGHT)
-                mode = AppCompatDelegate.MODE_NIGHT_NO;
+            else if (settings.theme == AppSettings.Theme.LIGHT) mode = AppCompatDelegate.MODE_NIGHT_NO;
             AppCompatDelegate.setDefaultNightMode(mode);
-
-            // Configure editor view properties
-            if (codeEditText != null) {
-                codeEditText.setTextSize(settings.getFontSize());
-                codeEditText.setAutoCloseBrackets(settings.isAutoCloseBrackets());
-                codeEditText.setAutoIndent(settings.autoIndent);
-                binding.editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
+            
+            // Rebind the active viewer so settings take effect
+            if (activeViewer != null) {
+                int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
+                List<EditorFile> files = viewModel.getOpenFiles().getValue();
+                if (files != null && activeIndex >= 0 && activeIndex < files.size()) {
+                    activeViewer.bindFile(files.get(activeIndex), viewModel);
+                }
             }
-            // Trigger a re-validation of JSON if the setting changed
-            validateJsonIfRequired(codeEditText != null && codeEditText.getText() != null ? codeEditText.getText().toString() : "");
         });
 
-        // Sync the tab bar and empty state UI with the list of open files
         viewModel.getOpenFiles().observe(this, files -> {
             int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
             if (files != null && !files.isEmpty()) {
                 binding.layoutEmptyEditor.setVisibility(View.GONE);
-                binding.editorContentContainer.setVisibility(View.VISIBLE);
+                binding.viewerContainer.setVisibility(View.VISIBLE);
                 binding.tabBar.setVisibility(View.VISIBLE);
                 binding.breadcrumb.setVisibility(View.VISIBLE);
                 binding.tabBar.setTabs(files, activeIndex);
             } else {
                 binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
-                binding.editorContentContainer.setVisibility(View.GONE);
+                binding.viewerContainer.setVisibility(View.GONE);
                 binding.tabBar.setVisibility(View.GONE);
                 binding.breadcrumb.setVisibility(View.GONE);
-                binding.jsonStatusBar.setVisibility(View.GONE);
+                hideJsonStatus();
             }
         });
 
-        // Handle tab switching and asset visualization logic
         viewModel.getActiveTabIndex().observe(this, index -> {
             List<EditorFile> files = viewModel.getOpenFiles().getValue();
             if (files != null && index >= 0 && index < files.size()) {
                 EditorFile activeFile = files.get(index);
                 binding.tabBar.setActiveTab(index);
-
-                // Update breadcrumbs for navigation context
+                
                 String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
                 binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
 
-                // Reset webview inline preview state
-                binding.ivTogglePreview.setTag(false);
-
-                // Determine if we should show the code editor or a specialized asset viewer
-                if (activeFile.isBinaryAsset()) {
-                    binding.webviewPreview.setVisibility(View.GONE);
-                    binding.webviewPreview.loadUrl("about:blank");
-                    binding.editorLayout.setVisibility(View.GONE);
-                    if (binding.findReplaceBar.getVisibility() == View.VISIBLE)
-                        binding.findReplaceBar.slideUp();
-                    binding.jsonStatusBar.setVisibility(View.GONE);
-
-                    FileType type = activeFile.getFileType();
-                    if (type == FileType.IMAGE || type == FileType.GIF || type == FileType.ICO || type == FileType.BMP) {
-                        binding.layoutFontViewer.setVisibility(View.GONE);
-                        binding.ivImageViewer.setVisibility(View.VISIBLE);
-
-                        if (type == FileType.GIF) {
-                            Glide.with(EditorActivity.this).asGif().load(activeFile.getFile()).into(binding.ivImageViewer);
-                        } else {
-                            binding.ivImageViewer.setImageURI(Uri.fromFile(activeFile.getFile()));
-                        }
-                    } else if (type == FileType.FONT) {
-                        binding.ivImageViewer.setVisibility(View.GONE);
-                        binding.layoutFontViewer.setVisibility(View.VISIBLE);
-                        binding.tvFontName.setText(activeFile.getFile().getName());
-
-                        String ext = FileUtils.getExtension(activeFile.getFile().getName()).toLowerCase();
-                        if (ext.equals("ttf") || ext.equals("otf")) {
-                            binding.webviewFontPreview.setVisibility(View.GONE);
-                            binding.etFontPreview.setVisibility(View.VISIBLE);
-                            try {
-                                android.graphics.Typeface tf = android.graphics.Typeface.createFromFile(activeFile.getFile());
-                                binding.etFontPreview.setTypeface(tf);
-                            } catch (Exception e) {
-                                Toast.makeText(this, "Could not load font", Toast.LENGTH_SHORT).show();
-                            }
-                        } else if (ext.equals("woff") || ext.equals("woff2") || ext.equals("eot")) {
-                            binding.etFontPreview.setVisibility(View.GONE);
-                            binding.webviewFontPreview.setVisibility(View.VISIBLE);
-                            loadWebFontPreview(activeFile.getFile(), ext);
-                        }
-                    }
-                } else {
-                    // Show standard code editor for text-based files
-                    binding.ivImageViewer.setVisibility(View.GONE);
-                    binding.layoutFontViewer.setVisibility(View.GONE);
-
-                    // Setup toggle button for SVG / CSV / MARKDOWN
-                    FileType textType = activeFile.getFileType();
-                    if (textType == FileType.SVG || textType == FileType.CSV || textType == FileType.MARKDOWN) {
-                        binding.ivTogglePreview.setVisibility(View.VISIBLE);
-                        
-                        boolean isPreview = viewModel.getPreviewState(relPath);
-                        binding.ivTogglePreview.setTag(isPreview);
-                        
-                        if (isPreview) {
-                            binding.editorLayout.setVisibility(View.GONE);
-                            if (binding.webviewPreview.getVisibility() != View.VISIBLE) {
-                                binding.webviewPreview.setVisibility(View.INVISIBLE);
-                            }
-                            binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
-                            renderInlinePreview(activeFile, textType);
-                        } else {
-                            binding.editorLayout.setVisibility(View.VISIBLE);
-                            binding.webviewPreview.setVisibility(View.GONE);
-                            binding.webviewPreview.loadUrl("about:blank");
-                            int iconRes = R.drawable.ic_image_icon;
-                            if (textType == FileType.CSV) iconRes = R.drawable.ic_csv_icon;
-                            else if (textType == FileType.MARKDOWN) iconRes = R.drawable.ic_md_icon;
-                            binding.ivTogglePreview.setImageResource(iconRes);
-                        }
-                    } else {
-                        binding.editorLayout.setVisibility(View.VISIBLE);
-                        binding.webviewPreview.setVisibility(View.GONE);
-                        binding.webviewPreview.loadUrl("about:blank");
-                        binding.ivTogglePreview.setVisibility(View.GONE);
-                    }
-
-                    if (codeEditText != null) {
-                        String currentFileId = (String) codeEditText.getTag();
-                        String currentEditorText = codeEditText.getText() != null ? codeEditText.getText().toString() : "";
-
-                        // Only reload the editor if we've switched to a different file or content has changed externally
-                        if (!activeFile.getId().equals(currentFileId) || !activeFile.getContent().equals(currentEditorText)) {
-                            if (binding.findReplaceBar.getVisibility() == View.VISIBLE) {
-                                binding.findReplaceBar.slideUp();
-                            }
-
-                            // Avoid triggering the TextWatcher while loading new file content
-                            codeEditText.removeTextChangedListener(editorTextWatcher);
-                            codeEditText.setTag(activeFile.getId());
-                            codeEditText.setFileType(activeFile.getFileType());
-                            codeEditText.setText(activeFile.getContent());
-
-                            // Restore cursor and scroll position
-                            int cursor = activeFile.getCursorPosition();
-                            if (cursor >= 0 && cursor <= codeEditText.length()) {
-                                codeEditText.setSelection(cursor);
-                            }
-                            codeEditText.scrollTo(0, activeFile.getScrollY());
-                            codeEditText.addTextChangedListener(editorTextWatcher);
-                            validateJsonIfRequired(activeFile.getContent());
-                            applyReadOnlyState();
-                        }
-                    }
-                }
+                boolean isPreview = viewModel.getPreviewState(relPath);
+                updateActiveViewer(activeFile, isPreview);
             }
         });
     }
 
-    /**
-     * Generates a web-based preview for font assets (WOFF/EOT) using a temporary
-     * HTML wrapper with @font-face and base64 encoding.
-     */
-    private void loadWebFontPreview(java.io.File fontFile, String ext) {
-        ExecutorProvider.getInstance().runOnIo(() -> {
-            try {
-                // Read font file bytes into memory
-                byte[] bytes = new byte[(int) fontFile.length()];
-                try (java.io.FileInputStream fis = new java.io.FileInputStream(fontFile)) {
-                    fis.read(bytes);
-                }
+    private void updateActiveViewer(EditorFile activeFile, boolean isPreview) {
+        if (activeViewer != null) {
+            activeViewer.onPause();
+        }
 
-                String base64Font = android.util.Base64.encodeToString(bytes, android.util.Base64.NO_WRAP);
-                String format = ext.equals("woff2") ? "woff2" : (ext.equals("eot") ? "embedded-opentype" : "woff");
-                String mime = ext.equals("woff2") ? "font/woff2" : "font/woff";
+        activeViewer = viewerManager.getOrCreateViewer(this, activeFile, isPreview);
+        View viewerView = activeViewer.getView(this, binding.viewerContainer);
 
-                // Resolve theme-aware text color for the preview
-                int colorInt = androidx.core.content.ContextCompat.getColor(this, R.color.vcode_text_primary);
-                String hexColor = String.format("#%06X", (0xFFFFFF & colorInt));
+        // Ensure the view is added to the container
+        if (viewerView.getParent() == null) {
+            binding.viewerContainer.addView(viewerView);
+        }
 
-                // Construct HTML content with embedded font
-                String html = "<!DOCTYPE html><html><head><style>" +
-                        "@font-face { font-family: 'Preview'; src: url(data:" + mime + ";charset=utf-8;base64," + base64Font + ") format('" + format + "'); }" +
-                        "body { font-family: 'Preview', sans-serif; color: " + hexColor + "; font-size: 24px; text-align: center; display: flex; align-items: center; justify-content: center; margin: 0; background: transparent; }" +
-                        "div { outline: none; border: none; width: 100%; margin-top: 24px; }" +
-                        "</style></head><body>" +
-                        "<div contenteditable=\"true\" spellcheck=\"false\">The quick brown fox jumps over the lazy dog<br>0123456789</div>" +
-                        "</body></html>";
+        // Hide all other views, show this one
+        for (int i = 0; i < binding.viewerContainer.getChildCount(); i++) {
+            View child = binding.viewerContainer.getChildAt(i);
+            child.setVisibility(child == viewerView ? View.VISIBLE : View.GONE);
+        }
 
-                android.os.Handler mainHandler = ExecutorProvider.getInstance().getMainHandler();
-                mainHandler.post(() -> {
-                    binding.webviewFontPreview.setBackgroundColor(android.graphics.Color.TRANSPARENT);
-                    binding.webviewFontPreview.getSettings().setJavaScriptEnabled(false);
-                    binding.webviewFontPreview.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
-                });
-            } catch (Exception e) {
-                android.os.Handler mainHandler = ExecutorProvider.getInstance().getMainHandler();
-                mainHandler.post(() -> Toast.makeText(this, "Could not load font", Toast.LENGTH_SHORT).show());
-            }
-        });
-    }
+        activeViewer.bindFile(activeFile, viewModel);
+        activeViewer.onResume();
+        
+        applyReadOnlyState();
 
-    /**
-     * Performs debounced JSON validation on the background thread and updates the status bar.
-     * Only executes if the active file is JSON and real-time validation is enabled.
-     */
-    private void validateJsonIfRequired(String text) {
-        AppSettings settings = viewModel.getSettingsLiveData().getValue();
-        List<EditorFile> files = viewModel.getOpenFiles().getValue();
-        Integer activeIdx = viewModel.getActiveTabIndex().getValue();
-
-        if (settings != null && settings.jsonValidateRealtime && files != null && activeIdx != null && activeIdx >= 0 && activeIdx < files.size()) {
-            EditorFile file = files.get(activeIdx);
-            if (file.getFileType() == FileType.JSON) {
-                binding.jsonStatusBar.setVisibility(View.VISIBLE);
-                binding.jsonStatusBar.showValidating();
-                jsonValidationHandler.removeCallbacksAndMessages(null);
-
-                Runnable jsonValidationRunnable = () -> ExecutorProvider.getInstance().runOnIo(() -> {
-                    JsonValidator validator = new JsonValidator();
-                    ValidationReport report = validator.validate(text);
-
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (report.isValid()) {
-                            binding.jsonStatusBar.showValid();
-                        } else {
-                            JsonError firstError = report.getErrors().get(0);
-                            String formattedError = firstError.message + " (Line " + firstError.line + ", Col " + firstError.column + ")";
-                            binding.jsonStatusBar.showInvalid(formattedError);
-                        }
-                    });
-                });
-                // Debounce to avoid constant CPU usage while typing
-                jsonValidationHandler.postDelayed(jsonValidationRunnable, 500);
+        // Update toggle button UI
+        FileType type = activeFile.getFileType();
+        if (type == FileType.SVG || type == FileType.CSV || type == FileType.MARKDOWN) {
+            binding.ivTogglePreview.setVisibility(View.VISIBLE);
+            if (isPreview) {
+                binding.ivTogglePreview.setImageResource(R.drawable.ic_code);
             } else {
-                binding.jsonStatusBar.setVisibility(View.GONE);
+                int iconRes = R.drawable.ic_image_icon;
+                if (type == FileType.CSV) iconRes = R.drawable.ic_csv_icon;
+                else if (type == FileType.MARKDOWN) iconRes = R.drawable.ic_md_icon;
+                binding.ivTogglePreview.setImageResource(iconRes);
             }
         } else {
-            binding.jsonStatusBar.setVisibility(View.GONE);
+            binding.ivTogglePreview.setVisibility(View.GONE);
+        }
+        
+        if (binding.findReplaceBar.getVisibility() == View.VISIBLE) {
+            binding.findReplaceBar.slideUp();
         }
     }
 
-    /**
-     * Handles the workflow of closing a file tab, including unsaved changes confirmations.
-     * @param index The index of the tab to close.
-     */
     private void handleTabClose(int index) {
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         if (files == null || index < 0 || index >= files.size()) return;
@@ -720,23 +384,24 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         AppSettings settings = viewModel.getSettings();
         boolean confirm = settings == null || settings.confirmOnTabClose;
 
+        Runnable doClose = () -> {
+            viewerManager.destroyViewer(file.getId());
+            viewModel.closeFile(index);
+        };
+
         if (file.isDirty() && confirm) {
             new AlertDialog.Builder(this)
                     .setTitle("Unsaved Changes")
                     .setMessage("Save changes to " + file.getFileName() + " before closing?")
-                    .setPositiveButton("Save & Close", (d, w) -> viewModel.saveFile(index, () -> viewModel.closeFile(index)))
-                    .setNegativeButton("Discard", (d, w) -> viewModel.closeFile(index))
+                    .setPositiveButton("Save & Close", (d, w) -> viewModel.saveFile(index, doClose))
+                    .setNegativeButton("Discard", (d, w) -> doClose.run())
                     .setNeutralButton("Cancel", null)
                     .show();
         } else {
-            viewModel.closeFile(index);
+            doClose.run();
         }
     }
 
-    /**
-     * Displays a custom context menu for additional editor actions like Git, Settings, and Formatting.
-     * @param anchorView The view to anchor the popup window to.
-     */
     private void showOverflowMenu(View anchorView) {
         LayoutCustomPopupBinding popupBinding = LayoutCustomPopupBinding.inflate(getLayoutInflater());
         int width = UiUtils.dpToPx(this, 220);
@@ -745,7 +410,6 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popupWindow.setElevation(UiUtils.dpToPx(this, 8));
 
-        // Add menu items with icons and actions
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
         addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
             isReadOnly = !isReadOnly;
@@ -754,23 +418,20 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> {
-            navigateWithUnsavedCheck(() -> {
-                Intent navToGit = new Intent(this, GitActivity.class);
-                if (viewModel.getProjectRoot() != null) {
-                    navToGit.putExtra("project_path", viewModel.getProjectRoot().getAbsolutePath());
-                    navToGit.putExtra("project_name", getIntent().getStringExtra(EXTRA_PROJECT_NAME));
-
-                    AppSettings settings = viewModel.getSettingsLiveData().getValue();
-                    if (settings != null && settings.gitDefaultBranch != null) {
-                        navToGit.putExtra("default_branch", settings.gitDefaultBranch);
-                    }
-                    startActivity(navToGit);
-                } else {
-                    Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
+        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
+            Intent navToGit = new Intent(this, GitActivity.class);
+            if (viewModel.getProjectRoot() != null) {
+                navToGit.putExtra("project_path", viewModel.getProjectRoot().getAbsolutePath());
+                navToGit.putExtra("project_name", getIntent().getStringExtra(EXTRA_PROJECT_NAME));
+                AppSettings settings = viewModel.getSettingsLiveData().getValue();
+                if (settings != null && settings.gitDefaultBranch != null) {
+                    navToGit.putExtra("default_branch", settings.gitDefaultBranch);
                 }
-            });
-        });
+                startActivity(navToGit);
+            } else {
+                Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
+            }
+        }));
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_gear, "Settings", () -> navigateWithUnsavedCheck(() -> startActivity(new Intent(this, SettingsActivity.class))));
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_floppy_disk, "Save All", () -> {
             viewModel.saveAll();
@@ -780,19 +441,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         popupWindow.showAsDropDown(anchorView, 0, UiUtils.dpToPx(this, 4));
     }
 
-    /**
-     * Helper to create and add an item to the custom overflow popup.
-     */
     private void addPopupItem(LinearLayout container, PopupWindow popup, int iconRes, String title, Runnable action) {
         ItemCustomPopupBinding itemBinding = ItemCustomPopupBinding.inflate(getLayoutInflater(), container, false);
         itemBinding.ivIcon.setImageResource(iconRes);
         itemBinding.tvTitle.setText(title);
         itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(this));
-
-        itemBinding.getRoot().setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
+        itemBinding.getRoot().setOnClickListener(v -> { popup.dismiss(); action.run(); });
         container.addView(itemBinding.getRoot());
     }
 
@@ -809,14 +463,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             onToggle.run();
             popup.dismiss();
         });
-        itemBinding.switchToggle.setOnClickListener(v -> {
-            onToggle.run();
-            popup.dismiss();
-        });
+        itemBinding.switchToggle.setOnClickListener(v -> { onToggle.run(); popup.dismiss(); });
         container.addView(itemBinding.getRoot());
     }
     
     private void applyReadOnlyState() {
+        CodeEditText codeEditText = getActiveCodeEditor();
         if (codeEditText != null) {
             codeEditText.setFocusable(!isReadOnly);
             codeEditText.setFocusableInTouchMode(!isReadOnly);
@@ -824,26 +476,21 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
     }
 
-    /**
-     * Toggles the visibility of the Find and Replace bar.
-     */
     private void showFindReplaceBar() {
         if (binding.findReplaceBar.getVisibility() == View.VISIBLE) {
             binding.findReplaceBar.slideUp();
         } else {
+            CodeEditText codeEditText = getActiveCodeEditor();
             if (codeEditText != null) binding.findReplaceBar.setEditor(codeEditText);
             binding.findReplaceBar.slideDown();
         }
     }
 
-    /**
-     * Launches the Snippet Manager bottom sheet for inserting pre-defined code blocks.
-     */
     private void showSnippetManager() {
         SnippetsBottomSheet snippetsSheet = new SnippetsBottomSheet();
         snippetsSheet.setListener(snippet -> {
+            CodeEditText codeEditText = getActiveCodeEditor();
             if (codeEditText != null && snippet.getContent() != null) {
-                // Delay insertion slightly to ensure sheet dismissal doesn't steal focus
                 new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() ->
                         codeEditText.insertSnippet(snippet.getContent()), 250);
             }
@@ -851,15 +498,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         snippetsSheet.show(getSupportFragmentManager(), "Snippets");
     }
 
-    /**
-     * Captures the current cursor and scroll position of the editor 
-     * and saves it to the active file's state in the ViewModel.
-     */
     private void saveCurrentEditorState() {
+        CodeEditText codeEditText = getActiveCodeEditor();
         if (codeEditText != null && codeEditText.getTag() != null) {
             List<EditorFile> files = viewModel.getOpenFiles().getValue();
             Integer activeIndex = viewModel.getActiveTabIndex().getValue();
-
             if (files != null && activeIndex != null && activeIndex >= 0 && activeIndex < files.size()) {
                 EditorFile activeFile = files.get(activeIndex);
                 if (!activeFile.isBinaryAsset()) {
@@ -876,10 +519,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         viewModel.openFile(fileNode.getFile());
     }
 
-    /**
-     * Displays a dialog to navigate to a specific line number in the current file.
-     */
     private void showGoToLineDialog() {
+        CodeEditText codeEditText = getActiveCodeEditor();
         if (codeEditText == null || codeEditText.getText() == null) return;
 
         int maxLines = codeEditText.getLineCount();
@@ -890,14 +531,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         sheet.setListener(line -> {
             int targetLineIndex = line - 1;
             Layout layout = codeEditText.getLayout();
-
             if (layout != null) {
                 int offset = layout.getLineStart(targetLineIndex);
                 codeEditText.setSelection(offset);
                 int y = layout.getLineTop(targetLineIndex);
                 codeEditText.scrollTo(0, Math.max(0, y - codeEditText.getPaddingTop()));
             } else {
-                // Fallback for when layout is not yet computed
                 String text = codeEditText.getText().toString();
                 int currentLine = 0;
                 int offset = 0;
@@ -914,11 +553,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         sheet.show(getSupportFragmentManager(), "GoToLineSheet");
     }
 
-    /**
-     * Triggers the appropriate code formatter for the active file's language
-     * on a background thread.
-     */
     private void formatCurrentFile() {
+        CodeEditText codeEditText = getActiveCodeEditor();
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         Integer activeIndex = viewModel.getActiveTabIndex().getValue();
 
@@ -939,7 +575,6 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         Toast.makeText(this, "Formatting...", Toast.LENGTH_SHORT).show();
         ExecutorProvider.getInstance().runOnIo(() -> {
             String formattedCode = CodeFormatter.format(rawCode, lang);
-
             ExecutorProvider.getInstance().runOnMain(() -> {
                 if (!rawCode.equals(formattedCode)) {
                     codeEditText.setText(formattedCode);
@@ -970,12 +605,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
     }
 
-
-
     @Override
     protected void onStop() {
         super.onStop();
-        // Force a state sync to disk when the activity is stopped
         saveCurrentEditorState();
         if (viewModel != null) viewModel.onStopSync();
     }
@@ -984,18 +616,40 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     protected void onResume() {
         super.onResume();
         if (viewModel != null) {
-            // Refresh environment and check for external file changes
             viewModel.reloadSettings();
             viewModel.refreshFileTree();
             viewModel.validateOpenFilesWithDisk();
+        }
+        if (activeViewer != null) {
+            activeViewer.onResume();
         }
     }
 
     @Override
     protected void onDestroy() {
         super.onDestroy();
-        // Clean up resources to prevent memory leaks
         if (localWebServer != null) localWebServer.stop();
-        jsonValidationHandler.removeCallbacksAndMessages(null);
+        if (viewerManager != null) viewerManager.destroyAll();
+    }
+
+    @Override
+    public void showJsonValidating() {
+        binding.jsonStatusBar.setVisibility(View.VISIBLE);
+        binding.jsonStatusBar.showValidating();
+    }
+
+    @Override
+    public void showJsonValid() {
+        binding.jsonStatusBar.showValid();
+    }
+
+    @Override
+    public void showJsonInvalid(String error) {
+        binding.jsonStatusBar.showInvalid(error);
+    }
+
+    @Override
+    public void hideJsonStatus() {
+        binding.jsonStatusBar.setVisibility(View.GONE);
     }
 }

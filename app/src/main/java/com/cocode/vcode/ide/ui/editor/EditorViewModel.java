@@ -670,6 +670,6 @@ public class EditorViewModel extends ViewModel {
         if (currentState != null) {
             return currentState.getPreviewStateFor(relativePath);
         }
-        return false;
+        return true;
     }
 }

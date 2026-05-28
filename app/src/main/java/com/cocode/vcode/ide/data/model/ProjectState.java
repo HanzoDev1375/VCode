@@ -76,11 +76,12 @@ public class ProjectState {
 
     /**
      * Resolves the toggle preview state linked against a relative target file.
+     * Defaults to true so previewable files open in preview mode initially.
      */
     public boolean getPreviewStateFor(String relativePath) {
         if (relativePath == null) return false;
         Boolean val = previewStates.get(relativePath);
-        return val != null ? val : false;
+        return val != null ? val : true;
     }
 
     public String getProjectId() {
