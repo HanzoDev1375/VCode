@@ -39,8 +39,8 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
     private String rootPath;
     private String projectName;
 
-    /** Tracks the node that is currently displaying its action menu (rename/delete). */
-    private FileNode activeActionNode = null;
+    private File clipboardFile = null;
+    private boolean isCutAction = false;
 
     public FileTreeAdapter(FileTreeListener listener, int indentDp, float screenDensity) {
         this.listener = listener;
@@ -72,23 +72,26 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
         restoreExpandedState(rootNodes, expandedPaths);
 
         flatNodes.clear();
-        activeActionNode = null;
         // Transform the nested tree into a flat list for the adapter
         flatten(rootNodes, flatNodes);
         notifyDataSetChanged();
     }
 
     /**
-     * Resets the active action state (hides rename/delete icons).
+     * Updates the clipboard state to visualize cut/copy operations.
      */
-    public void clearActiveAction() {
-        if (activeActionNode != null) {
-            int pos = flatNodes.indexOf(activeActionNode);
-            activeActionNode = null;
-            if (pos != -1) {
-                notifyItemChanged(pos);
-            }
-        }
+    public void setClipboardState(File file, boolean isCut) {
+        this.clipboardFile = file;
+        this.isCutAction = isCut;
+        notifyDataSetChanged();
+    }
+
+    public File getClipboardFile() {
+        return clipboardFile;
+    }
+
+    public boolean isCutAction() {
+        return isCutAction;
     }
 
     /**
@@ -177,9 +180,7 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
 
         void onAddFolderClick(File parentDir);
 
-        void onRenameNodeClick(File file);
-
-        void onDeleteNodeClick(File file);
+        void onNodeLongClick(View anchor, FileNode node);
     }
 
     /**
@@ -197,29 +198,23 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
         }
 
         private void setupClickListeners() {
-            // "New File" or "Rename" action button
+            // "New File" action button
             binding.btnAddFile.setOnClickListener(v -> {
                 int pos = getBindingAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION && listener != null) {
                     FileNode node = flatNodes.get(pos);
-                    if (activeActionNode == node) {
-                        listener.onRenameNodeClick(node.getFile());
-                        clearActiveAction();
-                    } else if (node.isDirectory()) {
+                    if (node.isDirectory()) {
                         listener.onAddFileClick(node.getFile());
                     }
                 }
             });
 
-            // "New Folder" or "Delete" action button
+            // "New Folder" action button
             binding.btnAddFolder.setOnClickListener(v -> {
                 int pos = getBindingAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION && listener != null) {
                     FileNode node = flatNodes.get(pos);
-                    if (activeActionNode == node) {
-                        listener.onDeleteNodeClick(node.getFile());
-                        clearActiveAction();
-                    } else if (node.isDirectory()) {
+                    if (node.isDirectory()) {
                         listener.onAddFolderClick(node.getFile());
                     }
                 }
@@ -231,12 +226,6 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
                 if (pos == RecyclerView.NO_POSITION) return;
                 FileNode node = flatNodes.get(pos);
 
-                // Dismiss any active context actions on tap
-                if (activeActionNode != null) {
-                    clearActiveAction();
-                    return;
-                }
-
                 if (node.isDirectory()) {
                     handleDirectoryClick(node, pos);
                 } else {
@@ -244,41 +233,12 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
                 }
             });
 
-            // Long click to reveal rename and delete actions
+            // Long click to reveal rename, delete, copy, cut, paste actions
             binding.getRoot().setOnLongClickListener(v -> {
                 int pos = getBindingAdapterPosition();
                 if (pos != RecyclerView.NO_POSITION && listener != null) {
                     FileNode node = flatNodes.get(pos);
-
-                    // Prevent actions on the project root folder
-                    if (rootPath != null && node.getFile().getAbsolutePath().equals(rootPath)) {
-                        return true;
-                    }
-
-                    if (activeActionNode == node) {
-                        clearActiveAction();
-                    } else {
-                        clearActiveAction();
-                        activeActionNode = node;
-
-                        // Swap standard "Add" icons with "Edit" and "Delete" icons
-                        binding.btnAddFile.setVisibility(View.VISIBLE);
-                        binding.btnAddFile.setImageResource(R.drawable.ic_pen);
-                        binding.btnAddFile.setColorFilter(ContextCompat.getColor(itemView.getContext(), R.color.vcode_accent_primary), PorterDuff.Mode.SRC_IN);
-
-                        binding.btnAddFolder.setVisibility(View.VISIBLE);
-                        binding.btnAddFolder.setImageResource(R.drawable.ic_trash);
-                        binding.btnAddFolder.setColorFilter(ContextCompat.getColor(itemView.getContext(), R.color.vcode_accent_error), PorterDuff.Mode.SRC_IN);
-
-                        // Animate the action buttons into view
-                        binding.btnAddFile.setAlpha(0f);
-                        binding.btnAddFile.setTranslationX(20f);
-                        binding.btnAddFile.animate().alpha(1f).translationX(0f).setDuration(200).start();
-
-                        binding.btnAddFolder.setAlpha(0f);
-                        binding.btnAddFolder.setTranslationX(20f);
-                        binding.btnAddFolder.animate().alpha(1f).translationX(0f).setStartDelay(50).setDuration(200).start();
-                    }
+                    listener.onNodeLongClick(binding.getRoot(), node);
                     return true;
                 }
                 return false;
@@ -342,6 +302,17 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
 
             binding.ivIcon.setImageTintList(null);
 
+            // Apply opacity if node is cut
+            boolean isCut = false;
+            if (isCutAction && clipboardFile != null) {
+                String nodePath = node.getFile().getAbsolutePath();
+                String cutPath = clipboardFile.getAbsolutePath();
+                if (nodePath.equals(cutPath) || nodePath.startsWith(cutPath + File.separator)) {
+                    isCut = true;
+                }
+            }
+            binding.getRoot().setAlpha(isCut ? 0.7f : 1.0f);
+
             if (node.isDirectory()) {
                 bindDirectory(node);
             } else {
@@ -366,32 +337,17 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             binding.gitStatusBadge.setVisibility(View.GONE);
             binding.tvName.setTypeface(FontManager.getInstance().getUiSemiBold(itemView.getContext()));
 
-            // Render buttons based on whether the node is in "action mode"
-            if (node == activeActionNode) {
-                binding.btnAddFile.setVisibility(View.VISIBLE);
-                binding.btnAddFile.setImageResource(R.drawable.ic_pen);
-                binding.btnAddFile.setColorFilter(ContextCompat.getColor(itemView.getContext(), R.color.vcode_accent_primary), PorterDuff.Mode.SRC_IN);
-                binding.btnAddFile.setAlpha(1f);
-                binding.btnAddFile.setTranslationX(0f);
+            binding.btnAddFile.setVisibility(View.VISIBLE);
+            binding.btnAddFile.setImageResource(R.drawable.ic_file_plus);
+            binding.btnAddFile.clearColorFilter();
+            binding.btnAddFile.setAlpha(1f);
+            binding.btnAddFile.setTranslationX(0f);
 
-                binding.btnAddFolder.setVisibility(View.VISIBLE);
-                binding.btnAddFolder.setImageResource(R.drawable.ic_trash);
-                binding.btnAddFolder.setColorFilter(ContextCompat.getColor(itemView.getContext(), R.color.vcode_accent_error), PorterDuff.Mode.SRC_IN);
-                binding.btnAddFolder.setAlpha(1f);
-                binding.btnAddFolder.setTranslationX(0f);
-            } else {
-                binding.btnAddFile.setVisibility(View.VISIBLE);
-                binding.btnAddFile.setImageResource(R.drawable.ic_file_plus);
-                binding.btnAddFile.clearColorFilter();
-                binding.btnAddFile.setAlpha(1f);
-                binding.btnAddFile.setTranslationX(0f);
-
-                binding.btnAddFolder.setVisibility(View.VISIBLE);
-                binding.btnAddFolder.setImageResource(R.drawable.ic_folder_plus);
-                binding.btnAddFolder.clearColorFilter();
-                binding.btnAddFolder.setAlpha(1f);
-                binding.btnAddFolder.setTranslationX(0f);
-            }
+            binding.btnAddFolder.setVisibility(View.VISIBLE);
+            binding.btnAddFolder.setImageResource(R.drawable.ic_folder_plus);
+            binding.btnAddFolder.clearColorFilter();
+            binding.btnAddFolder.setAlpha(1f);
+            binding.btnAddFolder.setTranslationX(0f);
         }
 
         /**
@@ -403,22 +359,8 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             binding.ivIcon.setVisibility(View.VISIBLE);
             binding.tvName.setTypeface(FontManager.getInstance().getUiMedium(itemView.getContext()));
 
-            if (node == activeActionNode) {
-                binding.btnAddFile.setVisibility(View.VISIBLE);
-                binding.btnAddFile.setImageResource(R.drawable.ic_pen);
-                binding.btnAddFile.setColorFilter(ContextCompat.getColor(itemView.getContext(), R.color.vcode_accent_primary), PorterDuff.Mode.SRC_IN);
-                binding.btnAddFile.setAlpha(1f);
-                binding.btnAddFile.setTranslationX(0f);
-
-                binding.btnAddFolder.setVisibility(View.VISIBLE);
-                binding.btnAddFolder.setImageResource(R.drawable.ic_trash);
-                binding.btnAddFolder.setColorFilter(ContextCompat.getColor(itemView.getContext(), R.color.vcode_accent_error), PorterDuff.Mode.SRC_IN);
-                binding.btnAddFolder.setAlpha(1f);
-                binding.btnAddFolder.setTranslationX(0f);
-            } else {
-                binding.btnAddFile.setVisibility(View.GONE);
-                binding.btnAddFolder.setVisibility(View.GONE);
-            }
+            binding.btnAddFile.setVisibility(View.GONE);
+            binding.btnAddFolder.setVisibility(View.GONE);
 
             FileIconHelper.setFileIconAndColor(binding.ivIcon, node.getFile().getName());
 

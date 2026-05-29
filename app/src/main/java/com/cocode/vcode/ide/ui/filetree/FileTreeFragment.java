@@ -1,34 +1,51 @@
 package com.cocode.vcode.ide.ui.filetree;
 
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.database.Cursor;
+import android.graphics.Typeface;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.PopupWindow;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
+import android.util.TypedValue;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.documentfile.provider.DocumentFile;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.recyclerview.widget.LinearLayoutManager;
 
+import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.databinding.FragmentFileTreeBinding;
+import com.cocode.vcode.ide.databinding.ItemCustomPopupBinding;
+import com.cocode.vcode.ide.databinding.LayoutCustomPopupBinding;
 import com.cocode.vcode.ide.ui.editor.EditorViewModel;
 import com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.NewFileBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.NewFolderBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.RenameBottomSheet;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
+import com.cocode.vcode.ide.utils.FileUtils;
 import com.cocode.vcode.ide.utils.FontManager;
+import com.cocode.vcode.ide.utils.UiUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -316,7 +333,185 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
     }
 
     @Override
-    public void onRenameNodeClick(File file) {
+    public void onNodeLongClick(View anchor, FileNode node) {
+        File file = node.getFile();
+        boolean isRoot = viewModel.getProjectRoot() != null && file.getAbsolutePath().equals(viewModel.getProjectRoot().getAbsolutePath());
+
+        File clipboardFile = adapter.getClipboardFile();
+        boolean canPaste = clipboardFile != null && clipboardFile.exists();
+
+        if (isRoot && !canPaste) {
+            return;
+        }
+
+        LayoutCustomPopupBinding popupBinding = LayoutCustomPopupBinding.inflate(getLayoutInflater());
+        int width = UiUtils.dpToPx(requireContext(), 220);
+
+        PopupWindow popupWindow = new PopupWindow(
+                popupBinding.getRoot(),
+                width,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popupWindow.setElevation(8f);
+        popupWindow.setAnimationStyle(R.style.VCodePopupMenuAnimation);
+
+        if (!isRoot) {
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_pen, "Rename", () -> showRenameDialog(file));
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_copy, "Copy", () -> {
+                adapter.setClipboardState(file, false);
+                Toast.makeText(getContext(), "Copied", Toast.LENGTH_SHORT).show();
+            });
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_scissors, "Cut", () -> {
+                adapter.setClipboardState(file, true);
+                Toast.makeText(getContext(), "Cut", Toast.LENGTH_SHORT).show();
+            });
+        }
+        
+        if (canPaste) {
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_file_plus, "Paste", () -> {
+                File destDir = file.isDirectory() ? file : file.getParentFile();
+                performPaste(destDir);
+            });
+        }
+        
+        if (!isRoot) {
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_copy, "Copy Path", () -> showCopyPathPopup(anchor, file));
+            
+            addDivider(popupBinding.popupContainer);
+            
+            View deleteItem = addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_trash, "Delete", () -> showDeleteDialog(file));
+            TextView tvTitle = deleteItem.findViewById(R.id.tv_title);
+            ImageView ivIcon = deleteItem.findViewById(R.id.iv_icon);
+            int errorColor = ContextCompat.getColor(requireContext(), R.color.vcode_accent_error);
+            if (tvTitle != null) tvTitle.setTextColor(errorColor);
+            if (ivIcon != null) ivIcon.setColorFilter(errorColor);
+        }
+
+        popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -anchor.getHeight() / 2);
+    }
+
+    private void showCopyPathPopup(View anchor, File file) {
+        LayoutCustomPopupBinding popupBinding = LayoutCustomPopupBinding.inflate(getLayoutInflater());
+        int width = UiUtils.dpToPx(requireContext(), 220);
+
+        PopupWindow popupWindow = new PopupWindow(
+                popupBinding.getRoot(),
+                width,
+                ViewGroup.LayoutParams.WRAP_CONTENT,
+                true
+        );
+        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+        popupWindow.setElevation(8f);
+        popupWindow.setAnimationStyle(R.style.VCodePopupMenuAnimation);
+
+        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_copy, "Absolute Path", () -> {
+            copyToSystemClipboard("Absolute Path", file.getAbsolutePath());
+        });
+
+        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_copy, "Relative Path", () -> {
+            if (viewModel.getProjectRoot() != null) {
+                String relPath = file.getAbsolutePath().replace(viewModel.getProjectRoot().getAbsolutePath() + File.separator, "");
+                if (relPath.startsWith(File.separator)) relPath = relPath.substring(1);
+                copyToSystemClipboard("Relative Path", relPath);
+            }
+        });
+
+        popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -anchor.getHeight() / 2);
+    }
+
+    private View addPopupItem(ViewGroup container, PopupWindow popup, int iconRes, String title, Runnable action) {
+        ItemCustomPopupBinding itemBinding = ItemCustomPopupBinding.inflate(getLayoutInflater(), container, false);
+        itemBinding.ivIcon.setImageResource(iconRes);
+        itemBinding.tvTitle.setText(title);
+        itemBinding.tvTitle.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelSmall);
+        itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
+        itemBinding.getRoot().setOnClickListener(v -> { popup.dismiss(); action.run(); });
+        container.addView(itemBinding.getRoot());
+        return itemBinding.getRoot();
+    }
+
+    private void addDivider(ViewGroup container) {
+        View divider = new View(requireContext());
+        LinearLayout.LayoutParams params = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT,
+                UiUtils.dpToPx(requireContext(), 1)
+        );
+        params.setMargins(0, UiUtils.dpToPx(requireContext(), 4), 0, UiUtils.dpToPx(requireContext(), 4));
+        divider.setLayoutParams(params);
+        divider.setBackgroundColor(getThemeColor(com.google.android.material.R.attr.colorOutlineVariant));
+        container.addView(divider);
+    }
+
+    private int getThemeColor(int attrRes) {
+        TypedValue typedValue = new TypedValue();
+        requireContext().getTheme().resolveAttribute(attrRes, typedValue, true);
+        return typedValue.data;
+    }
+
+    private void copyToSystemClipboard(String label, String text) {
+        ClipboardManager clipboard = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
+        ClipData clip = ClipData.newPlainText(label, text);
+        if (clipboard != null) {
+            clipboard.setPrimaryClip(clip);
+            Toast.makeText(getContext(), "Copied path", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void performPaste(File destinationDir) {
+        File source = adapter.getClipboardFile();
+        boolean isCut = adapter.isCutAction();
+        if (source == null || !source.exists() || destinationDir == null) return;
+
+        Toast.makeText(getContext(), "Pasting...", Toast.LENGTH_SHORT).show();
+
+        ExecutorProvider.getInstance().runOnIo(() -> {
+            File target = new File(destinationDir, source.getName());
+            boolean success = false;
+
+            int counter = 1;
+            String baseName = source.getName();
+            String extension = "";
+            int dotIndex = baseName.lastIndexOf('.');
+            if (dotIndex > 0) {
+                extension = baseName.substring(dotIndex);
+                baseName = baseName.substring(0, dotIndex);
+            }
+            while (target.exists()) {
+                target = new File(destinationDir, baseName + "_" + counter + extension);
+                counter++;
+            }
+
+            if (isCut) {
+                success = source.renameTo(target);
+                if (!success) {
+                    if (source.isDirectory()) {
+                        success = FileUtils.copyDirectory(source, target) && FileUtils.deleteRecursive(source);
+                    } else {
+                        success = FileUtils.copyFile(source, target) && source.delete();
+                    }
+                }
+                if (success) {
+                    ExecutorProvider.getInstance().runOnMain(() -> adapter.setClipboardState(null, false));
+                }
+            } else {
+                if (source.isDirectory()) {
+                    success = FileUtils.copyDirectory(source, target);
+                } else {
+                    success = FileUtils.copyFile(source, target);
+                }
+            }
+
+            if (success) {
+                ExecutorProvider.getInstance().runOnMain(() -> viewModel.refreshFileTree());
+            } else {
+                ExecutorProvider.getInstance().runOnMain(() -> Toast.makeText(getContext(), "Paste failed", Toast.LENGTH_SHORT).show());
+            }
+        });
+    }
+
+    private void showRenameDialog(File file) {
         RenameBottomSheet.RenameType type = file.isDirectory() ? RenameBottomSheet.RenameType.FOLDER : RenameBottomSheet.RenameType.FILE;
         RenameBottomSheet.show(
                 getChildFragmentManager(),
@@ -326,8 +521,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         );
     }
 
-    @Override
-    public void onDeleteNodeClick(File file) {
+    private void showDeleteDialog(File file) {
         DeleteBottomSheet.DeleteType type = file.isDirectory() ? DeleteBottomSheet.DeleteType.FOLDER : DeleteBottomSheet.DeleteType.FILE;
         DeleteBottomSheet.show(
                 getChildFragmentManager(),

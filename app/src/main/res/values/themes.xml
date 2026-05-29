@@ -93,4 +93,9 @@
         <item name="android:windowLightStatusBar">false</item>
     </style>
 
+    <style name="VCodePopupMenuAnimation">
+        <item name="android:windowEnterAnimation">@anim/vcode_popup_enter</item>
+        <item name="android:windowExitAnimation">@anim/vcode_popup_exit</item>
+    </style>
+
 </resources>
