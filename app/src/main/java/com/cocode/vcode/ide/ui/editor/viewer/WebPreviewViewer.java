@@ -1,5 +1,6 @@
 package com.cocode.vcode.ide.ui.editor.viewer;
 
+import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
 import android.util.Base64;
@@ -91,6 +92,7 @@ public class WebPreviewViewer implements IFileViewer {
         webView.loadDataWithBaseURL(null, htmlBuilder.toString(), "text/html", "utf-8", null);
     }
 
+    @SuppressLint("SetJavaScriptEnabled")
     private void renderMarkdown(String content) {
         int colorInt = ContextCompat.getColor(context, R.color.vcode_text_primary);
         String hexColor = String.format("#%06X", (0xFFFFFF & colorInt));
@@ -101,7 +103,7 @@ public class WebPreviewViewer implements IFileViewer {
 
         String html = "<!DOCTYPE html><html><head>" +
                 "<meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">" +
-                "<script src=\"https://cdn.jsdelivr.net/npm/marked/marked.min.js\"></script>" +
+                "<script src=\"scripts/marked.min.js\"></script>" +
                 "<style>" +
                 "body { font-family: sans-serif; color: " + hexColor + "; background-color: transparent; padding: 16px; line-height: 1.6; word-wrap: break-word; }" +
                 "pre { background: " + surfaceColor + "66; padding: 10px; border-radius: 5px; overflow-x: auto; }" +
@@ -120,7 +122,7 @@ public class WebPreviewViewer implements IFileViewer {
                 "</body></html>";
 
         webView.getSettings().setJavaScriptEnabled(true);
-        webView.loadDataWithBaseURL(null, html, "text/html", "utf-8", null);
+        webView.loadDataWithBaseURL("file:///android_asset/", html, "text/html", "utf-8", null);
     }
 
     @Override

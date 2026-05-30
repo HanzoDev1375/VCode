@@ -299,17 +299,40 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
         });
 
+        viewModel.getIsEditorLoading().observe(this, isLoading -> {
+            if (isLoading != null && isLoading) {
+                binding.progressEditorLoading.setVisibility(View.VISIBLE);
+                binding.viewerContainer.setVisibility(View.GONE);
+                binding.layoutEmptyEditor.setVisibility(View.GONE);
+            } else {
+                binding.progressEditorLoading.setVisibility(View.GONE);
+                List<EditorFile> files = viewModel.getOpenFiles().getValue();
+                if (files != null && !files.isEmpty()) {
+                    binding.viewerContainer.setVisibility(View.VISIBLE);
+                    binding.layoutEmptyEditor.setVisibility(View.GONE);
+                } else {
+                    binding.viewerContainer.setVisibility(View.GONE);
+                    binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
+                }
+            }
+        });
+
         viewModel.getOpenFiles().observe(this, files -> {
             int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
+            boolean isLoading = viewModel.getIsEditorLoading().getValue() != null && viewModel.getIsEditorLoading().getValue();
             if (files != null && !files.isEmpty()) {
-                binding.layoutEmptyEditor.setVisibility(View.GONE);
-                binding.viewerContainer.setVisibility(View.VISIBLE);
+                if (!isLoading) {
+                    binding.layoutEmptyEditor.setVisibility(View.GONE);
+                    binding.viewerContainer.setVisibility(View.VISIBLE);
+                }
                 binding.tabBar.setVisibility(View.VISIBLE);
                 binding.breadcrumb.setVisibility(View.VISIBLE);
                 binding.tabBar.setTabs(files, activeIndex);
             } else {
-                binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
-                binding.viewerContainer.setVisibility(View.GONE);
+                if (!isLoading) {
+                    binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
+                    binding.viewerContainer.setVisibility(View.GONE);
+                }
                 binding.tabBar.setVisibility(View.GONE);
                 binding.breadcrumb.setVisibility(View.GONE);
                 hideJsonStatus();

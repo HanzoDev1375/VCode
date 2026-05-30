@@ -119,14 +119,18 @@ public class FileUtils {
     /**
      * Duplicates data content chunks between files via an intermediate buffer block allocation stream.
      */
-    public static boolean copyFile(File src, File dst) {
+    public static boolean copyFile(File src, File dst, java.util.concurrent.atomic.AtomicBoolean isCancelled, ProgressListener listener) {
         if (src == null || !src.exists() || dst == null) return false;
         try (FileInputStream in = new FileInputStream(src);
              FileOutputStream out = new FileOutputStream(dst)) {
             byte[] buffer = new byte[8192];
             int read;
             while ((read = in.read(buffer)) != -1) {
+                if (isCancelled != null && isCancelled.get()) {
+                    return false;
+                }
                 out.write(buffer, 0, read);
+                if (listener != null) listener.onProgress(read);
             }
             return true;
         } catch (IOException e) {
@@ -134,23 +138,33 @@ public class FileUtils {
         }
     }
 
+    public static boolean copyFile(File src, File dst) {
+        return copyFile(src, dst, null, null);
+    }
+
     /**
      * Clones complex directory trees by systematically mapping subfolders and files.
      */
-    public static boolean copyDirectory(File src, File dst) {
+    public static boolean copyDirectory(File src, File dst, java.util.concurrent.atomic.AtomicBoolean isCancelled, ProgressListener listener) {
         if (src == null || !src.isDirectory()) return false;
+        if (isCancelled != null && isCancelled.get()) return false;
         if (!dst.exists()) dst.mkdirs();
         File[] children = src.listFiles();
         if (children == null) return true;
         for (File child : children) {
+            if (isCancelled != null && isCancelled.get()) return false;
             File dstChild = new File(dst, child.getName());
             if (child.isDirectory()) {
-                if (!copyDirectory(child, dstChild)) return false;
+                if (!copyDirectory(child, dstChild, isCancelled, listener)) return false;
             } else {
-                if (!copyFile(child, dstChild)) return false;
+                if (!copyFile(child, dstChild, isCancelled, listener)) return false;
             }
         }
         return true;
+    }
+
+    public static boolean copyDirectory(File src, File dst) {
+        return copyDirectory(src, dst, null, null);
     }
 
     /**
@@ -306,5 +320,9 @@ public class FileUtils {
             }
         }
         return count;
+    }
+
+    public interface ProgressListener {
+        void onProgress(long bytesRead);
     }
 }

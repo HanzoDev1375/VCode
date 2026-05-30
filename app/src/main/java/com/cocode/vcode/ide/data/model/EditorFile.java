@@ -18,6 +18,7 @@ public class EditorFile {
     private FileType fileType;
     private int cursorPosition;
     private int scrollY;
+    private boolean isContentLoaded = false;
 
     public EditorFile() {
     }
@@ -137,5 +138,13 @@ public class EditorFile {
 
     public void setScrollY(int scrollY) {
         this.scrollY = Math.max(0, scrollY);
+    }
+
+    public boolean isContentLoaded() {
+        return isContentLoaded;
+    }
+
+    public void setContentLoaded(boolean contentLoaded) {
+        isContentLoaded = contentLoaded;
     }
 }

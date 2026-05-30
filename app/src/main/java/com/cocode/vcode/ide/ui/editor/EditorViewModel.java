@@ -44,6 +44,7 @@ public class EditorViewModel extends ViewModel {
     private final MutableLiveData<ProjectState> projectStateLiveData = new MutableLiveData<>();
     private final MutableLiveData<List<FileNode>> fileTreeLiveData = new MutableLiveData<>(new ArrayList<>());
     private final MutableLiveData<AppSettings> settingsLiveData = new MutableLiveData<>();
+    private final MutableLiveData<Boolean> isEditorLoadingLiveData = new MutableLiveData<>(false);
 
     /**
      * Maps repository-relative file paths to their current Git status (e.g., Modified, Untracked).
@@ -77,6 +78,7 @@ public class EditorViewModel extends ViewModel {
     public String getProjectName() { return projectName; }
     public LiveData<AppSettings> getSettingsLiveData() { return settingsLiveData; }
     public LiveData<Map<String, FileStatus.Type>> getGitStatuses() { return gitStatusesLiveData; }
+    public LiveData<Boolean> getIsEditorLoading() { return isEditorLoadingLiveData; }
 
     /**
      * Loads the latest application settings from the repository and updates the LiveData.
@@ -143,32 +145,65 @@ public class EditorViewModel extends ViewModel {
                 if (file.exists() && file.isFile()) {
                     try {
                         FileType fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
-                        String content = "";
-
-                        // Only read content for text-based files; binary assets are handled via URI
-                        if (fileType == null || fileType.isTextBased()) {
-                            content = FileUtils.readFile(file);
-                        }
-
-                        EditorFile ef = new EditorFile(UUID.randomUUID().toString(), file, content, fileType);
+                        EditorFile ef = new EditorFile(UUID.randomUUID().toString(), file, "", fileType);
                         ef.setCursorPosition(state.getCursorFor(relativePath));
                         ef.setScrollY(state.getScrollFor(relativePath));
+                        ef.setContentLoaded(false);
                         restoredFiles.add(ef);
                     } catch (Exception ignored) { }
                 }
             }
+            
+            int targetTab = state.getActiveTabIndex();
+            if (targetTab < 0 || targetTab >= restoredFiles.size()) {
+                targetTab = restoredFiles.isEmpty() ? -1 : 0;
+            }
+
+            if (targetTab >= 0) {
+                EditorFile active = restoredFiles.get(targetTab);
+                if (!active.isBinaryAsset()) {
+                    try {
+                        active.setContent(FileUtils.readFile(active.getFile()));
+                        active.markSaved();
+                    } catch (Exception ignored) {}
+                }
+                active.setContentLoaded(true);
+            }
+
+            final int finalTargetTab = targetTab;
             ExecutorProvider.getInstance().runOnMain(() -> {
                 openFilesLiveData.setValue(restoredFiles);
-                // Restore the active tab index, ensuring it remains within bounds
-                int targetTab = state.getActiveTabIndex();
-                if (targetTab >= 0 && targetTab < restoredFiles.size()) {
-                    activeTabIndexLiveData.setValue(targetTab);
-                } else if (!restoredFiles.isEmpty()) {
-                    activeTabIndexLiveData.setValue(0);
-                } else {
-                    activeTabIndexLiveData.setValue(-1);
-                }
+                activeTabIndexLiveData.setValue(finalTargetTab);
+                
+                loadRemainingTabsAsync(restoredFiles);
             });
+        });
+    }
+
+    private void loadRemainingTabsAsync(List<EditorFile> files) {
+        ExecutorProvider.getInstance().runOnIo(() -> {
+            boolean updated = false;
+            for (EditorFile ef : files) {
+                if (!ef.isContentLoaded()) {
+                    if (!ef.isBinaryAsset()) {
+                        try {
+                            String content = FileUtils.readFile(ef.getFile());
+                            ef.setContent(content);
+                            ef.markSaved();
+                        } catch (Exception ignored) {}
+                    }
+                    ef.setContentLoaded(true);
+                    updated = true;
+                }
+            }
+            if (updated) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    List<EditorFile> currentDocs = getOpenFilesList();
+                    if (!currentDocs.isEmpty()) {
+                        openFilesLiveData.setValue(new ArrayList<>(currentDocs));
+                    }
+                });
+            }
         });
     }
 
@@ -357,6 +392,7 @@ public class EditorViewModel extends ViewModel {
 
                 EditorFile newFile = new EditorFile(UUID.randomUUID().toString(), file, content, fileType);
                 newFile.markSaved();
+                newFile.setContentLoaded(true);
 
                 // Restore previous cursor/scroll if available in the state object
                 if (currentState != null) {
@@ -422,8 +458,31 @@ public class EditorViewModel extends ViewModel {
     public void setActiveTab(int index) {
         List<EditorFile> docs = getOpenFilesList();
         if (index >= 0 && index < docs.size()) {
-            activeTabIndexLiveData.setValue(index);
-            persistStateAsync();
+            EditorFile target = docs.get(index);
+            if (!target.isContentLoaded()) {
+                isEditorLoadingLiveData.setValue(true);
+                ExecutorProvider.getInstance().runOnIo(() -> {
+                    if (!target.isContentLoaded()) {
+                        if (!target.isBinaryAsset()) {
+                            try {
+                                String content = FileUtils.readFile(target.getFile());
+                                target.setContent(content);
+                                target.markSaved();
+                            } catch (Exception ignored) {}
+                        }
+                        target.setContentLoaded(true);
+                    }
+                    ExecutorProvider.getInstance().runOnMain(() -> {
+                        openFilesLiveData.setValue(new ArrayList<>(docs));
+                        activeTabIndexLiveData.setValue(index);
+                        isEditorLoadingLiveData.setValue(false);
+                        persistStateAsync();
+                    });
+                });
+            } else {
+                activeTabIndexLiveData.setValue(index);
+                persistStateAsync();
+            }
         }
     }
 

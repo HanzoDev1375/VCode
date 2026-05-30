@@ -143,6 +143,14 @@
                 android:layout_height="match_parent"
                 android:visibility="gone" />
 
+            <ProgressBar
+                android:id="@+id/progress_editor_loading"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_gravity="center"
+                android:indeterminate="true"
+                android:visibility="gone" />
+
             <LinearLayout
                 android:id="@+id/layout_empty_editor"
                 android:layout_width="wrap_content"
