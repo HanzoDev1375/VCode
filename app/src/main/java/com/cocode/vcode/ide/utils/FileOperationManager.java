@@ -25,6 +25,7 @@ public class FileOperationManager {
     private final NotificationManager notificationManager;
     private final AtomicBoolean isCancelled = new AtomicBoolean(false);
     private BroadcastReceiver cancelReceiver;
+    private long lastNotificationTime = 0;
 
     public static class ProgressState {
         public final boolean isActive;
@@ -90,6 +91,12 @@ public class FileOperationManager {
 
         progressLiveData.postValue(new ProgressState(true, progress, max));
 
+        long now = System.currentTimeMillis();
+        if (now - lastNotificationTime < 300) {
+            return; // Throttle notification updates
+        }
+        lastNotificationTime = now;
+
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
                 .setSmallIcon(R.drawable.vcode_logo_notification)
                 .setContentTitle(title)
@@ -116,9 +123,15 @@ public class FileOperationManager {
                 .setContentTitle(title)
                 .setContentText(resultText)
                 .setProgress(0, 0, false)
+                .setAutoCancel(true)
                 .setOngoing(false);
 
-        notificationManager.notify(NOTIFICATION_ID, builder.build());
+        // Cancel the ongoing notification to bypass Android's rapid-update rate limiting on the same ID
+        notificationManager.cancel(NOTIFICATION_ID);
+        // Reset throttle
+        lastNotificationTime = 0;
+        // Notify completion with a separate ID
+        notificationManager.notify(NOTIFICATION_ID + 1, builder.build());
     }
 
     public AtomicBoolean getCancelToken() {

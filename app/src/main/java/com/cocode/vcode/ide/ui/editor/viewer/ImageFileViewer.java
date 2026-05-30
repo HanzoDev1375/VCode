@@ -53,7 +53,7 @@ public class ImageFileViewer implements IFileViewer {
     @Override
     public void destroy() {
         if (imageView != null && context != null) {
-            Glide.with(context).clear(imageView);
+            Glide.with(context.getApplicationContext()).clear(imageView);
         }
         imageView = null;
         context = null;

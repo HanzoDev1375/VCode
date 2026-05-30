@@ -130,7 +130,7 @@ public class FileUtils {
                     return false;
                 }
                 out.write(buffer, 0, read);
-                if (listener != null) listener.onProgress(read);
+                if (listener != null) listener.onProgress(src, read);
             }
             return true;
         } catch (IOException e) {
@@ -323,6 +323,6 @@ public class FileUtils {
     }
 
     public interface ProgressListener {
-        void onProgress(long bytesRead);
+        void onProgress(File file, long bytesRead);
     }
 }

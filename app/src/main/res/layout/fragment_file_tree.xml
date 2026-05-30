@@ -70,16 +70,7 @@
         android:layout_height="1dp"
         android:background="?attr/colorOutline" />
 
-    <ProgressBar
-        android:id="@+id/progress_file_tree"
-        style="?android:attr/progressBarStyleHorizontal"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="20dp"
-        android:layout_marginTop="4dp"
-        android:indeterminate="true"
-        android:max="100"
-        android:visibility="gone" />
+
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/rv_file_tree"

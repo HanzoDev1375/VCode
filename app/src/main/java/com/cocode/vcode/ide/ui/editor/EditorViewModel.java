@@ -103,6 +103,7 @@ public class EditorViewModel extends ViewModel {
         this.projectId = pId;
         this.projectName = pName;
         refreshFileTree();
+        isEditorLoadingLiveData.setValue(true);
 
         // Load project-specific state (open tabs, scroll positions) from the metadata repository
         ExecutorProvider.getInstance().runOnIo(() -> {
@@ -121,6 +122,7 @@ public class EditorViewModel extends ViewModel {
     private void restoreTabsFromState(ProjectState state) {
         List<String> paths = state.getOpenFilePaths();
         if (paths == null || paths.isEmpty()) {
+            isEditorLoadingLiveData.setValue(false);
             ExecutorProvider.getInstance().runOnIo(() -> {
                 try {
                     File metaFile = new File(projectRoot, "project_meta.json");
@@ -174,6 +176,7 @@ public class EditorViewModel extends ViewModel {
             ExecutorProvider.getInstance().runOnMain(() -> {
                 openFilesLiveData.setValue(restoredFiles);
                 activeTabIndexLiveData.setValue(finalTargetTab);
+                isEditorLoadingLiveData.setValue(false);
                 
                 loadRemainingTabsAsync(restoredFiles);
             });

@@ -165,20 +165,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             }
         });
 
-        FileOperationManager.getInstance(requireContext()).getProgressLiveData().observe(getViewLifecycleOwner(), state -> {
-            if (state != null && state.isActive) {
-                binding.progressFileTree.setVisibility(View.VISIBLE);
-                if (state.max > 0) {
-                    binding.progressFileTree.setIndeterminate(false);
-                    binding.progressFileTree.setMax(state.max);
-                    binding.progressFileTree.setProgress(state.progress);
-                } else {
-                    binding.progressFileTree.setIndeterminate(true);
-                }
-            } else {
-                binding.progressFileTree.setVisibility(View.GONE);
-            }
-        });
+        // FileOperationManager updates notifications independently.
     }
 
     /**
@@ -196,25 +183,31 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             int current = 0;
             boolean success = true;
 
-            for (Uri uri : uris) {
-                if (opManager.getCancelToken().get()) {
-                    success = false;
-                    break;
+            try {
+                for (Uri uri : uris) {
+                    if (opManager.getCancelToken().get()) {
+                        success = false;
+                        break;
+                    }
+                    current++;
+                    String fileName = getFileNameFromUri(uri);
+                    if (fileName == null) fileName = "imported_file_" + System.currentTimeMillis();
+                    
+                    opManager.updateProgress("Importing Files", "Importing: " + fileName + " (" + current + "/" + total + ")", total, current);
+
+                    File destFile = new File(root, fileName);
+                    copyStreamToFile(uri, destFile, opManager.getCancelToken());
                 }
-                current++;
-                opManager.updateProgress("Importing Files", "File " + current + " of " + total, total, current);
-
-                String fileName = getFileNameFromUri(uri);
-                if (fileName == null) fileName = "imported_file_" + System.currentTimeMillis();
-                File destFile = new File(root, fileName);
-                copyStreamToFile(uri, destFile, opManager.getCancelToken());
+            } catch (Exception e) {
+                e.printStackTrace();
+                success = false;
+            } finally {
+                final boolean finalSuccess = success;
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    opManager.finishOperation("Import Files", finalSuccess ? "Imported successfully" : "Import failed or cancelled", finalSuccess);
+                    viewModel.refreshFileTree();
+                });
             }
-
-            final boolean finalSuccess = success;
-            ExecutorProvider.getInstance().runOnMain(() -> {
-                opManager.finishOperation("Import Files", finalSuccess ? "Complete" : "Cancelled", finalSuccess);
-                viewModel.refreshFileTree();
-            });
         });
     }
 
@@ -233,20 +226,26 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             boolean[] success = new boolean[]{true};
             int[] fileCount = new int[]{0};
 
-            if (documentFile != null) {
-                String folderName = documentFile.getName() != null ? documentFile.getName() : "Imported_Folder";
-                File destDir = new File(root, folderName);
-                if (!destDir.exists()) destDir.mkdirs();
+            try {
+                if (documentFile != null) {
+                    String folderName = documentFile.getName() != null ? documentFile.getName() : "Imported_Folder";
+                    File destDir = new File(root, folderName);
+                    if (!destDir.exists()) destDir.mkdirs();
 
-                copyDocumentFileTree(documentFile, destDir, opManager.getCancelToken(), opManager, fileCount);
+                    copyDocumentFileTree(documentFile, destDir, opManager.getCancelToken(), opManager, fileCount);
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+                success[0] = false;
+            } finally {
+                if (opManager.getCancelToken().get()) success[0] = false;
+
+                final boolean finalSuccess = success[0];
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    opManager.finishOperation("Import Folder", finalSuccess ? "Imported successfully" : "Import failed or cancelled", finalSuccess);
+                    viewModel.refreshFileTree();
+                });
             }
-            if (opManager.getCancelToken().get()) success[0] = false;
-
-            final boolean finalSuccess = success[0];
-            ExecutorProvider.getInstance().runOnMain(() -> {
-                opManager.finishOperation("Import Folder", finalSuccess ? "Imported " + fileCount[0] + " files" : "Cancelled", finalSuccess);
-                viewModel.refreshFileTree();
-            });
         });
     }
 
@@ -303,15 +302,18 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         if (cancelToken.get()) return;
         for (DocumentFile file : sourceDoc.listFiles()) {
             if (cancelToken.get()) return;
+            String name = file.getName();
+            if (name == null) name = "unknown_file_" + System.currentTimeMillis();
+            
             if (file.isDirectory()) {
-                File newDir = new File(destDir, Objects.requireNonNull(file.getName()));
+                File newDir = new File(destDir, name);
                 if (!newDir.exists()) newDir.mkdirs();
                 copyDocumentFileTree(file, newDir, cancelToken, opManager, fileCount);
             } else {
-                File newFile = new File(destDir, Objects.requireNonNull(file.getName()));
+                File newFile = new File(destDir, name);
                 copyStreamToFile(file.getUri(), newFile, cancelToken);
                 fileCount[0]++;
-                opManager.updateProgress("Importing Folder", "Copied " + fileCount[0] + " files", 0, fileCount[0]);
+                opManager.updateProgress("Importing Folder", "Importing: " + name + " (" + fileCount[0] + ")", 0, fileCount[0]);
             }
         }
     }
@@ -511,54 +513,64 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             File target = new File(destinationDir, source.getName());
             boolean success = false;
 
-            int counter = 1;
-            String baseName = source.getName();
-            String extension = "";
-            int dotIndex = baseName.lastIndexOf('.');
-            if (dotIndex > 0) {
-                extension = baseName.substring(dotIndex);
-                baseName = baseName.substring(0, dotIndex);
-            }
-            while (target.exists()) {
-                target = new File(destinationDir, baseName + "_" + counter + extension);
-                counter++;
-            }
+            try {
+                int counter = 1;
+                String baseName = source.getName();
+                String extension = "";
+                int dotIndex = baseName.lastIndexOf('.');
+                if (dotIndex > 0) {
+                    extension = baseName.substring(dotIndex);
+                    baseName = baseName.substring(0, dotIndex);
+                }
+                while (target.exists()) {
+                    target = new File(destinationDir, baseName + "_" + counter + extension);
+                    counter++;
+                }
 
-            int[] bytesCopied = new int[]{0};
-            FileUtils.ProgressListener listener = read -> {
-                bytesCopied[0] += read;
-                opManager.updateProgress("Pasting...", "Copied " + (bytesCopied[0] / 1024) + " KB", 0, 0);
-            };
+                long[] bytesCopied = new long[]{0};
+                long[] lastUpdate = new long[]{0};
+                FileUtils.ProgressListener listener = (file, read) -> {
+                    bytesCopied[0] += read;
+                    long now = System.currentTimeMillis();
+                    if (now - lastUpdate[0] > 500) {
+                        opManager.updateProgress("Pasting...", "Pasting: " + file.getName(), 0, 0);
+                        lastUpdate[0] = now;
+                    }
+                };
 
-            if (isCut) {
-                success = source.renameTo(target);
-                if (!success) {
+                if (isCut) {
+                    success = source.renameTo(target);
+                    if (!success) {
+                        if (source.isDirectory()) {
+                            success = FileUtils.copyDirectory(source, target, opManager.getCancelToken(), listener) && FileUtils.deleteRecursive(source);
+                        } else {
+                            success = FileUtils.copyFile(source, target, opManager.getCancelToken(), listener) && source.delete();
+                        }
+                    }
+                    if (success) {
+                        ExecutorProvider.getInstance().runOnMain(() -> adapter.setClipboardState(null, false));
+                    }
+                } else {
                     if (source.isDirectory()) {
-                        success = FileUtils.copyDirectory(source, target, opManager.getCancelToken(), listener) && FileUtils.deleteRecursive(source);
+                        success = FileUtils.copyDirectory(source, target, opManager.getCancelToken(), listener);
                     } else {
-                        success = FileUtils.copyFile(source, target, opManager.getCancelToken(), listener) && source.delete();
+                        success = FileUtils.copyFile(source, target, opManager.getCancelToken(), listener);
                     }
                 }
-                if (success) {
-                    ExecutorProvider.getInstance().runOnMain(() -> adapter.setClipboardState(null, false));
-                }
-            } else {
-                if (source.isDirectory()) {
-                    success = FileUtils.copyDirectory(source, target, opManager.getCancelToken(), listener);
-                } else {
-                    success = FileUtils.copyFile(source, target, opManager.getCancelToken(), listener);
-                }
-            }
 
-            if (opManager.getCancelToken().get()) {
+                if (opManager.getCancelToken().get()) {
+                    success = false;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
                 success = false;
+            } finally {
+                final boolean finalSuccess = success;
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    opManager.finishOperation("Paste", finalSuccess ? "Pasted successfully" : "Paste failed or cancelled", finalSuccess);
+                    viewModel.refreshFileTree();
+                });
             }
-
-            final boolean finalSuccess = success;
-            ExecutorProvider.getInstance().runOnMain(() -> {
-                opManager.finishOperation("Paste", finalSuccess ? "Paste complete" : "Paste failed or cancelled", finalSuccess);
-                viewModel.refreshFileTree();
-            });
         });
     }
 
