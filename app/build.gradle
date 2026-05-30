@@ -23,6 +23,7 @@ android {
         }
     }
     compileOptions {
+        coreLibraryDesugaringEnabled true
         sourceCompatibility JavaVersion.VERSION_11
         targetCompatibility JavaVersion.VERSION_11
     }
@@ -39,6 +40,8 @@ dependencies {
     implementation libs.constraintlayout
     implementation libs.activity
     implementation libs.fragment
+    
+    coreLibraryDesugaring libs.desugar.jdk.libs
 
     // Architecture
     implementation libs.lifecycle.viewmodel

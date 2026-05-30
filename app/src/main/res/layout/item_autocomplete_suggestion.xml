@@ -2,35 +2,32 @@
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
-    android:layout_height="@dimen/vcode_autocomplete_item_height"
+    android:layout_height="38dp"
     android:background="?attr/selectableItemBackground"
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
-    android:paddingHorizontal="16dp">
+    android:paddingHorizontal="12dp">
 
     <TextView
         android:id="@+id/tv_type_badge"
-        android:layout_width="32dp"
-        android:layout_height="32dp"
-        android:layout_marginEnd="12dp"
+        android:layout_width="22dp"
+        android:layout_height="22dp"
+        android:layout_marginEnd="10dp"
         android:background="@drawable/vcode_bg_symbol_key"
         android:gravity="center"
-        android:fontFamily="sans-serif-medium"
         android:textColor="@android:color/white"
-        android:textSize="14sp"
-        tools:text="T"
-        tools:backgroundTint="@color/vcode_accent_primary" />
+        android:textSize="10sp"
+        tools:text="T" />
 
     <TextView
         android:id="@+id/tv_label"
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
-        android:fontFamily="monospace"
         android:textColor="@color/vcode_text_primary"
-        android:textSize="14sp"
+        android:textSize="13sp"
         android:maxLines="1"
         android:ellipsize="end"
         tools:text="div" />
@@ -40,9 +37,8 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
-        android:fontFamily="sans-serif"
         android:textColor="@color/vcode_text_secondary"
-        android:textSize="11sp"
+        android:textSize="10sp"
         android:maxLines="1"
         android:ellipsize="end"
         tools:text="HTML Tag" />

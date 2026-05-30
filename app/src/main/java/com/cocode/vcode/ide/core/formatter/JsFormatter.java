@@ -76,11 +76,14 @@ public class JsFormatter extends BaseFormatter {
                 continue;
             }
 
-            // Handle start braces: Advance scope indentation settings and push a line break
+            boolean haveNewLine = i + 1 >= cleanCode.length() || cleanCode.charAt(i + 1) != '\n';
             if (c == '{') {
                 if (!isNewLine && out.length() > 0 && out.charAt(out.length() - 1) != ' ')
                     out.append(" ");
-                out.append("{\n");
+                out.append("{");
+                if (haveNewLine) {
+                    out.append("\n");
+                }
                 indent++;
                 isNewLine = true;
             }
@@ -107,26 +110,30 @@ public class JsFormatter extends BaseFormatter {
                         if (rem.startsWith("else") || rem.startsWith("catch") || rem.startsWith("finally")) {
                             out.append(" ");
                         } else {
-                            out.append("\n");
+                            if (haveNewLine) {
+                                out.append("\n");
+                            }
                             isNewLine = true;
                         }
                     }
                 }
             }
-            // Rule statement break processing
             else if (c == ';') {
                 out.append(";");
                 // Only create line break for semicolons outside function or control loops parameters
                 if (inParens == 0) {
-                    out.append("\n");
+                    if (haveNewLine) {
+                        out.append("\n");
+                    }
                     isNewLine = true;
                 }
             }
-            // Separator parameter processing
             else if (c == ',') {
                 out.append(",");
                 if (inParens == 0) {
-                    out.append("\n");
+                    if (haveNewLine) {
+                        out.append("\n");
+                    }
                     isNewLine = true;
                 } else {
                     out.append(" "); // Maintain a tidy readable space inside multiple argument definitions
@@ -134,9 +141,6 @@ public class JsFormatter extends BaseFormatter {
             }
             // Guard trailing structural carriage line breaks from building redundant layers
             else if (c == '\n') {
-                if (out.length() > 0 && out.charAt(out.length() - 1) == '\n') {
-                    continue;
-                }
                 out.append("\n");
                 isNewLine = true;
             }

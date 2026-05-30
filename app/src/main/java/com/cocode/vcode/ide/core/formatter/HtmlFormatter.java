@@ -9,22 +9,31 @@ import java.util.regex.Pattern;
  */
 public class HtmlFormatter extends BaseFormatter {
     
-    private static final Pattern TAG_SPLIT = Pattern.compile(">\\s*<");
+    private static final Pattern TAG_SPLIT = Pattern.compile(">[ \\t\\x0B\\f\\r]*<");
     private static final Pattern VOID_TAGS = Pattern.compile("(?i)^<(img|br|hr|input|link|meta|area|base|col|param|source).*?>$");
     private static final Pattern INLINE_TAG = Pattern.compile("^<[^>]+>.*</[^>]+>$");
+    private static final Pattern MULTI_NEWLINES = Pattern.compile("\\n{3,}");
 
     @Override
     public String format(String code) {
         if (code == null || code.isEmpty()) return "";
-        // Strip trailing whitespaces between tags and insert newlines to split markup safely onto independent lines
+        // Strip trailing horizontal whitespaces between tags and insert newlines
         String clean = TAG_SPLIT.matcher(code).replaceAll(">\n<");
-        String[] lines = clean.split("\n");
+        String[] lines = clean.split("\n", -1);
         StringBuilder out = new StringBuilder(clean.length() + lines.length * 2);
         int indent = 0;
+        int emptyLines = 0;
 
         for (String line : lines) {
             String trimmed = line.trim();
-            if (trimmed.isEmpty()) continue; // Ignore empty line noise
+            if (trimmed.isEmpty()) {
+                if (emptyLines < 1 && out.length() > 0) {
+                    out.append("\n");
+                    emptyLines++;
+                }
+                continue; 
+            }
+            emptyLines = 0;
 
             // Pull back indentation depth immediately if the line contains a closing tag
             if (trimmed.startsWith("</")) indent = Math.max(0, indent - 1);
@@ -40,6 +49,9 @@ public class HtmlFormatter extends BaseFormatter {
                 if (!INLINE_TAG.matcher(trimmed).matches()) indent++;
             }
         }
-        return out.toString().trim();
+        
+        String result = out.toString();
+        result = MULTI_NEWLINES.matcher(result).replaceAll("\n\n");
+        return result.trim();
     }
 }

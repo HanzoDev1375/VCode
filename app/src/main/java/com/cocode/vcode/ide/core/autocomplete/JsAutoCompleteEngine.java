@@ -5,6 +5,8 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -17,7 +19,7 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
     // Regex parsing pattern aimed at capturing function definitions, variable assignments, and class structures
     private static final Pattern PAT_USER_FUNC = Pattern.compile(
-            "(?:function\\s+|const\\s+|let\\s+|var\\s+|class\\s+)([a-zA-Z_$][\\w$]*)");
+            "(function|const|let|var|class)\\s+([a-zA-Z_$][\\w$]*)");
 
     // Built-in API global namespace method dictionary maps
     private static final String[][] DOT_METHODS = {
@@ -81,42 +83,63 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
     @Override
     public List<CompletionItem> getSuggestions(String fullText, int cursorPos) {
-        if (fullText == null || cursorPos < 0) return new ArrayList<>();
-        String line = getLineBeforeCursor(fullText, cursorPos);
+        if (fullText == null || cursorPos < 0 || cursorPos > fullText.length()) return new ArrayList<>();
+
+        String word = getWordBeforeCursor(fullText, cursorPos);
 
         // Member fields requested via Dot notation '.' -> Extract parent name and match methods
-        int dotIdx = line.lastIndexOf('.');
-        if (dotIdx >= 0 && dotIdx == cursorPos - (cursorPos - dotIdx)) {
-            String beforeDot = getNonWhitespaceBeforeCursor(
-                    fullText.substring(0, dotIdx), dotIdx).trim();
-            String afterDot = getWordBeforeCursor(fullText, cursorPos);
+        int potentialDotIdx = cursorPos - word.length() - 1;
+        if (potentialDotIdx >= 0 && fullText.charAt(potentialDotIdx) == '.') {
+            String beforeDot = getNonWhitespaceBeforeCursor(fullText, potentialDotIdx).trim();
 
             for (String[] pair : DOT_METHODS) {
                 // If context prefix aligns with an object namespace definition, process member properties
-                if (beforeDot.equals(pair[0]) || beforeDot.endsWith(pair[0])) {
+                if (beforeDot.equals(pair[0]) || beforeDot.endsWith(pair[0]) || beforeDot.endsWith("." + pair[0])) {
                     String[] methods = pair[1].split(",");
                     List<CompletionItem> items = new ArrayList<>();
                     for (String m : methods) {
                         items.add(new CompletionItem(m, m, pair[0] + " method",
                                 CompletionItem.Type.BUILTIN, 0));
                     }
-                    return fuzzyFilter(items, afterDot);
+                    return fuzzyFilter(items, word);
                 }
             }
         }
 
         // General fallback execution -> Gather keywords and scan local user-declared tokens
-        String word = getWordBeforeCursor(fullText, cursorPos);
         List<CompletionItem> all = new ArrayList<>(builtinItems);
 
         // Perform text matching sweep to dynamically index active workspace variables or functions
+        Set<String> seen = new HashSet<>();
+        for (CompletionItem item : all) {
+            seen.add(item.getLabel());
+        }
+
         Matcher m = PAT_USER_FUNC.matcher(fullText);
-        int scanLimit = Math.min(fullText.length(), 10000); // Caps lookups to preserve memory on huge files
+        int scanLimit = Math.min(fullText.length(), 50000); // Caps lookups to preserve memory on huge files
         while (m.find() && m.start() < scanLimit) {
-            String name = m.group(1);
-            if (name != null && !name.isEmpty()) {
-                all.add(new CompletionItem(name, name, "User defined",
-                        CompletionItem.Type.FUNCTION, 0));
+            String keyword = m.group(1);
+            String name = m.group(2);
+            if (name != null && !name.isEmpty() && seen.add(name)) {
+                CompletionItem.Type type = CompletionItem.Type.VALUE;
+                String detail = "Variable";
+                if ("function".equals(keyword)) {
+                    type = CompletionItem.Type.FUNCTION;
+                    detail = "Function";
+                } else if ("class".equals(keyword)) {
+                    type = CompletionItem.Type.KEYWORD;
+                    detail = "Class";
+                }
+                all.add(new CompletionItem(name, name, detail, type, 0));
+            }
+        }
+
+        // Add all other words in the document as generic suggestions
+        Matcher wordMatcher = Pattern.compile("[a-zA-Z_$][\\w$]*").matcher(fullText);
+        while (wordMatcher.find() && wordMatcher.start() < scanLimit) {
+            String w = wordMatcher.group();
+            if (w.length() >= 2 && seen.add(w)) {
+                all.add(new CompletionItem(w, w, "Document Word", CompletionItem.Type.VALUE, 0));
             }
         }
 

@@ -19,8 +19,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
+import com.cocode.vcode.ide.databinding.ItemAutocompleteSuggestionBinding;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
+import android.graphics.drawable.GradientDrawable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -59,6 +61,7 @@ public class AutoCompletePopup {
         popupWindow.setOutsideTouchable(false);
         popupWindow.setFocusable(false); // Keeps soft input focus firmly inside the main text editing window
         popupWindow.setElevation(8f);
+        popupWindow.setAnimationStyle(R.style.VCodePopupMenuAnimation);
     }
 
     /**
@@ -77,11 +80,11 @@ public class AutoCompletePopup {
         int popupWidth = Math.min(UiUtils.dpToPx(context, WIDTH_DP), screenWidth - UiUtils.dpToPx(context, 32));
         popupWindow.setWidth(popupWidth);
 
-        // Calculate estimated height for collision detection (roughly 48dp per item)
-        int estimatedHeight = items.size() > 4 ? UiUtils.dpToPx(context, 216) : items.size() * UiUtils.dpToPx(context, 48);
+        // Calculate estimated height for collision detection (roughly 38dp per item)
+        int estimatedHeight = items.size() > 5 ? UiUtils.dpToPx(context, 190) : items.size() * UiUtils.dpToPx(context, 38);
 
-        if (items.size() > 4) {
-            popupWindow.setHeight(UiUtils.dpToPx(context, 216));
+        if (items.size() > 5) {
+            popupWindow.setHeight(UiUtils.dpToPx(context, 190));
         } else {
             popupWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
         }
@@ -194,48 +197,9 @@ public class AutoCompletePopup {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            // Programmatically establish item row layout styling constructs
-            LinearLayout row = new LinearLayout(context);
-            row.setOrientation(LinearLayout.HORIZONTAL);
-            row.setGravity(android.view.Gravity.CENTER_VERTICAL);
-            row.setPadding(UiUtils.dpToPx(context, 12), UiUtils.dpToPx(context, 8), UiUtils.dpToPx(context, 12), UiUtils.dpToPx(context, 8));
-            row.setMinimumHeight(UiUtils.dpToPx(context, 48));
-            row.setBackground(buildRippleBackground());
-
-            // Build indicator symbol circle containers
-            TextView badge = new TextView(context);
-            int badgeSize = UiUtils.dpToPx(context, 22);
-            LinearLayout.LayoutParams badgeParams = new LinearLayout.LayoutParams(badgeSize, badgeSize);
-            badgeParams.setMarginEnd(UiUtils.dpToPx(context, 10));
-            badge.setLayoutParams(badgeParams);
-            badge.setGravity(android.view.Gravity.CENTER);
-            badge.setTextSize(8);
-            badge.setTextColor(Color.WHITE);
-            badge.setTypeface(uiFontBold);
-            
-            android.graphics.drawable.GradientDrawable d = new android.graphics.drawable.GradientDrawable();
-            d.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-            badge.setBackground(d);
-            row.addView(badge);
-
-            // Build completion target text layout
-            TextView label = new TextView(context);
-            LinearLayout.LayoutParams labelParams = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
-            label.setLayoutParams(labelParams);
-            label.setTextSize(14);
-            label.setTextColor(colorTextPrimary);
-            label.setMaxLines(1);
-            row.addView(label);
-
-            // Build secondary descriptive detail markers
-            TextView detail = new TextView(context);
-            detail.setTextSize(11);
-            detail.setTextColor(colorTextSecondary);
-            detail.setTypeface(uiFont);
-            detail.setMaxLines(1);
-            row.addView(detail);
-
-            return new ViewHolder(row, badge, label, detail);
+            ItemAutocompleteSuggestionBinding binding = ItemAutocompleteSuggestionBinding.inflate(
+                    android.view.LayoutInflater.from(context), parent, false);
+            return new ViewHolder(binding);
         }
 
         @SuppressLint("SetTextI18n")
@@ -243,20 +207,25 @@ public class AutoCompletePopup {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             CompletionItem item = items.get(position);
 
-            ((android.graphics.drawable.GradientDrawable) holder.badge.getBackground()).setColor(getBadgeColor(item.getType()));
-            holder.badge.setText(getBadgeLetter(item.getType()));
+            GradientDrawable badgeBg = (GradientDrawable) holder.binding.tvTypeBadge.getBackground();
+            if (badgeBg != null) {
+                badgeBg.setColor(getBadgeColor(item.getType()));
+            }
+            holder.binding.tvTypeBadge.setText(getBadgeLetter(item.getType()));
+            holder.binding.tvTypeBadge.setTypeface(uiFontBold);
 
             String labelText = item.getLabel();
-            if (labelText != null && labelText.length() > 15) {
-                holder.label.setText(labelText.substring(0, 15) + "...");
+            if (labelText != null && labelText.length() > 20) {
+                holder.binding.tvLabel.setText(labelText.substring(0, 20) + "...");
             } else {
-                holder.label.setText(labelText != null ? labelText : "");
+                holder.binding.tvLabel.setText(labelText != null ? labelText : "");
             }
 
-            // Emphasize the top matches group by applying standard bold weightings to the first item row entry
-            holder.label.setTypeface(codeFont, position == 0 ? Typeface.BOLD : Typeface.NORMAL);
+            // Bold styling for top suggestion
+            holder.binding.tvLabel.setTypeface(codeFont, position == 0 ? Typeface.BOLD : Typeface.NORMAL);
 
-            holder.detail.setText(item.getDetail() != null ? item.getDetail() : "");
+            holder.binding.tvDetail.setText(item.getDetail() != null ? item.getDetail() : "");
+            holder.binding.tvDetail.setTypeface(uiFont);
 
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onItemSelected(item);
@@ -268,9 +237,6 @@ public class AutoCompletePopup {
             return items.size();
         }
 
-        /**
-         * Resolves unique color accents assigned to distinguish varying identifier tokens categories.
-         */
         private int getBadgeColor(CompletionItem.Type type) {
             if (type == null) return colorTextSecondary;
             switch (type) {
@@ -288,9 +254,6 @@ public class AutoCompletePopup {
             }
         }
 
-        /**
-         * Resolves short textual shorthand letters representing specific code tokens classifications.
-         */
         private String getBadgeLetter(CompletionItem.Type type) {
             if (type == null) return "?";
             switch (type) {
@@ -318,23 +281,12 @@ public class AutoCompletePopup {
             }
         }
 
-
-
-        private android.graphics.drawable.Drawable buildRippleBackground() {
-            android.graphics.drawable.ColorDrawable bg = new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT);
-            android.content.res.ColorStateList rippleColor = android.content.res.ColorStateList.valueOf(
-                    ContextCompat.getColor(context, R.color.vcode_selection_color));
-            return new android.graphics.drawable.RippleDrawable(rippleColor, bg, null);
-        }
-
         class ViewHolder extends RecyclerView.ViewHolder {
-            final TextView badge, label, detail;
+            final ItemAutocompleteSuggestionBinding binding;
 
-            ViewHolder(View root, TextView badge, TextView label, TextView detail) {
-                super(root);
-                this.badge = badge;
-                this.label = label;
-                this.detail = detail;
+            ViewHolder(ItemAutocompleteSuggestionBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
         }
     }

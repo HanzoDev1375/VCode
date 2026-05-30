@@ -9,7 +9,9 @@ import java.util.regex.Pattern;
  */
 public class CssFormatter extends BaseFormatter {
 
-    private static final Pattern WHITESPACE = Pattern.compile("\\s+");
+    private static final Pattern SPACES = Pattern.compile("[ \\t\\x0B\\f\\r]+");
+    private static final Pattern SPACE_NEWLINE = Pattern.compile(" \\n");
+    private static final Pattern NEWLINE_SPACE = Pattern.compile("\\n ");
     private static final Pattern BLANK_LINES = Pattern.compile("(?m)^\\s+$");
     private static final Pattern MULTI_NEWLINES = Pattern.compile("\\n{3,}");
 
@@ -21,8 +23,11 @@ public class CssFormatter extends BaseFormatter {
         boolean inString = false; // State flag to avoid scrambling characters inside literal text blocks
         char stringChar = 0;      // Tracks quote boundaries matching double vs single bounds
 
-        // Collapse all messy pre-existing whitespaces down to a single space token to reset baseline positioning
-        String cleanCode = WHITESPACE.matcher(code).replaceAll(" ").trim();
+        // Clean out erratic tabs and double whitespaces, keeping baseline structural spaces intact
+        String cleanCode = SPACES.matcher(code).replaceAll(" ");
+        cleanCode = SPACE_NEWLINE.matcher(cleanCode).replaceAll("\n");
+        cleanCode = NEWLINE_SPACE.matcher(cleanCode).replaceAll("\n");
+        cleanCode = cleanCode.trim();
         boolean isNewLine = true;
 
         for (int i = 0; i < cleanCode.length(); i++) {
@@ -48,26 +53,31 @@ public class CssFormatter extends BaseFormatter {
                 continue;
             }
 
-            // Handle block start layout updates
+            boolean haveNewLine = i + 1 >= cleanCode.length() || cleanCode.charAt(i + 1) != '\n';
             if (c == '{') {
                 // Ensure a nice clear space precedes an open bracket block if missing
                 if (!isNewLine && out.length() > 0 && out.charAt(out.length() - 1) != ' ')
                     out.append(" ");
-                out.append("{\n");
+                out.append("{");
+                if (haveNewLine) {
+                    out.append("\n");
+                }
                 indent++;
                 isNewLine = true;
             }
-            // Handle block wrap updates
             else if (c == '}') {
                 indent = Math.max(0, indent - 1); // Step back an indent depth level safely
                 if (!isNewLine) out.append("\n");
-                out.append(getIndentString(indent)).append("}\n\n");
+                out.append(getIndentString(indent)).append("}");
+                if (haveNewLine) {
+                    out.append("\n");
+                }
                 isNewLine = true;
             }
-            // Separate single rule declarations safely onto independent lines
+            // Separate single rule declarations safely without forcing line breaks
             else if (c == ';') {
-                out.append(";\n");
-                isNewLine = true;
+                out.append(";");
+                // We no longer force isNewLine = true here to allow inline properties
             }
             else {
                 boolean b = i + 1 < cleanCode.length() && cleanCode.charAt(i + 1) != ' ';
@@ -89,6 +99,12 @@ public class CssFormatter extends BaseFormatter {
                 else {
                     // Prevent piling up unnecessary trailing/leading indentation text spacers
                     if (c == ' ' && isNewLine) continue;
+
+                    if (c == '\n') {
+                        out.append("\n");
+                        isNewLine = true;
+                        continue;
+                    }
 
                     if (isNewLine) {
                         out.append(getIndentString(indent));

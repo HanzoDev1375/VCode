@@ -571,6 +571,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         String rawCode = java.util.Objects.requireNonNull(codeEditText.getText()).toString();
         FileType lang = activeFile.getFileType();
+        int originalSelection = codeEditText.getSelectionStart();
 
         Toast.makeText(this, "Formatting...", Toast.LENGTH_SHORT).show();
         ExecutorProvider.getInstance().runOnIo(() -> {
@@ -578,8 +579,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             ExecutorProvider.getInstance().runOnMain(() -> {
                 if (!rawCode.equals(formattedCode)) {
                     codeEditText.setText(formattedCode);
-                    codeEditText.setSelection(0);
-                    codeEditText.scrollTo(0, 0);
+                    codeEditText.setSelection(Math.min(originalSelection, formattedCode.length()));
                     Toast.makeText(this, "Formatted successfully", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(this, "Code is already formatted", Toast.LENGTH_SHORT).show();
