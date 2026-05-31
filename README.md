@@ -27,7 +27,9 @@ Write code at the speed of thought. VCode's editor never stutters, never freezes
   - JavaScript suggestions inside `<script>` blocks.
   - Project‑wide variable and function discovery.
   - File and folder name suggestions with icons.
+- **Built‑in Emmet Expansion** — type shorthand abbreviations like `ul>li.item*3` in HTML or `m10`, `df`, `jcc` in CSS and instantly expand them into full code. The `!` abbreviation injects your custom HTML boilerplate with your cursor already inside `<body>`.
 - **One‑tap code formatting** for JS, CSS, HTML, and JSON — your cursor stays exactly where it was.
+- **Smart overflow menu** — text‑editing tools (Find/Replace, Go to Line, Format Code) automatically appear or hide based on the active file type and view mode.
 - Auto‑closing brackets, smart indentation, Find & Replace with regex, and real‑time JSON validation.
 
 ---
@@ -36,7 +38,7 @@ Write code at the speed of thought. VCode's editor never stutters, never freezes
 
 Stop switching apps just to see what something looks like.
 
-- **Live Web Preview** — run your HTML project in a powerful WebView instantly, or pop it open in your browser.
+- **Live Web Preview** — run your *currently active* HTML file instantly in a powerful WebView, or pop it open in your browser. The Run button appears automatically only when relevant — animated and context‑aware.
 - **Markdown rendering** — your `.md` files render as rich, formatted documents right inside the editor.
 - **SVG, CSV, and Image previews** — files open directly in their visual representation, no extra steps.
 - **JSON Viewer** — formatted, syntax‑highlighted JSON at a glance.
