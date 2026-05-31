@@ -27,6 +27,10 @@ public class CodeFormatter {
         FORMATTERS.put(FileType.JAVASCRIPT, new JsFormatter());
     }
 
+    public static boolean isFormatSupported(FileType language) {
+        return FORMATTERS.containsKey(language);
+    }
+
     /**
      * Formats incoming source text block based on target language style standards.
      *

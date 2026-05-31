@@ -224,7 +224,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             binding.btnRun.setImageResource(R.drawable.ic_play);
             binding.ivViewPreview.setVisibility(View.GONE);
             Toast.makeText(this, "Server stopped", Toast.LENGTH_SHORT).show();
-            updateRunButtonVisibility();
+            updateToolbarVisibility();
             return;
         }
 
@@ -243,7 +243,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         binding.btnRun.setImageResource(R.drawable.ic_stop);
         binding.ivViewPreview.setVisibility(View.VISIBLE);
         executeActiveFilePreviewIntent();
-        updateRunButtonVisibility();
+        updateToolbarVisibility();
     }
 
     private void toggleInlinePreview() {
@@ -264,18 +264,26 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         updateActiveViewer(activeFile, !isPreviewMode);
     }
 
-    private void updateRunButtonVisibility() {
+    private void updateToolbarVisibility() {
         boolean isServerRunning = localWebServer != null && localWebServer.isRunning();
         
         int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
+        boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
         boolean isActiveHtml = false;
         
-        if (files != null && activeIndex >= 0 && activeIndex < files.size()) {
+        if (hasOpenFile) {
             EditorFile activeFile = files.get(activeIndex);
             if (activeFile.getFileType() == FileType.HTML) {
                 isActiveHtml = true;
             }
+            binding.btnUndo.setVisibility(View.VISIBLE);
+            binding.btnRedo.setVisibility(View.VISIBLE);
+            binding.btnSaveCurrent.setVisibility(View.VISIBLE);
+        } else {
+            binding.btnUndo.setVisibility(View.GONE);
+            binding.btnRedo.setVisibility(View.GONE);
+            binding.btnSaveCurrent.setVisibility(View.GONE);
         }
         
         if (isServerRunning || isActiveHtml) {
@@ -382,7 +390,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 boolean isPreview = viewModel.getPreviewState(relPath);
                 updateActiveViewer(activeFile, isPreview);
             }
-            updateRunButtonVisibility();
+            updateToolbarVisibility();
         });
     }
 
@@ -465,14 +473,39 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popupWindow.setElevation(UiUtils.dpToPx(this, 8));
 
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
-        addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
-            isReadOnly = !isReadOnly;
-            applyReadOnlyState();
-        });
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
+        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
+        List<EditorFile> files = viewModel.getOpenFiles().getValue();
+        boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
+        boolean showTextEditingOptions = false;
+
+        if (hasOpenFile) {
+            EditorFile activeFile = files.get(activeIndex);
+            FileType type = activeFile.getFileType();
+            boolean isBinary = activeFile.isBinaryAsset();
+            
+            boolean supportsPreview = type == FileType.CSV || type == FileType.SVG || type == FileType.MARKDOWN;
+            String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
+            boolean isPreviewMode = supportsPreview && viewModel.getPreviewState(relPath);
+            
+            if (!isBinary && !isPreviewMode) {
+                showTextEditingOptions = true;
+            }
+        }
+
+        if (showTextEditingOptions) {
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
+            addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
+                isReadOnly = !isReadOnly;
+                applyReadOnlyState();
+            });
+            if (CodeFormatter.isFormatSupported(files.get(activeIndex).getFileType())) {
+                addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
+            }
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
+        }
+
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
+        
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);
             if (viewModel.getProjectRoot() != null) {
@@ -487,11 +520,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
             }
         }));
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_gear, "Settings", () -> navigateWithUnsavedCheck(() -> startActivity(new Intent(this, SettingsActivity.class))));
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_floppy_disk, "Save All", () -> {
-            viewModel.saveAll();
-            Toast.makeText(this, "Saving all files...", Toast.LENGTH_SHORT).show();
-        });
+
+        if (hasOpenFile) {
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_floppy_disk, "Save All", () -> {
+                viewModel.saveAll();
+                Toast.makeText(this, "Saving all files...", Toast.LENGTH_SHORT).show();
+            });
+        }
 
         popupWindow.showAsDropDown(anchorView, 0, UiUtils.dpToPx(this, 4));
     }
