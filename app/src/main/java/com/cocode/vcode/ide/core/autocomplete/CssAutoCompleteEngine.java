@@ -42,10 +42,27 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
 
     private final List<CompletionItem> propertyItems = new ArrayList<>();
     private final Map<String, List<String>> valueMap = new HashMap<>();
+    private final List<CompletionItem> htmlTagItems = new ArrayList<>();
 
     public CssAutoCompleteEngine(Context context) {
         super(context);
         loadProperties();
+        loadHtmlTags();
+    }
+
+    private void loadHtmlTags() {
+        try {
+            String json = loadAssetJson("completions/html_tags.json");
+            JSONArray arr = new JSONArray(json);
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject obj = arr.getJSONObject(i);
+                String tag = obj.optString("tag");
+                String detail = obj.optString("detail", "HTML Element");
+                htmlTagItems.add(new CompletionItem(tag, tag + " ", detail, CompletionItem.Type.TAG, 0));
+            }
+        } catch (Exception e) {
+            // Non-critical
+        }
     }
 
     /**
@@ -79,6 +96,10 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
 
     @Override
     public List<CompletionItem> getSuggestions(String fullText, int cursorPos) {
+        return getSuggestions(fullText, cursorPos, false);
+    }
+
+    public List<CompletionItem> getSuggestions(String fullText, int cursorPos, boolean isInlineStyle) {
         if (fullText == null || cursorPos < 0) return new ArrayList<>();
         String line = getLineBeforeCursor(fullText, cursorPos);
 
@@ -88,11 +109,21 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             return fuzzyFilter(AT_RULE_ITEMS, word.replace("@", ""));
         }
 
-        // Right side of property assignment ':' -> Provide contextual property choices
         int colonIdx = line.lastIndexOf(':');
         int braceIdx = line.lastIndexOf('{');
-        if (colonIdx > braceIdx) {
+        int semiIdxLine = line.lastIndexOf(';');
+        
+        if (colonIdx > braceIdx && colonIdx > semiIdxLine) {
             String propertyPart = line.substring(braceIdx >= 0 ? braceIdx + 1 : 0, colonIdx).trim();
+            
+            // Clean up propertyPart for inline HTML styles and multiple properties on one line
+            int semiIdx = propertyPart.lastIndexOf(';');
+            int quoteIdx = Math.max(propertyPart.lastIndexOf('"'), propertyPart.lastIndexOf('\''));
+            int startIdx = Math.max(semiIdx, quoteIdx);
+            if (startIdx >= 0) {
+                propertyPart = propertyPart.substring(startIdx + 1).trim();
+            }
+
             List<String> vals = valueMap.get(propertyPart);
             if (vals != null) {
                 String word = getWordBeforeCursor(fullText, cursorPos);
@@ -105,8 +136,8 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             return new ArrayList<>();
         }
 
-        // Active scope within curly braces -> Suggest core CSS properties
-        if (braceIdx >= 0 || isInsideRuleBlock(fullText, cursorPos)) {
+        // Active scope within curly braces OR inline style attribute -> Suggest core CSS properties
+        if (isInlineStyle || braceIdx >= 0 || isInsideRuleBlock(fullText, cursorPos)) {
             String word = getWordBeforeCursor(fullText, cursorPos);
             return fuzzyFilter(propertyItems, word);
         }
@@ -117,7 +148,8 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             return fuzzyFilter(PSEUDO_ITEMS, word);
         }
 
-        return fuzzyFilter(propertyItems, word);
+        // Outside of blocks, suggest HTML elements for selectors
+        return fuzzyFilter(htmlTagItems, word);
     }
 
     /**

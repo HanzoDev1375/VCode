@@ -19,9 +19,14 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     // Maps a base tag identifier (e.g. "img") directly to its applicable attribute options array
     private final java.util.Map<String, List<CompletionItem>> attrMap = new java.util.HashMap<>();
 
+    private final CssAutoCompleteEngine cssEngine;
+    private final JsAutoCompleteEngine jsEngine;
+
     public HtmlAutoCompleteEngine(Context context) {
         super(context);
         loadTags();
+        this.cssEngine = new CssAutoCompleteEngine(context);
+        this.jsEngine = new JsAutoCompleteEngine(context);
     }
 
     /**
@@ -86,9 +91,28 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             }
         }
 
+        // Check if inside embedded <style> or <script> tags
+        String unclosedBlock = tagParser.getUnclosedTagAt(fullText, cursorPos);
+        if ("style".equals(unclosedBlock)) {
+            return cssEngine.getSuggestions(fullText, cursorPos);
+        } else if ("script".equals(unclosedBlock)) {
+            return jsEngine.getSuggestions(fullText, cursorPos);
+        }
+
         // Caret sits inside active tag scope bounds -> Fetch valid local attribute properties
         String currentTag = tagParser.getCurrentOpenTagName(fullText, cursorPos);
         if (currentTag != null && !currentTag.isEmpty()) {
+            // Check if we are specifically inside an inline 'style="..."' attribute
+            String before = fullText.substring(0, cursorPos);
+            int lastOpen = before.lastIndexOf('<');
+            if (lastOpen != -1) {
+                String tagText = before.substring(lastOpen);
+                if (tagText.matches("(?s).*\\bstyle\\s*=\\s*\"[^\"]*$") || 
+                    tagText.matches("(?s).*\\bstyle\\s*=\\s*'[^']*$")) {
+                    return cssEngine.getSuggestions(fullText, cursorPos, true);
+                }
+            }
+
             List<CompletionItem> attrs = attrMap.get(currentTag);
             if (attrs != null) {
                 return fuzzyFilter(attrs, word);
