@@ -25,7 +25,8 @@
                 android:background="@drawable/vcode_bg_toolbar"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:paddingHorizontal="8dp">
+                android:paddingHorizontal="8dp"
+                android:animateLayoutChanges="true">
 
                 <ImageView
                     android:id="@+id/btn_menu"

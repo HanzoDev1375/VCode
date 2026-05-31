@@ -364,11 +364,44 @@ public class EditorViewModel extends ViewModel {
     /**
      * Creates a new file on disk and refreshes the tree.
      */
+    private String getMainFileFromMeta() {
+        try {
+            File metaFile = new File(projectRoot, "project_meta.json");
+            if (metaFile.exists()) {
+                String metaContent = FileUtils.readFile(metaFile);
+                org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
+                return metaJson.optString("mainFile", "");
+            }
+        } catch (Exception ignored) {}
+        return "";
+    }
+
+    private void updateMainFileInMeta(String newMainFile) {
+        try {
+            File metaFile = new File(projectRoot, "project_meta.json");
+            if (metaFile.exists()) {
+                String metaContent = FileUtils.readFile(metaFile);
+                org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
+                metaJson.put("mainFile", newMainFile);
+                FileUtils.writeFile(metaFile, metaJson.toString(2));
+            }
+        } catch (Exception ignored) {}
+    }
+
     public void createFile(File parentDir, String name, String content) {
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 File newFile = FileUtils.createFile(parentDir, name);
                 FileUtils.writeFile(newFile, content);
+                
+                String relPath = getRelativePath(newFile);
+                if (relPath.endsWith(".html")) {
+                    String currentMain = getMainFileFromMeta();
+                    if (currentMain == null || currentMain.isEmpty()) {
+                        updateMainFileInMeta(relPath);
+                    }
+                }
+                
                 refreshFileTree();
                 projectRepo.touchProjectById(projectId);
             } catch (Exception ignored) {
@@ -395,7 +428,26 @@ public class EditorViewModel extends ViewModel {
      */
     public void deleteNode(File file) {
         ExecutorProvider.getInstance().runOnIo(() -> {
+            String deletedPath = file.getAbsolutePath();
+            String relPath = getRelativePath(file);
+            
             FileUtils.deleteRecursive(file);
+            
+            ExecutorProvider.getInstance().runOnMain(() -> {
+                List<EditorFile> openFiles = getOpenFilesList();
+                for (int i = openFiles.size() - 1; i >= 0; i--) {
+                    String openFilePath = openFiles.get(i).getFile().getAbsolutePath();
+                    if (openFilePath.equals(deletedPath) || openFilePath.startsWith(deletedPath + File.separator)) {
+                        closeFile(i);
+                    }
+                }
+            });
+
+            String mainFile = getMainFileFromMeta();
+            if (mainFile.equals(relPath) || mainFile.startsWith(relPath + "/")) {
+                updateMainFileInMeta("");
+            }
+
             refreshFileTree();
             projectRepo.touchProjectById(projectId);
         });

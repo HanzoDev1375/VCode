@@ -224,6 +224,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             binding.btnRun.setImageResource(R.drawable.ic_play);
             binding.ivViewPreview.setVisibility(View.GONE);
             Toast.makeText(this, "Server stopped", Toast.LENGTH_SHORT).show();
+            updateRunButtonVisibility();
             return;
         }
 
@@ -242,6 +243,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         binding.btnRun.setImageResource(R.drawable.ic_stop);
         binding.ivViewPreview.setVisibility(View.VISIBLE);
         executeActiveFilePreviewIntent();
+        updateRunButtonVisibility();
     }
 
     private void toggleInlinePreview() {
@@ -262,8 +264,36 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         updateActiveViewer(activeFile, !isPreviewMode);
     }
 
+    private void updateRunButtonVisibility() {
+        boolean isServerRunning = localWebServer != null && localWebServer.isRunning();
+        
+        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
+        List<EditorFile> files = viewModel.getOpenFiles().getValue();
+        boolean isActiveHtml = false;
+        
+        if (files != null && activeIndex >= 0 && activeIndex < files.size()) {
+            EditorFile activeFile = files.get(activeIndex);
+            if (activeFile.getFileType() == FileType.HTML) {
+                isActiveHtml = true;
+            }
+        }
+        
+        if (isServerRunning || isActiveHtml) {
+            binding.btnRun.setVisibility(View.VISIBLE);
+        } else {
+            binding.btnRun.setVisibility(View.GONE);
+        }
+    }
+
     private void executeActiveFilePreviewIntent() {
-        String serverUrl = localWebServer.getUrl("");
+        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
+        List<EditorFile> files = viewModel.getOpenFiles().getValue();
+        String path = "";
+        if (files != null && activeIndex >= 0 && activeIndex < files.size()) {
+            path = files.get(activeIndex).getRelativePath(viewModel.getProjectRoot());
+        }
+
+        String serverUrl = localWebServer.getUrl(path);
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
         boolean openInApp = settings == null || settings.openPreviewInApp;
 
@@ -352,6 +382,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 boolean isPreview = viewModel.getPreviewState(relPath);
                 updateActiveViewer(activeFile, isPreview);
             }
+            updateRunButtonVisibility();
         });
     }
 
