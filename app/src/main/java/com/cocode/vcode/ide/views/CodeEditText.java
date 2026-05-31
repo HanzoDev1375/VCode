@@ -500,12 +500,16 @@ public class CodeEditText extends AppCompatEditText {
         int cursor = getSelectionStart();
         String text = getText().toString();
         int wordStart = cursor;
-        while (wordStart > 0 && Character.isLetterOrDigit(text.charAt(wordStart - 1))) {
-            wordStart--;
-        }
+        if (item.getReplaceLength() >= 0) {
+            wordStart = Math.max(0, cursor - item.getReplaceLength());
+        } else {
+            while (wordStart > 0 && Character.isLetterOrDigit(text.charAt(wordStart - 1))) {
+                wordStart--;
+            }
 
-        if (wordStart > 0 && text.charAt(wordStart - 1) == '<' && insertText.startsWith("<")) {
-            wordStart--;
+            if (wordStart > 0 && text.charAt(wordStart - 1) == '<' && insertText.startsWith("<")) {
+                wordStart--;
+            }
         }
 
         int lineStart = wordStart;

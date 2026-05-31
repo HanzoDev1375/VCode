@@ -140,6 +140,15 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
 
         // Active scope within curly braces OR inline style attribute -> Suggest core CSS properties
         if (isInlineStyle || braceIdx >= 0 || isInsideRuleBlock(fullText, cursorPos)) {
+            String emmetAbbr = getEmmetAbbreviationBeforeCursor(fullText, cursorPos);
+            String expanded = EmmetParser.expandCss(emmetAbbr);
+            if (expanded != null) {
+                List<CompletionItem> res = new ArrayList<>();
+                CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
+                emmetItem.setReplaceLength(emmetAbbr.length());
+                res.add(emmetItem);
+                return res;
+            }
             String word = getWordBeforeCursor(fullText, cursorPos);
             return fuzzyFilter(propertyItems, word);
         }

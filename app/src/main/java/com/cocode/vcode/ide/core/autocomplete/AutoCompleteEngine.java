@@ -40,6 +40,23 @@ public abstract class AutoCompleteEngine {
     }
 
     /**
+     * Extracts an Emmet abbreviation consisting of alphanumeric characters plus special symbols.
+     */
+    protected String getEmmetAbbreviationBeforeCursor(String text, int pos) {
+        if (text == null || pos <= 0 || pos > text.length()) return "";
+        int start = pos - 1;
+        while (start >= 0) {
+            char c = text.charAt(start);
+            if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$' || c == '#' || c == '.' || c == '*' || c == '>' || c == '+' || c == '!' || c == ':') {
+                start--;
+            } else {
+                break;
+            }
+        }
+        return text.substring(start + 1, pos);
+    }
+
+    /**
      * Isolates the current text fragment running from the last newline up to the current pointer position.
      */
     protected String getLineBeforeCursor(String text, int pos) {
@@ -126,6 +143,26 @@ public abstract class AutoCompleteEngine {
             return sb.toString();
         } catch (Exception e) {
             return "[]"; // Structural fallback payload preventing crash downstream
+        }
+    }
+
+    /**
+     * Standard utility to extract raw text data out of local asset documents, preserving newlines.
+     */
+    protected String loadAssetText(String assetPath) {
+        try {
+            java.io.InputStream is = context.getAssets().open(assetPath);
+            java.io.BufferedReader reader = new java.io.BufferedReader(
+                    new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = reader.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            reader.close();
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
         }
     }
 

@@ -25,6 +25,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     private final CssAutoCompleteEngine cssEngine;
     private final JsAutoCompleteEngine jsEngine;
     private java.io.File currentFile;
+    private String htmlBoilerplate;
 
     public HtmlAutoCompleteEngine(Context context) {
         super(context);
@@ -72,6 +73,19 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             }
         } catch (Exception e) {
             // Completion data not critical — proceed with empty list
+        }
+
+        try {
+            String template = loadAssetText("templates/template_blank.html");
+            if (template != null && !template.trim().isEmpty()) {
+                htmlBoilerplate = template.replace("<body>\n\n", "<body>\n    |\n")
+                                          .replace("<body>\r\n\r\n", "<body>\r\n    |\r\n");
+                if (!htmlBoilerplate.contains("|")) {
+                    htmlBoilerplate = htmlBoilerplate.replace("<body>", "<body>\n    |");
+                }
+            }
+        } catch (Exception e) {
+            // Non-critical
         }
     }
 
@@ -135,13 +149,35 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             return new ArrayList<>(); // Stop searching tags if we are definitely inside attributes
         }
 
+        // Emmet support
+        String emmetAbbr = getEmmetAbbreviationBeforeCursor(fullText, cursorPos);
+        List<CompletionItem> emmetResults = new ArrayList<>();
+        if (emmetAbbr != null && !emmetAbbr.isEmpty() && !emmetAbbr.contains("<")) {
+            String expanded = EmmetParser.expandHtml(emmetAbbr, htmlBoilerplate);
+            if (expanded != null) {
+                if (emmetAbbr.contains(".") || emmetAbbr.contains("#") || emmetAbbr.contains(">") || emmetAbbr.contains("*") || emmetAbbr.contains("+") || emmetAbbr.equals("!")) {
+                    List<CompletionItem> res = new ArrayList<>();
+                    CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
+                    emmetItem.setReplaceLength(emmetAbbr.length());
+                    res.add(emmetItem);
+                    return res;
+                } else {
+                    CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
+                    emmetItem.setReplaceLength(emmetAbbr.length());
+                    emmetResults.add(emmetItem);
+                }
+            }
+        }
+
         // Emmet-style plain words (e.g. "div") OR typing "<div"
         // If they type a word, or just typed a '<', immediately suggest matching tags!
         if ((word != null && !word.isEmpty()) || trimmed.endsWith("<")) {
-            return fuzzyFilter(tagItems, word);
+            List<CompletionItem> finalResults = new ArrayList<>(emmetResults);
+            finalResults.addAll(fuzzyFilter(tagItems, word));
+            return finalResults;
         }
 
-        return new ArrayList<>();
+        return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
     }
 
     private java.io.File getProjectRoot(java.io.File file) {
