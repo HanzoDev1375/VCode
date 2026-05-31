@@ -22,7 +22,7 @@ import java.util.List;
 
 /**
  * GitOptionsBottomSheet provides a dynamic, icon-based menu for context-specific actions.
- * It is extensively used across Git tabs to provide options for commits, branches, 
+ * It is extensively used across Git tabs to provide options for commits, branches,
  * and remotes in a clean, Material Design bottom sheet.
  */
 public class GitOptionsBottomSheet extends BottomSheetDialogFragment {
@@ -32,6 +32,7 @@ public class GitOptionsBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Creates a new instance of the options sheet with an optional header.
+     *
      * @param headerTitle The title to display at the top of the menu.
      */
     public static GitOptionsBottomSheet newInstance(@Nullable String headerTitle) {
@@ -42,9 +43,10 @@ public class GitOptionsBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Adds a menu option to the sheet.
-     * @param title The display text for the option.
+     *
+     * @param title     The display text for the option.
      * @param iconResId The drawable resource for the option icon.
-     * @param listener The callback to execute when the option is selected.
+     * @param listener  The callback to execute when the option is selected.
      * @return The current instance for method chaining.
      */
     public GitOptionsBottomSheet addOption(String title, @DrawableRes int iconResId, OptionClickListener listener) {

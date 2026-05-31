@@ -54,11 +54,12 @@ public class EditorViewModel extends ViewModel {
 
     private File projectRoot;
     private String projectId;
+    /**
+     * Background task for periodic automatic saving of all dirty files.
+     */
+    private final Runnable autoSaveRunnable = this::saveAll;
     private String projectName;
     private ProjectState currentState;
-
-    /** Background task for periodic automatic saving of all dirty files. */
-    private final Runnable autoSaveRunnable = this::saveAll;
 
     public EditorViewModel(FileRepository fileRepo, ProjectStateRepository stateRepo, SettingsRepository settingsRepo, ProjectRepository projectRepo) {
         this.fileRepo = fileRepo;
@@ -69,16 +70,45 @@ public class EditorViewModel extends ViewModel {
     }
 
     // --- Getters for reactive data streams ---
-    public LiveData<List<FileNode>> getFileTree() { return fileTreeLiveData; }
-    public File getProjectRoot() { return projectRoot; }
-    public LiveData<List<EditorFile>> getOpenFiles() { return openFilesLiveData; }
-    public LiveData<Integer> getActiveTabIndex() { return activeTabIndexLiveData; }
-    public LiveData<Result<Boolean>> getFileSaveResult() { return fileSaveResult; }
-    public LiveData<ProjectState> getProjectState() { return projectStateLiveData; }
-    public String getProjectName() { return projectName; }
-    public LiveData<AppSettings> getSettingsLiveData() { return settingsLiveData; }
-    public LiveData<Map<String, FileStatus.Type>> getGitStatuses() { return gitStatusesLiveData; }
-    public LiveData<Boolean> getIsEditorLoading() { return isEditorLoadingLiveData; }
+    public LiveData<List<FileNode>> getFileTree() {
+        return fileTreeLiveData;
+    }
+
+    public File getProjectRoot() {
+        return projectRoot;
+    }
+
+    public LiveData<List<EditorFile>> getOpenFiles() {
+        return openFilesLiveData;
+    }
+
+    public LiveData<Integer> getActiveTabIndex() {
+        return activeTabIndexLiveData;
+    }
+
+    public LiveData<Result<Boolean>> getFileSaveResult() {
+        return fileSaveResult;
+    }
+
+    public LiveData<ProjectState> getProjectState() {
+        return projectStateLiveData;
+    }
+
+    public String getProjectName() {
+        return projectName;
+    }
+
+    public LiveData<AppSettings> getSettingsLiveData() {
+        return settingsLiveData;
+    }
+
+    public LiveData<Map<String, FileStatus.Type>> getGitStatuses() {
+        return gitStatusesLiveData;
+    }
+
+    public LiveData<Boolean> getIsEditorLoading() {
+        return isEditorLoadingLiveData;
+    }
 
     /**
      * Loads the latest application settings from the repository and updates the LiveData.
@@ -92,8 +122,9 @@ public class EditorViewModel extends ViewModel {
 
     /**
      * Initializes the ViewModel with project metadata and restores the previous session's state.
-     * @param root The root directory of the project.
-     * @param pId Unique identifier for the project.
+     *
+     * @param root  The root directory of the project.
+     * @param pId   Unique identifier for the project.
      * @param pName Human-friendly name of the project.
      */
     public void initProject(File root, String pId, String pName) {
@@ -135,7 +166,8 @@ public class EditorViewModel extends ViewModel {
                             ExecutorProvider.getInstance().runOnMain(() -> openFile(mainFile));
                         }
                     }
-                } catch (Exception ignored) { }
+                } catch (Exception ignored) {
+                }
             });
             return;
         }
@@ -152,10 +184,11 @@ public class EditorViewModel extends ViewModel {
                         ef.setScrollY(state.getScrollFor(relativePath));
                         ef.setContentLoaded(false);
                         restoredFiles.add(ef);
-                    } catch (Exception ignored) { }
+                    } catch (Exception ignored) {
+                    }
                 }
             }
-            
+
             int targetTab = state.getActiveTabIndex();
             if (targetTab < 0 || targetTab >= restoredFiles.size()) {
                 targetTab = restoredFiles.isEmpty() ? -1 : 0;
@@ -167,7 +200,8 @@ public class EditorViewModel extends ViewModel {
                     try {
                         active.setContent(FileUtils.readFile(active.getFile()));
                         active.markSaved();
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 }
                 active.setContentLoaded(true);
             }
@@ -177,7 +211,7 @@ public class EditorViewModel extends ViewModel {
                 openFilesLiveData.setValue(restoredFiles);
                 activeTabIndexLiveData.setValue(finalTargetTab);
                 isEditorLoadingLiveData.setValue(false);
-                
+
                 loadRemainingTabsAsync(restoredFiles);
             });
         });
@@ -193,7 +227,8 @@ public class EditorViewModel extends ViewModel {
                             String content = FileUtils.readFile(ef.getFile());
                             ef.setContent(content);
                             ef.markSaved();
-                        } catch (Exception ignored) {}
+                        } catch (Exception ignored) {
+                        }
                     }
                     ef.setContentLoaded(true);
                     updated = true;
@@ -245,13 +280,20 @@ public class EditorViewModel extends ViewModel {
                 Map<String, FileStatus.Type> freshMap = new HashMap<>();
 
                 // Compile JGit's categorical status sets into our unified mapping
-                for (String path : workspaceStatus.getAdded()) freshMap.put(path, FileStatus.Type.STAGED_ADDED);
-                for (String path : workspaceStatus.getChanged()) freshMap.put(path, FileStatus.Type.STAGED_MODIFIED);
-                for (String path : workspaceStatus.getRemoved()) freshMap.put(path, FileStatus.Type.STAGED_DELETED);
-                for (String path : workspaceStatus.getModified()) freshMap.put(path, FileStatus.Type.UNSTAGED_MODIFIED);
-                for (String path : workspaceStatus.getMissing()) freshMap.put(path, FileStatus.Type.UNSTAGED_DELETED);
-                for (String path : workspaceStatus.getUntracked()) freshMap.put(path, FileStatus.Type.UNTRACKED);
-                for (String path : workspaceStatus.getConflicting()) freshMap.put(path, FileStatus.Type.CONFLICTED);
+                for (String path : workspaceStatus.getAdded())
+                    freshMap.put(path, FileStatus.Type.STAGED_ADDED);
+                for (String path : workspaceStatus.getChanged())
+                    freshMap.put(path, FileStatus.Type.STAGED_MODIFIED);
+                for (String path : workspaceStatus.getRemoved())
+                    freshMap.put(path, FileStatus.Type.STAGED_DELETED);
+                for (String path : workspaceStatus.getModified())
+                    freshMap.put(path, FileStatus.Type.UNSTAGED_MODIFIED);
+                for (String path : workspaceStatus.getMissing())
+                    freshMap.put(path, FileStatus.Type.UNSTAGED_DELETED);
+                for (String path : workspaceStatus.getUntracked())
+                    freshMap.put(path, FileStatus.Type.UNTRACKED);
+                for (String path : workspaceStatus.getConflicting())
+                    freshMap.put(path, FileStatus.Type.CONFLICTED);
 
                 ExecutorProvider.getInstance().runOnMain(() -> gitStatusesLiveData.setValue(freshMap));
             } catch (Exception e) {
@@ -329,7 +371,8 @@ public class EditorViewModel extends ViewModel {
                 FileUtils.writeFile(newFile, content);
                 refreshFileTree();
                 projectRepo.touchProjectById(projectId);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         });
     }
 
@@ -342,7 +385,8 @@ public class EditorViewModel extends ViewModel {
                 FileUtils.createFolder(parentDir, name);
                 refreshFileTree();
                 projectRepo.touchProjectById(projectId);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         });
     }
 
@@ -366,12 +410,14 @@ public class EditorViewModel extends ViewModel {
                 FileUtils.renameFile(file, newName);
                 refreshFileTree();
                 projectRepo.touchProjectById(projectId);
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         });
     }
 
     /**
      * Opens a file in the editor, or switches to its tab if it is already open.
+     *
      * @param file The file to open.
      */
     public void openFile(File file) {
@@ -420,7 +466,8 @@ public class EditorViewModel extends ViewModel {
                     activeTabIndexLiveData.setValue(updated.size() - 1);
                     persistStateAsync();
                 });
-            } catch (Exception ignored) { }
+            } catch (Exception ignored) {
+            }
         });
     }
 
@@ -471,7 +518,8 @@ public class EditorViewModel extends ViewModel {
                                 String content = FileUtils.readFile(target.getFile());
                                 target.setContent(content);
                                 target.markSaved();
-                            } catch (Exception ignored) {}
+                            } catch (Exception ignored) {
+                            }
                         }
                         target.setContentLoaded(true);
                     }
@@ -656,7 +704,9 @@ public class EditorViewModel extends ViewModel {
         stateRepo.saveStateSync(projectRoot, currentState);
     }
 
-    /** Synchronous version of saveAll for lifecycle-critical cleanup. */
+    /**
+     * Synchronous version of saveAll for lifecycle-critical cleanup.
+     */
     private void saveAllSync() {
         List<EditorFile> docs = getOpenFilesList();
         boolean anySaved = false;
@@ -667,7 +717,8 @@ public class EditorViewModel extends ViewModel {
                     fileRepo.writeFileSync(ef.getFile(), ef.getContent());
                     ef.markSaved();
                     anySaved = true;
-                } catch (Exception ignored) { }
+                } catch (Exception ignored) {
+                }
             }
         }
 

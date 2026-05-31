@@ -1,6 +1,7 @@
 package com.cocode.vcode.ide.core.autocomplete;
 
 import android.content.Context;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -10,8 +11,8 @@ import java.util.List;
  */
 public abstract class AutoCompleteEngine {
 
-    protected final Context context;
     private static final int MAX_SUGGESTIONS = 15; // Upper limit to keep presentation performance smooth
+    protected final Context context;
 
     public AutoCompleteEngine(Context context) {
         // Guard against memory leaks by capturing the application-wide context reference
@@ -85,7 +86,7 @@ public abstract class AutoCompleteEngine {
         }
 
         String lowerPrefix = prefix.toLowerCase();
-        List<CompletionItem> exact    = new ArrayList<>(); // Priority group 1
+        List<CompletionItem> exact = new ArrayList<>(); // Priority group 1
         List<CompletionItem> contains = new ArrayList<>(); // Priority group 2
 
         for (CompletionItem item : all) {

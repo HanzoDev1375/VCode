@@ -1,15 +1,17 @@
 package com.cocode.vcode.ide;
 
 import android.app.Application;
-import androidx.appcompat.app.AppCompatDelegate;
-import com.cocode.vcode.ide.data.model.AppSettings;
-import com.cocode.vcode.ide.data.repository.SettingsRepository;
-
 import android.content.Intent;
 import android.util.Log;
+
+import androidx.appcompat.app.AppCompatDelegate;
+
+import com.cocode.vcode.ide.data.model.AppSettings;
+import com.cocode.vcode.ide.data.repository.SettingsRepository;
+import com.cocode.vcode.ide.ui.debug.DebugActivity;
+
 import java.io.PrintWriter;
 import java.io.StringWriter;
-import com.cocode.vcode.ide.ui.debug.DebugActivity;
 
 public class VCodeApplication extends Application {
     @Override
@@ -28,7 +30,8 @@ public class VCodeApplication extends Application {
 
         int mode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
         if (settings.getTheme() == AppSettings.Theme.DARK) mode = AppCompatDelegate.MODE_NIGHT_YES;
-        else if (settings.getTheme() == AppSettings.Theme.LIGHT) mode = AppCompatDelegate.MODE_NIGHT_NO;
+        else if (settings.getTheme() == AppSettings.Theme.LIGHT)
+            mode = AppCompatDelegate.MODE_NIGHT_NO;
 
         AppCompatDelegate.setDefaultNightMode(mode);
     }

@@ -5,20 +5,14 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.os.Bundle;
-import android.view.View;
-import android.widget.Button;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.view.WindowCompat;
-
-import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.ui.projects.ProjectsActivity;
 
 import com.cocode.vcode.ide.databinding.ActivityDebugBinding;
+import com.cocode.vcode.ide.ui.projects.ProjectsActivity;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 
@@ -48,7 +42,7 @@ public class DebugActivity extends AppCompatActivity {
         if (crashLog == null || crashLog.isEmpty()) {
             crashLog = "No stack trace provided.";
         }
-        
+
         binding.tvCrashLog.setText(crashLog);
 
         String finalCrashLog = crashLog;

@@ -57,6 +57,7 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
 
     /**
      * Updates the file tree data. Preserves the expansion state of folders across updates.
+     *
      * @param rootNodes The new set of root-level nodes.
      */
     public void setTree(List<FileNode> rootNodes) {

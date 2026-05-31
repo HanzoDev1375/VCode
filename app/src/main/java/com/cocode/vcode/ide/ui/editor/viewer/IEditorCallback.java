@@ -6,7 +6,10 @@ package com.cocode.vcode.ide.ui.editor.viewer;
  */
 public interface IEditorCallback {
     void showJsonValidating();
+
     void showJsonValid();
+
     void showJsonInvalid(String error);
+
     void hideJsonStatus();
 }

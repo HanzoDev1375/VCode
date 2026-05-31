@@ -3,6 +3,7 @@ package com.cocode.vcode.ide.ui.commitdetails;
 import android.content.Context;
 import android.os.Bundle;
 import android.widget.Toast;
+
 import androidx.activity.EdgeToEdge;
 import androidx.annotation.Nullable;
 import androidx.lifecycle.ViewModelProvider;

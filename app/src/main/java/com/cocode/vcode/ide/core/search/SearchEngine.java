@@ -15,6 +15,7 @@ public class SearchEngine {
 
     /**
      * Scans a document string to find all occurrences of a specific search query.
+     *
      * @param query         The text string or regex pattern to look for.
      * @param text          The full text content of the target file being searched.
      * @param caseSensitive True to enforce strict character casing rules.
@@ -29,7 +30,8 @@ public class SearchEngine {
         if (query == null || query.isEmpty() || text == null || text.isEmpty()) return results;
 
         Pattern pattern = buildPattern(query, caseSensitive, regex, wholeWord);
-        if (pattern == null) return results; // Exit gracefully if the query contains faulty regex syntax
+        if (pattern == null)
+            return results; // Exit gracefully if the query contains faulty regex syntax
 
         // Pre-compute line start offsets across the document up front.
         // This indexes line breaks once so we can quickly calculate line/column numbers

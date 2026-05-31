@@ -6,6 +6,7 @@ import androidx.annotation.NonNull;
  * Functional data wrapper type mapping background task outcomes.
  * Streamlines architecture flows by clearly grouping payload data structures
  * along with descriptive exception status strings across application pipelines.
+ *
  * @param <T> The expected entity type parameter wrapped by successful process resolutions.
  */
 public class Result<T> {

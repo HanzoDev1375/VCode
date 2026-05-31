@@ -35,15 +35,17 @@ import java.util.List;
 
 /**
  * GitHistoryFragment provides a visual timeline of the repository's commit history.
- * It supports searching commits by message or SHA, and offers context actions like 
+ * It supports searching commits by message or SHA, and offers context actions like
  * cherry-picking, reverting, and resetting.
  */
 public class GitHistoryFragment extends Fragment implements CommitHistoryAdapter.CommitHistoryListener {
     private FragmentGitHistoryBinding binding;
     private GitViewModel viewModel;
     private CommitHistoryAdapter adapter;
-    
-    /** Local cache of the full history to enable efficient client-side filtering. */
+
+    /**
+     * Local cache of the full history to enable efficient client-side filtering.
+     */
     private List<CommitItem> fullHistory = new ArrayList<>();
 
     @Nullable
@@ -71,7 +73,8 @@ public class GitHistoryFragment extends Fragment implements CommitHistoryAdapter
         // Implement real-time history filtering
         binding.etSearchHistory.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {}
+            public void beforeTextChanged(CharSequence charSequence, int i, int i1, int i2) {
+            }
 
             @Override
             public void onTextChanged(CharSequence charSequence, int i, int i1, int i2) {
@@ -79,7 +82,8 @@ public class GitHistoryFragment extends Fragment implements CommitHistoryAdapter
             }
 
             @Override
-            public void afterTextChanged(Editable editable) {}
+            public void afterTextChanged(Editable editable) {
+            }
         });
 
         // Observe the commit history stream and update the list or empty state UI

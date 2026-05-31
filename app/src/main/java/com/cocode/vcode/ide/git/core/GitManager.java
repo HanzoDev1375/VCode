@@ -39,6 +39,7 @@ public class GitManager {
     /**
      * Clones an external source code repository into a target local destination folder.
      * Hooks into progress monitors to deliver tracking updates back to UI listeners.
+     *
      * @param url       The absolute web URL pointing to the remote repository source.
      * @param targetDir The destination file directory path on the local file system.
      * @param username  The account username or organization profile handle identifier.
@@ -203,6 +204,7 @@ public class GitManager {
 
     /**
      * Resolves the revision history map data tracks, providing pagination limits controls.
+     *
      * @param maxCount Upper threshold bound representing total history cards requested.
      * @param skip     The baseline offset index boundary used to advance history pages views.
      * @return A compiled sequence tracking structured historical revision info profiles.

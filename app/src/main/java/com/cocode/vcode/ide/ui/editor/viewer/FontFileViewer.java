@@ -38,10 +38,10 @@ public class FontFileViewer implements IFileViewer {
     public View getView(Context context, ViewGroup parent) {
         if (container == null) {
             this.context = context;
-            
+
             container = new LinearLayout(context);
             container.setLayoutParams(new ViewGroup.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
             container.setOrientation(LinearLayout.VERTICAL);
             container.setGravity(Gravity.CENTER);
@@ -50,14 +50,14 @@ public class FontFileViewer implements IFileViewer {
 
             tvFontName = new TextView(context);
             tvFontName.setLayoutParams(new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT, 
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT));
             tvFontName.setTextAppearance(context, com.google.android.material.R.style.TextAppearance_Material3_TitleLarge);
             tvFontName.setTextColor(ContextCompat.getColor(context, R.color.vcode_text_primary));
-            
+
             etFontPreview = new EditText(context);
             LinearLayout.LayoutParams etParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             etParams.topMargin = 60;
             etFontPreview.setLayoutParams(etParams);
@@ -70,12 +70,12 @@ public class FontFileViewer implements IFileViewer {
 
             webviewFontPreview = new WebView(context);
             LinearLayout.LayoutParams wvParams = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT);
             wvParams.topMargin = 60;
             webviewFontPreview.setLayoutParams(wvParams);
             webviewFontPreview.setBackgroundColor(Color.TRANSPARENT);
-            
+
             container.addView(tvFontName);
             container.addView(etFontPreview);
             container.addView(webviewFontPreview);
@@ -86,10 +86,10 @@ public class FontFileViewer implements IFileViewer {
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
         if (container == null || file == null || file.getFile() == null) return;
-        
+
         File f = file.getFile();
         tvFontName.setText(f.getName());
-        
+
         String ext = FileUtils.getExtension(f.getName()).toLowerCase();
         if (ext.equals("ttf") || ext.equals("otf")) {
             webviewFontPreview.setVisibility(View.GONE);
@@ -140,17 +140,20 @@ public class FontFileViewer implements IFileViewer {
             } catch (Exception e) {
                 Handler mainHandler = ExecutorProvider.getInstance().getMainHandler();
                 mainHandler.post(() -> {
-                    if (context != null) Toast.makeText(context, "Could not load font", Toast.LENGTH_SHORT).show();
+                    if (context != null)
+                        Toast.makeText(context, "Could not load font", Toast.LENGTH_SHORT).show();
                 });
             }
         });
     }
 
     @Override
-    public void onResume() { }
+    public void onResume() {
+    }
 
     @Override
-    public void onPause() { }
+    public void onPause() {
+    }
 
     @Override
     public void destroy() {

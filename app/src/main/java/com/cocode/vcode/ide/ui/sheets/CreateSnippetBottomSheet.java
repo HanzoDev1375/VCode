@@ -22,15 +22,17 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 /**
  * CreateSnippetBottomSheet provides a form for creating or editing reusable code snippets.
- * It handles title and content input, validates required fields, and notifies 
+ * It handles title and content input, validates required fields, and notifies
  * the listener upon successful submission.
  */
 public class CreateSnippetBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetCreateSnippetBinding binding;
     private SnippetSaveListener listener;
-    
-    /** The snippet being edited, or null if creating a new one. */
+
+    /**
+     * The snippet being edited, or null if creating a new one.
+     */
     private SnippetItem existingSnippet;
 
     /**
@@ -66,7 +68,7 @@ public class CreateSnippetBottomSheet extends BottomSheetDialogFragment {
         // Apply rounded backgrounds to input fields
         UiUtils.setViewRounded(binding.etSnippetTitle, UiUtils.dpToPx(requireContext(), 10), ContextCompat.getColor(requireContext(), R.color.vcode_bg_elevated));
         UiUtils.setViewRounded(binding.etSnippetCode, UiUtils.dpToPx(requireContext(), 10), ContextCompat.getColor(requireContext(), R.color.vcode_bg_elevated));
-        
+
         setupTypefaces();
         setupMode();
 

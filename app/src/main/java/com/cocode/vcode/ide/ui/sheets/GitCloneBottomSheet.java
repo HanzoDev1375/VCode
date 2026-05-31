@@ -115,10 +115,12 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
     private void setupAutoNamingFallback() {
         etRepoUrl.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -223,7 +225,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         serviceIntent.putExtra(GitCloneService.EXTRA_GIT_USER, gitUser);
         serviceIntent.putExtra(GitCloneService.EXTRA_GIT_TOKEN, gitToken);
         serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_ID, projectId);
-        
+
         ContextCompat.startForegroundService(context, serviceIntent);
     }
 

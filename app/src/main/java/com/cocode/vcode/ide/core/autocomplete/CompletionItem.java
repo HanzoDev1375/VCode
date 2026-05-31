@@ -9,9 +9,9 @@ public class CompletionItem {
 
     private final String label;       // The text displayed to the user in the popup list
     private final String insertText;  // The actual snippet or text injected into the document
+    private final int cursorOffset;   // Relative cursor positioning adjustments post-insertion
     private String detail;            // Optional context info (e.g., "Method", "Tag", description)
     private Type type;                // The syntactic category of this token
-    private final int cursorOffset;   // Relative cursor positioning adjustments post-insertion
 
     /**
      * Constructs a fully initialized completion item.
@@ -69,6 +69,8 @@ public class CompletionItem {
         FUNCTION,       // Call signatures and custom subroutines
         BUILTIN,        // Platform-standard symbols (e.g., "console.log")
         SNIPPET,        // Expandable structural boilerplate blocks
-        JSON_KEY        // JSON field property strings
+        JSON_KEY,       // JSON field property strings
+        FILE,           // Local workspace file
+        FOLDER          // Local workspace directory
     }
 }

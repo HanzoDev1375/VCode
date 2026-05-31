@@ -2,6 +2,7 @@ package com.cocode.vcode.ide.data.model;
 
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.utils.FileUtils;
+
 import java.io.File;
 
 /**
@@ -31,7 +32,7 @@ public class EditorFile {
         this.file = file;
         this.content = content != null ? content : "";
         this.savedContent = content != null ? content : "";
-        
+
         if (fileType != null) {
             this.fileType = fileType;
         } else {
@@ -57,6 +58,7 @@ public class EditorFile {
     /**
      * Compares active working text lines against disk persistence states to look for unsaved edits.
      * Prevents tracking mutations on external asset models.
+     *
      * @return True if there are uncommitted buffer changes waiting for a disk write sequence.
      */
     public boolean isDirty() {

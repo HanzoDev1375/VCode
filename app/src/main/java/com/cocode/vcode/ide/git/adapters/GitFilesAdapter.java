@@ -1,7 +1,6 @@
 package com.cocode.vcode.ide.git.adapters;
 
 import android.content.Context;
-import android.graphics.PorterDuff;
 import android.graphics.drawable.GradientDrawable;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;

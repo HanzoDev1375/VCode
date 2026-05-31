@@ -14,7 +14,7 @@ import java.util.List;
 
 /**
  * ProjectsViewModel manages the list of projects and workspace-level operations.
- * It interfaces with the {@link ProjectRepository} to handle project creation, 
+ * It interfaces with the {@link ProjectRepository} to handle project creation,
  * renaming, and deletion, and publishes the results to the UI via LiveData.
  */
 public class ProjectsViewModel extends ViewModel {

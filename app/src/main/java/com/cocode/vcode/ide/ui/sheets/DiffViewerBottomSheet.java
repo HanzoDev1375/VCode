@@ -1,5 +1,6 @@
 package com.cocode.vcode.ide.ui.sheets;
 
+import android.content.Intent;
 import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -18,12 +19,12 @@ import com.cocode.vcode.ide.git.model.GitFileItem;
 import com.cocode.vcode.ide.git.repository.GitRepository;
 import com.cocode.vcode.ide.ui.commitdetails.CommitDetailsActivity;
 import com.cocode.vcode.ide.ui.commitdetails.CommitDetailsViewModel;
-import com.cocode.vcode.ide.ui.git.GitViewModel;
 import com.cocode.vcode.ide.ui.editor.EditorActivity;
+import com.cocode.vcode.ide.ui.git.GitViewModel;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import android.content.Intent;
+
 import java.io.File;
 
 /**
@@ -35,8 +36,10 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetDiffViewerBinding binding;
     private GitFileItem fileItem;
-    
-    /** The specific commit SHA to compare against, or null for workspace diffs. */
+
+    /**
+     * The specific commit SHA to compare against, or null for workspace diffs.
+     */
     private String commitSha;
 
     /**
@@ -68,12 +71,12 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-        
+
         // Setup header metadata
         binding.tvDiffFilename.setText(fileItem.getFileName());
         binding.tvDiffFilename.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
         binding.btnCloseDiff.setOnClickListener(v -> dismiss());
-        
+
         binding.btnGoToFile.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
         if (getActivity() instanceof com.cocode.vcode.ide.ui.git.GitActivity) {
             binding.btnGoToFile.setVisibility(View.VISIBLE);
@@ -135,6 +138,7 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Parses the raw diff string and dynamically populates the UI with highlighted lines.
+     *
      * @param diff The raw JGit unified diff output.
      */
     private void renderDiff(String diff) {

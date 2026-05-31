@@ -27,16 +27,13 @@ public class ZoomImageView extends AppCompatImageView {
     private static final int NONE = 0;
     private static final int DRAG = 1;
     private static final int ZOOM = 2;
-
-    private Matrix matrix;
-    private int mode = NONE;
-
     // Tracking points for gesture tracking offsets calculations
     private final PointF last = new PointF();
     private final PointF start = new PointF();
-
     // Scale constraints definition parameters
     private final float maxScale = 5f;
+    private Matrix matrix;
+    private int mode = NONE;
     private float[] m;
 
     // Viewport layout sizing parameters

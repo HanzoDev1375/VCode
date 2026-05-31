@@ -40,7 +40,9 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
     private GitFilesAdapter unstagedAdapter;
     private GitFilesAdapter stagedAdapter;
 
-    /** Internal flags to track the expanded/collapsed state of the staging sections. */
+    /**
+     * Internal flags to track the expanded/collapsed state of the staging sections.
+     */
     private boolean isUnstagedExpanded = true;
     private boolean isStagedExpanded = true;
 
@@ -150,7 +152,8 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
         // Live character counter for the commit message
         binding.etCommitMessage.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -158,7 +161,8 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         binding.btnCommit.setOnClickListener(v -> {

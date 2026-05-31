@@ -42,15 +42,16 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
     private final ProjectClickListener listener;
     private List<Project> projects = new ArrayList<>();
-    
+
     /**
-     * Tracks the view that is currently swiped open to ensure only one item 
+     * Tracks the view that is currently swiped open to ensure only one item
      * can be in the active swipe state at a time.
      */
     private View currentlySwipedView = null;
 
     /**
      * Initializes the adapter with a click listener for handling user interactions.
+     *
      * @param listener Callback for project-related actions.
      */
     public ProjectsAdapter(ProjectClickListener listener) {
@@ -60,6 +61,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
     /**
      * Updates the underlying project list and calculates the minimal set of changes
      * using DiffUtil for efficient UI updates.
+     *
      * @param newProjects The new list of projects to display.
      */
     public void setProjects(List<Project> newProjects) {
@@ -73,6 +75,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
      * Forces a specific project card to redraw its UI.
      * Useful for optimistic UI updates where a change is reflected immediately
      * before the full dataset is reloaded.
+     *
      * @param projectId The unique ID of the project to update.
      */
     public void forceItemUpdate(String projectId) {
@@ -117,13 +120,19 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
      * Interface for handling interactions with project cards.
      */
     public interface ProjectClickListener {
-        /** Called when a project card is tapped. */
+        /**
+         * Called when a project card is tapped.
+         */
         void onProjectClick(Project project);
 
-        /** Called when the rename action is triggered from the swipe menu. */
+        /**
+         * Called when the rename action is triggered from the swipe menu.
+         */
         void onProjectRenameClick(Project project);
 
-        /** Called when the delete action is triggered from the swipe menu. */
+        /**
+         * Called when the delete action is triggered from the swipe menu.
+         */
         void onProjectDeleteClick(Project project);
     }
 
@@ -333,6 +342,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
         /**
          * Binds a project model to the view holder, updating the UI with project details.
+         *
          * @param project The project data to display.
          */
         public void bind(Project project) {

@@ -11,15 +11,8 @@ public abstract class BaseFormatter {
 
     // Pulls the current active indentation preference (e.g., space or tab count) from app configurations
     protected static final String INDENT = new AppSettings().getIndent(); // 2 tabs
-
-    /**
-     * Abstract contract to format source string code into a structured, uniform style.
-     * @param code The raw, unformatted source text sequence.
-     * @return The formatted source code string.
-     */
-    public abstract String format(String code);
-
     private static final String[] INDENT_CACHE = new String[50];
+
     static {
         INDENT_CACHE[0] = "";
         for (int i = 1; i < INDENT_CACHE.length; i++) {
@@ -28,7 +21,16 @@ public abstract class BaseFormatter {
     }
 
     /**
+     * Abstract contract to format source string code into a structured, uniform style.
+     *
+     * @param code The raw, unformatted source text sequence.
+     * @return The formatted source code string.
+     */
+    public abstract String format(String code);
+
+    /**
      * Builds an indentation block sequence corresponding directly to the nested bracket hierarchy depth.
+     *
      * @param level The current structural nesting depth level.
      * @return A consolidated spacer sequence string matching the requested indentation weight.
      */

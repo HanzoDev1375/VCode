@@ -44,6 +44,7 @@ import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FontManager;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -87,6 +88,8 @@ public class CodeEditText extends AppCompatEditText {
     private boolean isUndoRedoActive = false;
     private boolean isSettingText = false;
     private boolean isTypingText = false;
+    private File currentFile;
+    private final boolean isFormatting = false;
 
     private OnScrollChangeListener scrollChangeListener;
 
@@ -705,6 +708,9 @@ public class CodeEditText extends AppCompatEditText {
                 case HTML:
                     this.syntaxHighlighter = new HtmlSyntaxHighlighter(ctx);
                     this.autoCompleteEngine = new HtmlAutoCompleteEngine(ctx);
+                    if (currentFile != null) {
+                        ((HtmlAutoCompleteEngine) this.autoCompleteEngine).setCurrentFile(currentFile);
+                    }
                     break;
                 case CSS:
                     this.syntaxHighlighter = new CssSyntaxHighlighter(ctx);
@@ -733,6 +739,13 @@ public class CodeEditText extends AppCompatEditText {
             }
         }
         scheduleHighlight();
+    }
+
+    public void setCurrentFile(File file) {
+        this.currentFile = file;
+        if (autoCompleteEngine instanceof HtmlAutoCompleteEngine) {
+            ((HtmlAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
+        }
     }
 
     public void setOnScrollChangeListener(OnScrollChangeListener listener) {

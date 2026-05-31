@@ -35,9 +35,6 @@ import java.util.UUID;
 public class ProjectRepository {
 
     private static final String META_FILE = "project_meta.json";
-
-    private final Context appContext;
-
     // JSON configuration mapping fields for project description schemas
     private static final String KEY_ID = "id";
     private static final String KEY_NAME = "name";
@@ -45,6 +42,7 @@ public class ProjectRepository {
     private static final String KEY_LAST_MODIFIED_AT = "lastModifiedAt";
     private static final String KEY_MAIN_FILE = "mainFile";
     private static final String KEY_FILE_COUNT = "fileCount";
+    private final Context appContext;
 
     public ProjectRepository(Context context) {
         this.appContext = context.getApplicationContext();

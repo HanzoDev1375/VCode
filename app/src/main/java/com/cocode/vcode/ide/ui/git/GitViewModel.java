@@ -37,13 +37,15 @@ public class GitViewModel extends AndroidViewModel {
     private final MutableLiveData<List<BranchItem>> localBranches = new MutableLiveData<>();
     private final MutableLiveData<List<BranchItem>> remoteBranches = new MutableLiveData<>();
     private final MutableLiveData<String> currentBranch = new MutableLiveData<>();
-    
+
     // UI state indicators
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isNotRepository = new MutableLiveData<>(false);
 
-    /** Dedicated single-thread executor to ensure Git operations are performed sequentially. */
+    /**
+     * Dedicated single-thread executor to ensure Git operations are performed sequentially.
+     */
     private final java.util.concurrent.ExecutorService gitExecutor =
             java.util.concurrent.Executors.newSingleThreadExecutor();
 
@@ -63,7 +65,8 @@ public class GitViewModel extends AndroidViewModel {
 
     /**
      * Initializes the Git repository for the specified directory.
-     * @param projectDir The root directory of the project.
+     *
+     * @param projectDir            The root directory of the project.
      * @param explicitDefaultBranch Optional branch name to use as default.
      */
     public void initRepo(File projectDir, String explicitDefaultBranch) {
@@ -328,13 +331,33 @@ public class GitViewModel extends AndroidViewModel {
     }
 
     // --- Getters for reactive data ---
-    public LiveData<List<GitFileItem>> getStagedFiles() { return stagedFiles; }
-    public LiveData<List<GitFileItem>> getUnstagedFiles() { return unstagedFiles; }
-    public LiveData<List<CommitItem>> getCommitHistory() { return commitHistory; }
-    public LiveData<List<BranchItem>> getLocalBranches() { return localBranches; }
-    public LiveData<String> getCurrentBranch() { return currentBranch; }
-    public LiveData<String> getErrorMessage() { return errorMessage; }
-    public LiveData<Boolean> getIsLoading() { return isLoading; }
+    public LiveData<List<GitFileItem>> getStagedFiles() {
+        return stagedFiles;
+    }
+
+    public LiveData<List<GitFileItem>> getUnstagedFiles() {
+        return unstagedFiles;
+    }
+
+    public LiveData<List<CommitItem>> getCommitHistory() {
+        return commitHistory;
+    }
+
+    public LiveData<List<BranchItem>> getLocalBranches() {
+        return localBranches;
+    }
+
+    public LiveData<String> getCurrentBranch() {
+        return currentBranch;
+    }
+
+    public LiveData<String> getErrorMessage() {
+        return errorMessage;
+    }
+
+    public LiveData<Boolean> getIsLoading() {
+        return isLoading;
+    }
 
     /**
      * Represents a single Git operation that may throw an exception.

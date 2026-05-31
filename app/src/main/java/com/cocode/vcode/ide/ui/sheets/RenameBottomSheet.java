@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -21,7 +20,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 /**
  * RenameBottomSheet provides a specialized input form for renaming various project entities.
- * It intelligently selects text to exclude extensions when renaming files and 
+ * It intelligently selects text to exclude extensions when renaming files and
  * adapts its labels based on the {@link RenameType} (Project, File, Folder, or Branch).
  */
 public class RenameBottomSheet extends BottomSheetDialogFragment {
@@ -29,16 +28,19 @@ public class RenameBottomSheet extends BottomSheetDialogFragment {
     private BottomSheetRenameBinding binding;
     private RenameListener listener;
     private String currentName;
-    
-    /** The type of entity being renamed, used to configure labels and hints. */
+
+    /**
+     * The type of entity being renamed, used to configure labels and hints.
+     */
     private RenameType renameType = RenameType.PROJECT;
 
     /**
      * Static helper to instantiate and show the rename sheet.
-     * @param manager The FragmentManager to host the sheet.
-     * @param type The type of item being renamed.
+     *
+     * @param manager     The FragmentManager to host the sheet.
+     * @param type        The type of item being renamed.
      * @param currentName The existing name of the item.
-     * @param listener Callback for the rename event.
+     * @param listener    Callback for the rename event.
      */
     public static void show(FragmentManager manager, RenameType type, String currentName, RenameListener listener) {
         RenameBottomSheet sheet = new RenameBottomSheet();
@@ -112,7 +114,7 @@ public class RenameBottomSheet extends BottomSheetDialogFragment {
         binding.tvProjectNameLabel.setTypeface(fm.getUiMedium(ctx));
         binding.etProjectName.setTypeface(fm.getUiMedium(ctx));
         binding.btnRenameProject.setTypeface(fm.getUiSemiBold(ctx));
-        
+
         UiUtils.setViewRounded(binding.etProjectName, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
     }
 
@@ -135,7 +137,7 @@ public class RenameBottomSheet extends BottomSheetDialogFragment {
         }
 
         binding.etProjectName.requestFocus();
-        
+
         // Show soft keyboard with a slight delay to ensure the window is ready
         binding.etProjectName.postDelayed(() -> {
             if (getContext() != null) {

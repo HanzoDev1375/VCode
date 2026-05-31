@@ -107,11 +107,28 @@ public class GitHubApiClient {
             this.totalPrivateRepos = totalPrivateRepos;
         }
 
-        public String getLogin() { return login; }
-        public String getName() { return name; }
-        public String getEmail() { return email; }
-        public String getAvatarUrl() { return avatarUrl; }
-        public int getPublicRepos() { return publicRepos; }
-        public int getTotalPrivateRepos() { return totalPrivateRepos; }
+        public String getLogin() {
+            return login;
+        }
+
+        public String getName() {
+            return name;
+        }
+
+        public String getEmail() {
+            return email;
+        }
+
+        public String getAvatarUrl() {
+            return avatarUrl;
+        }
+
+        public int getPublicRepos() {
+            return publicRepos;
+        }
+
+        public int getTotalPrivateRepos() {
+            return totalPrivateRepos;
+        }
     }
 }

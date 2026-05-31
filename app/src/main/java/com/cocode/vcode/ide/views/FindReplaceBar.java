@@ -74,10 +74,12 @@ public class FindReplaceBar extends LinearLayout {
     private void setupListeners() {
         binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int st, int c, int a) {}
+            public void beforeTextChanged(CharSequence s, int st, int c, int a) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int st, int b, int c) {}
+            public void onTextChanged(CharSequence s, int st, int b, int c) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {

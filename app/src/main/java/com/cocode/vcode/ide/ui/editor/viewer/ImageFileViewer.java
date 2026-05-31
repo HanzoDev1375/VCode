@@ -25,7 +25,7 @@ public class ImageFileViewer implements IFileViewer {
             this.context = context;
             imageView = new ZoomImageView(context);
             imageView.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
             imageView.setBackgroundColor(Color.TRANSPARENT);
         }
@@ -35,7 +35,7 @@ public class ImageFileViewer implements IFileViewer {
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
         if (imageView == null || file == null || file.getFile() == null) return;
-        
+
         FileType type = file.getFileType();
         if (type == FileType.GIF) {
             Glide.with(context).asGif().load(file.getFile()).into(imageView);
@@ -45,10 +45,12 @@ public class ImageFileViewer implements IFileViewer {
     }
 
     @Override
-    public void onResume() { }
+    public void onResume() {
+    }
 
     @Override
-    public void onPause() { }
+    public void onPause() {
+    }
 
     @Override
     public void destroy() {

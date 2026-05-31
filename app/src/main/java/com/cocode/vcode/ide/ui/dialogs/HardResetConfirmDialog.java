@@ -21,15 +21,9 @@ import com.google.android.material.button.MaterialButton;
 public class HardResetConfirmDialog {
 
     /**
-     * Listener interface for capturing the user's confirmation of the hard reset.
-     */
-    public interface HardResetConfirmationListener {
-        void onResetConfirmed();
-    }
-
-    /**
      * Inflates and displays the hard reset confirmation dialog.
-     * @param context The context used to inflate the layout and build the dialog.
+     *
+     * @param context  The context used to inflate the layout and build the dialog.
      * @param listener Callback to execute when the user confirms the reset.
      */
     public static void show(Context context, HardResetConfirmationListener listener) {
@@ -71,5 +65,12 @@ public class HardResetConfirmDialog {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
+    }
+
+    /**
+     * Listener interface for capturing the user's confirmation of the hard reset.
+     */
+    public interface HardResetConfirmationListener {
+        void onResetConfirmed();
     }
 }

@@ -63,14 +63,14 @@ public class NewBranchBottomSheet extends BottomSheetDialogFragment {
     private void setupDropdown() {
         viewModel.getLocalBranches().observe(getViewLifecycleOwner(), branches -> {
             if (branches == null) return;
-            
+
             List<String> names = new ArrayList<>();
             for (BranchItem b : branches) names.add(b.getName());
 
             ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
                     android.R.layout.simple_dropdown_item_1line, names);
             binding.autoCreateFrom.setAdapter(adapter);
-            
+
             // Default to the first available branch (usually the current HEAD)
             if (!names.isEmpty() && binding.autoCreateFrom.getText().toString().isEmpty()) {
                 binding.autoCreateFrom.setText(names.get(0), false);

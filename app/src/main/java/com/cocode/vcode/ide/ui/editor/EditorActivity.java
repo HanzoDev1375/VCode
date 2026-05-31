@@ -119,7 +119,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 navigateWithUnsavedCheck(EditorActivity.this::finish);
             }
         });
-        
+
         handleOpenFileIntent(getIntent());
     }
 
@@ -255,9 +255,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
         boolean isPreviewMode = viewModel.getPreviewState(relPath);
-        
+
         viewModel.setPreviewState(relPath, !isPreviewMode);
-        
+
         // This will trigger getSettingsLiveData or we can just force the update manually:
         updateActiveViewer(activeFile, !isPreviewMode);
     }
@@ -286,9 +286,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             if (settings == null) return;
             int mode = AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM;
             if (settings.theme == AppSettings.Theme.DARK) mode = AppCompatDelegate.MODE_NIGHT_YES;
-            else if (settings.theme == AppSettings.Theme.LIGHT) mode = AppCompatDelegate.MODE_NIGHT_NO;
+            else if (settings.theme == AppSettings.Theme.LIGHT)
+                mode = AppCompatDelegate.MODE_NIGHT_NO;
             AppCompatDelegate.setDefaultNightMode(mode);
-            
+
             // Rebind the active viewer so settings take effect
             if (activeViewer != null) {
                 int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
@@ -344,7 +345,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             if (files != null && index >= 0 && index < files.size()) {
                 EditorFile activeFile = files.get(index);
                 binding.tabBar.setActiveTab(index);
-                
+
                 String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
                 binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
 
@@ -375,7 +376,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         activeViewer.bindFile(activeFile, viewModel);
         activeViewer.onResume();
-        
+
         applyReadOnlyState();
 
         // Update toggle button UI
@@ -393,7 +394,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         } else {
             binding.ivTogglePreview.setVisibility(View.GONE);
         }
-        
+
         if (binding.findReplaceBar.getVisibility() == View.VISIBLE) {
             binding.findReplaceBar.slideUp();
         }
@@ -469,7 +470,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         itemBinding.ivIcon.setImageResource(iconRes);
         itemBinding.tvTitle.setText(title);
         itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(this));
-        itemBinding.getRoot().setOnClickListener(v -> { popup.dismiss(); action.run(); });
+        itemBinding.getRoot().setOnClickListener(v -> {
+            popup.dismiss();
+            action.run();
+        });
         container.addView(itemBinding.getRoot());
     }
 
@@ -486,10 +490,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             onToggle.run();
             popup.dismiss();
         });
-        itemBinding.switchToggle.setOnClickListener(v -> { onToggle.run(); popup.dismiss(); });
+        itemBinding.switchToggle.setOnClickListener(v -> {
+            onToggle.run();
+            popup.dismiss();
+        });
         container.addView(itemBinding.getRoot());
     }
-    
+
     private void applyReadOnlyState() {
         CodeEditText codeEditText = getActiveCodeEditor();
         if (codeEditText != null) {

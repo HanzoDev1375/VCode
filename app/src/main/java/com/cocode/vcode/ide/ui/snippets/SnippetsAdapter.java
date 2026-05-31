@@ -32,8 +32,10 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
 
     private final SnippetListener listener;
     private List<SnippetItem> snippets = new ArrayList<>();
-    
-    /** Tracks the currently swiped-open snippet card. */
+
+    /**
+     * Tracks the currently swiped-open snippet card.
+     */
     private View currentlySwipedView = null;
 
     public SnippetsAdapter(SnippetListener listener) {
@@ -80,7 +82,9 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
      */
     public interface SnippetListener {
         void onSnippetClick(SnippetItem snippet);
+
         void onSnippetEditClick(SnippetItem snippet);
+
         void onSnippetDeleteClick(SnippetItem snippet);
     }
 
@@ -246,7 +250,7 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
                 binding.tvLanguageBadge.setVisibility(View.VISIBLE);
                 binding.tvLanguageBadge.setText(lang.getDisplayName());
                 binding.tvLanguageBadge.setBackgroundTintList(ColorStateList.valueOf(ContextCompat.getColor(itemView.getContext(), lang.getColorResId())));
-                
+
                 // Use high-contrast text coloring for specifically bright backgrounds like JS Yellow
                 if (lang == FileType.JAVASCRIPT) {
                     binding.tvLanguageBadge.setTextColor(ContextCompat.getColor(itemView.getContext(), R.color.vcode_lang_on_js));

@@ -10,26 +10,26 @@ import java.util.Map;
 
 /**
  * Manages the lifecycle of dedicated viewer instances for open file tabs.
- * This guarantees zero lag and flicker-free tab switching by keeping 
+ * This guarantees zero lag and flicker-free tab switching by keeping
  * views fully rendered in memory.
  */
 public class ViewerManager {
-    
+
     // Maps a unique identifier (file ID + mode) to an instantiated viewer.
     private final Map<String, IFileViewer> activeViewers = new HashMap<>();
-    
+
     /**
      * Retrieves an existing viewer for the file, or creates a new one if it doesn't exist.
-     * 
-     * @param context The Activity context for creating views.
-     * @param file The file being opened.
+     *
+     * @param context       The Activity context for creating views.
+     * @param file          The file being opened.
      * @param isPreviewMode Whether the file should be opened in preview mode (e.g. Markdown/SVG).
      * @return The dedicated IFileViewer instance.
      */
     public IFileViewer getOrCreateViewer(Context context, EditorFile file, boolean isPreviewMode) {
         // Create a unique key per file and mode so we can have both Code and Preview cached.
         String key = file.getId() + (isPreviewMode ? "_preview" : "_edit");
-        
+
         IFileViewer viewer = activeViewers.get(key);
         if (viewer == null) {
             viewer = createViewerFor(file.getFileType(), isPreviewMode);
@@ -37,23 +37,23 @@ public class ViewerManager {
         }
         return viewer;
     }
-    
+
     /**
      * Destroys all viewers associated with a closed file to free memory.
-     * 
+     *
      * @param fileId The unique ID of the file being closed.
      */
     public void destroyViewer(String fileId) {
         String editKey = fileId + "_edit";
         String previewKey = fileId + "_preview";
-        
+
         IFileViewer editViewer = activeViewers.remove(editKey);
         if (editViewer != null) editViewer.destroy();
-        
+
         IFileViewer previewViewer = activeViewers.remove(previewKey);
         if (previewViewer != null) previewViewer.destroy();
     }
-    
+
     /**
      * Destroys all viewers.
      */
@@ -63,7 +63,7 @@ public class ViewerManager {
         }
         activeViewers.clear();
     }
-    
+
     /**
      * Factory method for creating the appropriate viewer implementation.
      */

@@ -38,20 +38,41 @@ public class GitCloneService extends Service {
 
     private static final String CHANNEL_ID = "git_clone_channel";
     private static final int NOTIFICATION_ID = 1001;
-
-    public interface CloneListener {
-        void onProgress(String task, int done, int total, int percentage);
-        void onUpdate(int completed);
-        void onSuccess();
-        void onFailure(String error);
-    }
-
     private static CloneListener sListener;
     private NotificationManager notificationManager;
     private NotificationCompat.Builder notificationBuilder;
 
     public static void setListener(CloneListener listener) {
         sListener = listener;
+    }
+
+    public static String parseGitError(Exception e) {
+        String msg = e.getMessage() != null ? e.getMessage() : e.toString();
+
+        if (msg.contains("not authorized") || msg.contains("Auth fail") || msg.contains("Authentication is required")) {
+            return "Authentication Failed: Invalid token or repository is private.";
+        }
+        if (msg.contains("not found") || msg.contains("cannot open git-upload-pack")) {
+            return "Repository not found. Check the URL.";
+        }
+        if (msg.contains("already exists")) {
+            return "Destination folder already exists.";
+        }
+        if (msg.contains("Unknown I/O disruption")) {
+            return "Filesystem Error: Could not write project files.";
+        }
+        if (msg.contains("Connection timed out") || msg.contains("UnknownHostException")) {
+            return "Network Error: Could not connect to GitHub.";
+        }
+
+        // Strip out noisy Java class names like org.eclipse.jgit.api.errors.TransportException:
+        msg = msg.replaceAll("^[a-zA-Z0-9_.]+(Exception|Error):\\s*", "");
+
+        // Limit length
+        if (msg.length() > 80) {
+            msg = msg.substring(0, 77) + "...";
+        }
+        return msg;
     }
 
     @Override
@@ -150,11 +171,11 @@ public class GitCloneService extends Service {
         Intent completeIntent = new Intent("com.cocode.vcode.ide.ACTION_CLONE_COMPLETE");
         completeIntent.setPackage(getPackageName());
         sendBroadcast(completeIntent);
-        
+
         if (com.cocode.vcode.ide.ui.projects.ProjectsViewModel.onCloneCompleteListener != null) {
             com.cocode.vcode.ide.ui.projects.ProjectsViewModel.onCloneCompleteListener.run();
         }
-        
+
         stopSelf();
     }
 
@@ -228,35 +249,6 @@ public class GitCloneService extends Service {
         });
     }
 
-    public static String parseGitError(Exception e) {
-        String msg = e.getMessage() != null ? e.getMessage() : e.toString();
-        
-        if (msg.contains("not authorized") || msg.contains("Auth fail") || msg.contains("Authentication is required")) {
-            return "Authentication Failed: Invalid token or repository is private.";
-        }
-        if (msg.contains("not found") || msg.contains("cannot open git-upload-pack")) {
-            return "Repository not found. Check the URL.";
-        }
-        if (msg.contains("already exists")) {
-            return "Destination folder already exists.";
-        }
-        if (msg.contains("Unknown I/O disruption")) {
-            return "Filesystem Error: Could not write project files.";
-        }
-        if (msg.contains("Connection timed out") || msg.contains("UnknownHostException")) {
-            return "Network Error: Could not connect to GitHub.";
-        }
-        
-        // Strip out noisy Java class names like org.eclipse.jgit.api.errors.TransportException:
-        msg = msg.replaceAll("^[a-zA-Z0-9_.]+(Exception|Error):\\s*", "");
-        
-        // Limit length
-        if (msg.length() > 80) {
-            msg = msg.substring(0, 77) + "...";
-        }
-        return msg;
-    }
-
     private String getMainFile(File dir) {
         if (!dir.exists() || !dir.isDirectory()) return "";
         File[] files = dir.listFiles();
@@ -274,5 +266,15 @@ public class GitCloneService extends Service {
             if (f.isFile() && !f.isHidden()) return f.getName();
         }
         return "";
+    }
+
+    public interface CloneListener {
+        void onProgress(String task, int done, int total, int percentage);
+
+        void onUpdate(int completed);
+
+        void onSuccess();
+
+        void onFailure(String error);
     }
 }

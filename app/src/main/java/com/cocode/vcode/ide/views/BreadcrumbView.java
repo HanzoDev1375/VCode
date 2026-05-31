@@ -59,6 +59,7 @@ public class BreadcrumbView extends HorizontalScrollView {
 
     /**
      * Parses absolute path records, splitting text into structured graphical segment nodes.
+     *
      * @param projectName  The user-facing active project workspace label name.
      * @param relativePath The path coordinates mapped between the project root and the open document.
      */

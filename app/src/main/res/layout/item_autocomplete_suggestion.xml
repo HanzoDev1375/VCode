@@ -10,16 +10,30 @@
     android:orientation="horizontal"
     android:paddingHorizontal="12dp">
 
-    <TextView
-        android:id="@+id/tv_type_badge"
+    <FrameLayout
         android:layout_width="22dp"
         android:layout_height="22dp"
-        android:layout_marginEnd="10dp"
-        android:background="@drawable/vcode_bg_symbol_key"
-        android:gravity="center"
-        android:textColor="@android:color/white"
-        android:textSize="10sp"
-        tools:text="T" />
+        android:layout_marginEnd="10dp">
+
+        <TextView
+            android:id="@+id/tv_type_badge"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:background="@drawable/vcode_bg_symbol_key"
+            android:gravity="center"
+            android:textColor="@android:color/white"
+            android:textSize="10sp"
+            tools:text="T" />
+
+        <ImageView
+            android:id="@+id/iv_type_icon"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:padding="2dp"
+            android:visibility="gone"
+            tools:visibility="visible"
+            tools:src="@drawable/ic_folder" />
+    </FrameLayout>
 
     <TextView
         android:id="@+id/tv_label"

@@ -25,8 +25,10 @@ public class DeleteBottomSheet extends BottomSheetDialogFragment {
     private ConfirmDeleteListener listener;
     private String itemName;
     private String customMessage;
-    
-    /** The type of item being deleted, used to determine the visual labels. */
+
+    /**
+     * The type of item being deleted, used to determine the visual labels.
+     */
     private DeleteType deleteType = DeleteType.PROJECT;
 
     /**

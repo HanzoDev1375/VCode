@@ -23,7 +23,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 /**
  * GitHubLoginBottomSheet provides a secure interface for linking a GitHub account via Personal Access Token.
- * It features a dual-state UI: a login form for unauthenticated users, and a profile card 
+ * It features a dual-state UI: a login form for unauthenticated users, and a profile card
  * for users who have already connected their account.
  */
 public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {

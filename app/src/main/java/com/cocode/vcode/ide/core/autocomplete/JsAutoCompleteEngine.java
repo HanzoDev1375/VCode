@@ -1,11 +1,13 @@
 package com.cocode.vcode.ide.core.autocomplete;
 
 import android.content.Context;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
-import java.util.List;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -83,7 +85,8 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
     @Override
     public List<CompletionItem> getSuggestions(String fullText, int cursorPos) {
-        if (fullText == null || cursorPos < 0 || cursorPos > fullText.length()) return new ArrayList<>();
+        if (fullText == null || cursorPos < 0 || cursorPos > fullText.length())
+            return new ArrayList<>();
 
         String word = getWordBeforeCursor(fullText, cursorPos);
 

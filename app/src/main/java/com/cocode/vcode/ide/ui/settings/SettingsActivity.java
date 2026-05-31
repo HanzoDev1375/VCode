@@ -27,8 +27,10 @@ public class SettingsActivity extends BaseActivity {
 
     private ActivitySettingsBinding binding;
     private SettingsViewModel viewModel;
-    
-    /** Flag to prevent infinite recursive updates when the UI is being populated from the model. */
+
+    /**
+     * Flag to prevent infinite recursive updates when the UI is being populated from the model.
+     */
     private boolean isUpdatingUi = false;
 
     @Override
@@ -142,10 +144,12 @@ public class SettingsActivity extends BaseActivity {
         // Default branch name configuration
         binding.etDefaultBranchValue.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {

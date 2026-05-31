@@ -120,9 +120,10 @@ public class UiUtils {
 
     /**
      * Applies precise outline corner clipping geometries along with solid background coloring rules.
-     * @param view The target presentation layer item to morph.
+     *
+     * @param view   The target presentation layer item to morph.
      * @param radius The exact boundary corner rounding width specified in scale pixels.
-     * @param color The absolute color resource hex definition value.
+     * @param color  The absolute color resource hex definition value.
      */
     public static void setViewRounded(View view, float radius, int color) {
         GradientDrawable shape = new GradientDrawable();

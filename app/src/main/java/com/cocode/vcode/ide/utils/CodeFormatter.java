@@ -29,7 +29,8 @@ public class CodeFormatter {
 
     /**
      * Formats incoming source text block based on target language style standards.
-     * @param code The unformatted raw code text block.
+     *
+     * @param code     The unformatted raw code text block.
      * @param language The targeted language configuration identifier.
      * @return The beautified structural code string.
      */

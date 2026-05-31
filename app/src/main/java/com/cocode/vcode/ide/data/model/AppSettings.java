@@ -128,5 +128,5 @@ public class AppSettings {
     /**
      * Available UI visual style modes supported by the workspace presentation layer.
      */
-    public enum Theme { DARK, LIGHT, SYSTEM }
+    public enum Theme {DARK, LIGHT, SYSTEM}
 }

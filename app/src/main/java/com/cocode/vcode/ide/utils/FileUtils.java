@@ -3,7 +3,6 @@ package com.cocode.vcode.ide.utils;
 import android.content.Context;
 import android.os.Environment;
 
-
 import com.cocode.vcode.ide.data.model.FileNode;
 
 import java.io.BufferedReader;

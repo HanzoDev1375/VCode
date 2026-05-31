@@ -21,7 +21,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 /**
  * ActionConfirmBottomSheet provides a unified confirmation interface for advanced Git operations.
- * It dynamically adapts its UI (title, description, icons, and colors) based on the 
+ * It dynamically adapts its UI (title, description, icons, and colors) based on the
  * requested {@link GitAction}, such as resets, cherry-picks, and reverts.
  */
 public class ActionConfirmBottomSheet extends BottomSheetDialogFragment {
@@ -33,6 +33,7 @@ public class ActionConfirmBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Creates a new instance of the sheet for a specific Git action.
+     *
      * @param action The Git operation to be confirmed.
      * @return A configured fragment instance.
      */

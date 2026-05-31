@@ -4,17 +4,15 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.database.Cursor;
-import android.graphics.Typeface;
+import android.graphics.Color;
+import android.graphics.drawable.ColorDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 import android.provider.OpenableColumns;
+import android.util.TypedValue;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.PopupWindow;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
-import android.util.TypedValue;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
@@ -43,6 +41,7 @@ import com.cocode.vcode.ide.ui.sheets.NewFileBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.NewFolderBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.RenameBottomSheet;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
+import com.cocode.vcode.ide.utils.FileOperationManager;
 import com.cocode.vcode.ide.utils.FileUtils;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
@@ -53,8 +52,6 @@ import java.io.InputStream;
 import java.io.OutputStream;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
-import com.cocode.vcode.ide.utils.FileOperationManager;
 
 /**
  * FileTreeFragment displays the project's file explorer.
@@ -66,8 +63,12 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
     private FragmentFileTreeBinding binding;
     private EditorViewModel viewModel;
-
-    /** Result launcher for importing multiple files from the system picker. */
+    private FileTreeAdapter adapter;
+    private FileSelectionListener selectionListener;
+    private File selectedImportDestination = null;
+    /**
+     * Result launcher for importing multiple files from the system picker.
+     */
     private final ActivityResultLauncher<String> importFilesLauncher = registerForActivityResult(
             new ActivityResultContracts.GetMultipleContents(), uris -> {
                 if (uris != null && !uris.isEmpty()) {
@@ -75,8 +76,9 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                 }
             }
     );
-
-    /** Result launcher for importing an entire directory tree from the system picker. */
+    /**
+     * Result launcher for importing an entire directory tree from the system picker.
+     */
     private final ActivityResultLauncher<Uri> importFolderLauncher = registerForActivityResult(
             new ActivityResultContracts.OpenDocumentTree(), uri -> {
                 if (uri != null) {
@@ -84,10 +86,6 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                 }
             }
     );
-
-    private FileTreeAdapter adapter;
-    private FileSelectionListener selectionListener;
-    private File selectedImportDestination = null;
 
     @Override
     public void onAttach(@NonNull Context context) {
@@ -192,7 +190,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                     current++;
                     String fileName = getFileNameFromUri(uri);
                     if (fileName == null) fileName = "imported_file_" + System.currentTimeMillis();
-                    
+
                     opManager.updateProgress("Importing Files", "Importing: " + fileName + " (" + current + "/" + total + ")", total, current);
 
                     File destFile = new File(root, fileName);
@@ -259,7 +257,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
                 .setView(dialogView)
                 .create();
-        
+
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
         }
@@ -269,7 +267,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
         androidx.recyclerview.widget.RecyclerView rvFolders = dialogView.findViewById(com.cocode.vcode.ide.R.id.rv_destination_folders);
         rvFolders.setLayoutManager(new LinearLayoutManager(getContext()));
-        
+
         File[] selected = new File[]{viewModel.getProjectRoot()};
 
         DestinationAdapter destAdapter = new DestinationAdapter(file -> {
@@ -281,7 +279,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
         com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_cancel);
         com.google.android.material.button.MaterialButton btnConfirm = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_confirm);
-        
+
         btnCancel.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
         btnConfirm.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
 
@@ -304,7 +302,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             if (cancelToken.get()) return;
             String name = file.getName();
             if (name == null) name = "unknown_file_" + System.currentTimeMillis();
-            
+
             if (file.isDirectory()) {
                 File newDir = new File(destDir, name);
                 if (!newDir.exists()) newDir.mkdirs();
@@ -410,19 +408,19 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                 Toast.makeText(getContext(), "Cut", Toast.LENGTH_SHORT).show();
             });
         }
-        
+
         if (canPaste) {
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_file_plus, "Paste", () -> {
                 File destDir = file.isDirectory() ? file : file.getParentFile();
                 performPaste(destDir);
             });
         }
-        
+
         if (!isRoot) {
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_copy, "Copy Path", () -> showCopyPathPopup(anchor, file));
-            
+
             addDivider(popupBinding.popupContainer);
-            
+
             View deleteItem = addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_trash, "Delete", () -> showDeleteDialog(file));
             TextView tvTitle = deleteItem.findViewById(R.id.tv_title);
             ImageView ivIcon = deleteItem.findViewById(R.id.iv_icon);
@@ -469,7 +467,10 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         itemBinding.tvTitle.setText(title);
         itemBinding.tvTitle.setTextAppearance(com.google.android.material.R.style.TextAppearance_Material3_LabelSmall);
         itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
-        itemBinding.getRoot().setOnClickListener(v -> { popup.dismiss(); action.run(); });
+        itemBinding.getRoot().setOnClickListener(v -> {
+            popup.dismiss();
+            action.run();
+        });
         container.addView(itemBinding.getRoot());
         return itemBinding.getRoot();
     }

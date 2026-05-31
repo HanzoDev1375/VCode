@@ -22,6 +22,7 @@ public class EditorViewModelFactory implements ViewModelProvider.Factory {
 
     /**
      * Initializes the factory with a context to provide to repositories.
+     *
      * @param context The context used to resolve application resources.
      */
     public EditorViewModelFactory(Context context) {

@@ -15,24 +15,18 @@ import com.google.android.material.button.MaterialButton;
 
 /**
  * MergeConfirmDialog facilitates the confirmation step for Git branch merging.
- * It presents a clear description of the source and target branches involved 
+ * It presents a clear description of the source and target branches involved
  * in the operation to prevent accidental merges.
  */
 public class MergeConfirmDialog {
 
     /**
-     * Listener interface for notifying when the user confirms the merge.
-     */
-    public interface MergeConfirmationListener {
-        void onMergeConfirmed();
-    }
-
-    /**
      * Displays the merge confirmation dialog with branch details.
-     * @param context The context for building the dialog.
+     *
+     * @param context      The context for building the dialog.
      * @param sourceBranch The name of the branch to merge from.
      * @param targetBranch The name of the active branch being merged into.
-     * @param listener Callback for the confirmation event.
+     * @param listener     Callback for the confirmation event.
      */
     public static void show(Context context, String sourceBranch, String targetBranch, MergeConfirmationListener listener) {
         // Inflate the custom layout for the merge confirmation
@@ -74,5 +68,12 @@ public class MergeConfirmDialog {
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         }
+    }
+
+    /**
+     * Listener interface for notifying when the user confirms the merge.
+     */
+    public interface MergeConfirmationListener {
+        void onMergeConfirmed();
     }
 }

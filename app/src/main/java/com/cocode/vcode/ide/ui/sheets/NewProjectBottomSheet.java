@@ -31,8 +31,10 @@ public class NewProjectBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetNewProjectBinding binding;
     private NewProjectListener listener;
-    
-    /** The currently selected template name. */
+
+    /**
+     * The currently selected template name.
+     */
     private String selectedTemplate = "Blank";
 
     /**
@@ -114,6 +116,7 @@ public class NewProjectBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Updates the selection stroke and the internal template state.
+     *
      * @param index The 1-based index of the template card.
      */
     private void selectTemplate(int index) {

@@ -8,38 +8,27 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
 import android.os.Build;
+
 import androidx.core.app.NotificationCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+
 import com.cocode.vcode.ide.R;
+
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class FileOperationManager {
 
-    private static FileOperationManager instance;
     public static final String ACTION_CANCEL_OPERATION = "com.cocode.vcode.ide.ACTION_CANCEL_FILE_OP";
     private static final int NOTIFICATION_ID = 4040;
     private static final String CHANNEL_ID = "vcode_file_ops";
-
+    private static FileOperationManager instance;
     private final Context context;
     private final NotificationManager notificationManager;
     private final AtomicBoolean isCancelled = new AtomicBoolean(false);
+    private final MutableLiveData<ProgressState> progressLiveData = new MutableLiveData<>(new ProgressState(false, 0, 0));
     private BroadcastReceiver cancelReceiver;
     private long lastNotificationTime = 0;
-
-    public static class ProgressState {
-        public final boolean isActive;
-        public final int progress;
-        public final int max;
-
-        public ProgressState(boolean isActive, int progress, int max) {
-            this.isActive = isActive;
-            this.progress = progress;
-            this.max = max;
-        }
-    }
-
-    private final MutableLiveData<ProgressState> progressLiveData = new MutableLiveData<>(new ProgressState(false, 0, 0));
 
     private FileOperationManager(Context context) {
         this.context = context.getApplicationContext();
@@ -72,7 +61,7 @@ public class FileOperationManager {
     public void startOperation(String title) {
         isCancelled.set(false);
         registerCancelReceiver();
-        
+
         progressLiveData.postValue(new ProgressState(true, 0, 100));
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
@@ -170,8 +159,21 @@ public class FileOperationManager {
         if (cancelReceiver != null) {
             try {
                 context.unregisterReceiver(cancelReceiver);
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
             cancelReceiver = null;
+        }
+    }
+
+    public static class ProgressState {
+        public final boolean isActive;
+        public final int progress;
+        public final int max;
+
+        public ProgressState(boolean isActive, int progress, int max) {
+            this.isActive = isActive;
+            this.progress = progress;
+            this.max = max;
         }
     }
 }

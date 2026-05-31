@@ -26,7 +26,7 @@ import com.cocode.vcode.ide.utils.FontManager;
 
 /**
  * GitBranchFragment manages the local branch list for the repository.
- * It allows users to switch branches, create new ones, and perform operations 
+ * It allows users to switch branches, create new ones, and perform operations
  * like merging, renaming, and deleting branches.
  */
 public class GitBranchFragment extends Fragment implements BranchAdapter.BranchListener {

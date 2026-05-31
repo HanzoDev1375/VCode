@@ -28,7 +28,7 @@ public class WebPreviewViewer implements IFileViewer {
             this.context = context;
             webView = new WebView(context);
             webView.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
             webView.setBackgroundColor(Color.TRANSPARENT);
         }
@@ -38,10 +38,10 @@ public class WebPreviewViewer implements IFileViewer {
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
         if (webView == null || file == null) return;
-        
+
         FileType type = file.getFileType();
         String content = file.getContent();
-        
+
         if (type == FileType.SVG) {
             String base64 = Base64.encodeToString(content.getBytes(), Base64.NO_WRAP);
             String html = "<!DOCTYPE html><html><body style=\"margin:0;display:flex;justify-content:center;align-items:center;height:100vh;background-color:transparent;\">" +
@@ -126,10 +126,12 @@ public class WebPreviewViewer implements IFileViewer {
     }
 
     @Override
-    public void onResume() { }
+    public void onResume() {
+    }
 
     @Override
-    public void onPause() { }
+    public void onPause() {
+    }
 
     @Override
     public void destroy() {

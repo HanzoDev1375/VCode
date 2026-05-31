@@ -2,7 +2,9 @@ package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
 import android.text.SpannableStringBuilder;
+
 import com.cocode.vcode.ide.R;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Matcher;

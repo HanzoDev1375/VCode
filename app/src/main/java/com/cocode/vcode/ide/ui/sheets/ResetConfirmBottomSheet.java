@@ -24,13 +24,15 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 /**
  * ResetConfirmBottomSheet allows users to perform Git resets to a specific commit.
- * It supports Soft, Mixed, and Hard reset modes, and includes a mandatory safety 
+ * It supports Soft, Mixed, and Hard reset modes, and includes a mandatory safety
  * confirmation dialog for destructive Hard resets.
  */
 public class ResetConfirmBottomSheet extends BottomSheetDialogFragment {
     private BottomSheetResetConfirmBinding binding;
-    
-    /** The target commit to reset to. */
+
+    /**
+     * The target commit to reset to.
+     */
     private CommitItem commit;
 
     /**
@@ -68,7 +70,7 @@ public class ResetConfirmBottomSheet extends BottomSheetDialogFragment {
         });
 
         binding.btnCancel.setOnClickListener(v -> dismiss());
-        
+
         binding.btnConfirmReset.setOnClickListener(v -> {
             int id = binding.rgResetMode.getCheckedRadioButtonId();
 

@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.inputmethod.InputMethodManager;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -32,8 +31,10 @@ public class NewFolderBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetCreateFolderBinding binding;
     private EditorViewModel viewModel;
-    
-    /** The parent directory where the new folder will be created. */
+
+    /**
+     * The parent directory where the new folder will be created.
+     */
     private File parentDir;
 
     /**

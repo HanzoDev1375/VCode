@@ -26,8 +26,10 @@ public class CommitDetailsViewModel extends AndroidViewModel {
 
     private final GitRepository repository;
     private final GitCredentialStore credentialStore;
-    
-    /** Sequential executor for thread-safe repository operations. */
+
+    /**
+     * Sequential executor for thread-safe repository operations.
+     */
     private final ExecutorService gitExecutor;
 
     // Observable metadata fields
@@ -157,14 +159,37 @@ public class CommitDetailsViewModel extends AndroidViewModel {
     }
 
     // --- Getters for reactive data ---
-    public LiveData<String> getCommitSha() { return commitSha; }
-    public LiveData<String> getCommitMessage() { return commitMessage; }
-    public LiveData<String> getCommitAuthor() { return commitAuthor; }
-    public LiveData<String> getCommitTimestamp() { return commitTimestamp; }
-    public LiveData<List<GitFileItem>> getCommitChanges() { return commitChanges; }
-    public LiveData<Boolean> getCommitChangesLoadError() { return commitChangesLoadError; }
-    public LiveData<Boolean> getActionCompleted() { return actionCompleted; }
-    public LiveData<String> getErrorMessage() { return errorMessage; }
+    public LiveData<String> getCommitSha() {
+        return commitSha;
+    }
+
+    public LiveData<String> getCommitMessage() {
+        return commitMessage;
+    }
+
+    public LiveData<String> getCommitAuthor() {
+        return commitAuthor;
+    }
+
+    public LiveData<String> getCommitTimestamp() {
+        return commitTimestamp;
+    }
+
+    public LiveData<List<GitFileItem>> getCommitChanges() {
+        return commitChanges;
+    }
+
+    public LiveData<Boolean> getCommitChangesLoadError() {
+        return commitChangesLoadError;
+    }
+
+    public LiveData<Boolean> getActionCompleted() {
+        return actionCompleted;
+    }
+
+    public LiveData<String> getErrorMessage() {
+        return errorMessage;
+    }
 
     @Override
     protected void onCleared() {

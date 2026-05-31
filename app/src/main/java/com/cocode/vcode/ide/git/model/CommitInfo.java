@@ -46,6 +46,7 @@ public class CommitInfo {
 
     /**
      * Evaluates parent node index sizes to verify if this node represents a historical branch merge junction.
+     *
      * @return True if the commit stems from multiple independent ancestral paths.
      */
     public boolean isMergeCommit() {
@@ -67,7 +68,7 @@ public class CommitInfo {
 
         // Multi-part processing profile: compile individual character bounds elements markers
         return (String.valueOf(parts[0].charAt(0))
-                + String.valueOf(parts[parts.length - 1].charAt(0))).toUpperCase();
+                + parts[parts.length - 1].charAt(0)).toUpperCase();
     }
 
     public String getFullHash() {

@@ -64,8 +64,7 @@ public class CssFormatter extends BaseFormatter {
                 }
                 indent++;
                 isNewLine = true;
-            }
-            else if (c == '}') {
+            } else if (c == '}') {
                 indent = Math.max(0, indent - 1); // Step back an indent depth level safely
                 if (!isNewLine) out.append("\n");
                 out.append(getIndentString(indent)).append("}");
@@ -78,8 +77,7 @@ public class CssFormatter extends BaseFormatter {
             else if (c == ';') {
                 out.append(";");
                 // We no longer force isNewLine = true here to allow inline properties
-            }
-            else {
+            } else {
                 boolean b = i + 1 < cleanCode.length() && cleanCode.charAt(i + 1) != ' ';
 
                 // Keep look and feel legible by placing single clean spaces behind structural property colons
@@ -95,8 +93,7 @@ public class CssFormatter extends BaseFormatter {
                     if (b) {
                         out.append(" ");
                     }
-                }
-                else {
+                } else {
                     // Prevent piling up unnecessary trailing/leading indentation text spacers
                     if (c == ' ' && isNewLine) continue;
 

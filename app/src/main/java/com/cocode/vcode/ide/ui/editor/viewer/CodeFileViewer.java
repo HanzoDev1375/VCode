@@ -22,20 +22,20 @@ import com.cocode.vcode.ide.views.CodeEditorLayout;
 
 public class CodeFileViewer implements IFileViewer {
 
+    private final Handler jsonValidationHandler = new Handler(Looper.getMainLooper());
     private CodeEditorLayout editorLayout;
     private CodeEditText codeEditText;
     private EditorFile currentFile;
     private EditorViewModel viewModel;
     private IEditorCallback editorCallback;
-    
-    private final Handler jsonValidationHandler = new Handler(Looper.getMainLooper());
-
     private final TextWatcher editorTextWatcher = new TextWatcher() {
         @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+        }
 
         @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {}
+        public void onTextChanged(CharSequence s, int start, int before, int count) {
+        }
 
         @Override
         public void afterTextChanged(Editable s) {
@@ -52,12 +52,12 @@ public class CodeFileViewer implements IFileViewer {
         if (editorLayout == null) {
             editorLayout = new CodeEditorLayout(context);
             editorLayout.setLayoutParams(new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT, 
+                    ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
-            
+
             codeEditText = editorLayout.getCodeEditText();
             codeEditText.addTextChangedListener(editorTextWatcher);
-            
+
             if (context instanceof IEditorCallback) {
                 editorCallback = (IEditorCallback) context;
             }
@@ -71,10 +71,10 @@ public class CodeFileViewer implements IFileViewer {
         this.viewModel = viewModel;
 
         if (codeEditText == null) return;
-        
+
         // Remove listener temporarily to avoid triggering changes during load
         codeEditText.removeTextChangedListener(editorTextWatcher);
-        
+
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
         if (settings != null) {
             codeEditText.setTextSize(settings.getFontSize());
@@ -84,8 +84,9 @@ public class CodeFileViewer implements IFileViewer {
         }
 
         codeEditText.setTag(file.getId());
+        codeEditText.setCurrentFile(file.getFile());
         codeEditText.setFileType(file.getFileType());
-        
+
         // Only set text if it's different to prevent resetting cursor
         String currentText = codeEditText.getText() != null ? codeEditText.getText().toString() : "";
         if (!currentText.equals(file.getContent())) {
@@ -133,10 +134,10 @@ public class CodeFileViewer implements IFileViewer {
     public CodeEditText getCodeEditor() {
         return codeEditText;
     }
-    
+
     private void validateJsonIfRequired(String text) {
         if (editorCallback == null || currentFile == null || viewModel == null) return;
-        
+
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
         if (settings != null && settings.jsonValidateRealtime && currentFile.getFileType() == FileType.JSON) {
             editorCallback.showJsonValidating();
@@ -148,7 +149,7 @@ public class CodeFileViewer implements IFileViewer {
 
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     // Check if this viewer is still active/alive before updating UI
-                    if (editorLayout == null || editorLayout.getParent() == null || ((View)editorLayout.getParent()).getVisibility() != View.VISIBLE) {
+                    if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
                         return;
                     }
                     if (report.isValid()) {

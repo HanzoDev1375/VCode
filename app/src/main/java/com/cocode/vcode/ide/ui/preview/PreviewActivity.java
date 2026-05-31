@@ -101,7 +101,7 @@ public class PreviewActivity extends BaseActivity {
         settings.setDisplayZoomControls(false); // Hides the default zoom buttons for a cleaner UI
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        
+
         // Advanced Browser Capabilities
         settings.setSupportMultipleWindows(true);
         settings.setJavaScriptCanOpenWindowsAutomatically(true);
@@ -184,6 +184,7 @@ public class PreviewActivity extends BaseActivity {
 
     /**
      * Loads a specific URL into the WebView.
+     *
      * @param url The URL or file path to load.
      */
     private void loadUrl(String url) {
@@ -194,6 +195,7 @@ public class PreviewActivity extends BaseActivity {
 
     /**
      * Displays a custom error layout when a page fails to load.
+     *
      * @param msg The error description to display.
      */
     private void showError(String msg) {

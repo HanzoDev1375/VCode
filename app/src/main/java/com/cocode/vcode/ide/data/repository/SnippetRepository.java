@@ -44,6 +44,7 @@ public class SnippetRepository {
     /**
      * Pulls down a combined view of available boilerplates, sorting modified variants above defaults.
      * Prevents entry duplication by matching and excluding overlapping structural unique IDs.
+     *
      * @return A LiveData collection containing the consolidated boilerplate results array.
      */
     public LiveData<Result<List<SnippetItem>>> getSnippets() {

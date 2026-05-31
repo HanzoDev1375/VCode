@@ -139,10 +139,12 @@ public class GitRemoteFragment extends Fragment {
 
         binding.etRemoteUrl.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
 
             @Override
             public void afterTextChanged(Editable s) {
@@ -226,7 +228,8 @@ public class GitRemoteFragment extends Fragment {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     try {
                         updater.onResult(true, null);
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                     if (isAdded()) {
                         refreshAccountUIState();
                         Toast.makeText(requireContext(), "Logged into GitHub as " + username, Toast.LENGTH_SHORT).show();
@@ -236,7 +239,8 @@ public class GitRemoteFragment extends Fragment {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     try {
                         updater.onResult(false, e.getMessage() != null ? e.getMessage() : "Authentication failed.");
-                    } catch (Exception ignored) {}
+                    } catch (Exception ignored) {
+                    }
                 });
             }
         }));
@@ -277,7 +281,8 @@ public class GitRemoteFragment extends Fragment {
         String globalPatToken = "";
         try {
             globalPatToken = credentialStore.getToken(context);
-        } catch (Exception ignored) {}
+        } catch (Exception ignored) {
+        }
 
         // Show progress HUD and disable form inputs to prevent concurrent modification
         binding.layoutStatusArea.setVisibility(View.VISIBLE);

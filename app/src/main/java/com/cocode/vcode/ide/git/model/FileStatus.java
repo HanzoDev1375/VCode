@@ -63,7 +63,8 @@ public class FileStatus {
     public String getFileName() {
         if (relativePath == null) return "";
         int sep = relativePath.lastIndexOf('/');
-        if (sep < 0) sep = relativePath.lastIndexOf('\\'); // Fallback check evaluating alternative platform layouts marks
+        if (sep < 0)
+            sep = relativePath.lastIndexOf('\\'); // Fallback check evaluating alternative platform layouts marks
         return sep >= 0 ? relativePath.substring(sep + 1) : relativePath;
     }
 

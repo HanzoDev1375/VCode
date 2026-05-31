@@ -8,7 +8,7 @@ import java.util.regex.Pattern;
  * nesting padding shifts on self-closing void elements.
  */
 public class HtmlFormatter extends BaseFormatter {
-    
+
     private static final Pattern TAG_SPLIT = Pattern.compile(">[ \\t\\x0B\\f\\r]*<");
     private static final Pattern VOID_TAGS = Pattern.compile("(?i)^<(img|br|hr|input|link|meta|area|base|col|param|source).*?>$");
     private static final Pattern INLINE_TAG = Pattern.compile("^<[^>]+>.*</[^>]+>$");
@@ -31,7 +31,7 @@ public class HtmlFormatter extends BaseFormatter {
                     out.append("\n");
                     emptyLines++;
                 }
-                continue; 
+                continue;
             }
             emptyLines = 0;
 
@@ -49,7 +49,7 @@ public class HtmlFormatter extends BaseFormatter {
                 if (!INLINE_TAG.matcher(trimmed).matches()) indent++;
             }
         }
-        
+
         String result = out.toString();
         result = MULTI_NEWLINES.matcher(result).replaceAll("\n\n");
         return result.trim();

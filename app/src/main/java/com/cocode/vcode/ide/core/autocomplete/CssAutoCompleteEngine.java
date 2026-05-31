@@ -1,8 +1,10 @@
 package com.cocode.vcode.ide.core.autocomplete;
 
 import android.content.Context;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -112,10 +114,10 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         int colonIdx = line.lastIndexOf(':');
         int braceIdx = line.lastIndexOf('{');
         int semiIdxLine = line.lastIndexOf(';');
-        
+
         if (colonIdx > braceIdx && colonIdx > semiIdxLine) {
             String propertyPart = line.substring(braceIdx >= 0 ? braceIdx + 1 : 0, colonIdx).trim();
-            
+
             // Clean up propertyPart for inline HTML styles and multiple properties on one line
             int semiIdx = propertyPart.lastIndexOf(';');
             int quoteIdx = Math.max(propertyPart.lastIndexOf('"'), propertyPart.lastIndexOf('\''));

@@ -3,7 +3,9 @@ package com.cocode.vcode.ide.core.syntax;
 import android.content.Context;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+
 import androidx.core.content.ContextCompat;
+
 import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
 
 /**
@@ -22,6 +24,7 @@ public abstract class SyntaxHighlighter {
 
     /**
      * Parses a raw code string into a styled Spannable representation matching language grammar patterns.
+     *
      * @param code The unstyled source code text character sequence.
      * @return A SpannableStringBuilder containing structural color spans applied to text ranges.
      */

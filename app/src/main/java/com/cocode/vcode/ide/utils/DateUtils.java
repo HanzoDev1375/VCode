@@ -17,6 +17,7 @@ public class DateUtils {
 
     /**
      * Converts absolute date values into relative textual representations.
+     *
      * @param date The baseline target timestamp value.
      * @return A localized narrative segment description representing the elapsed interval.
      */

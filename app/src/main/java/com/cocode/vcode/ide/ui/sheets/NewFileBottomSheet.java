@@ -2,7 +2,6 @@ package com.cocode.vcode.ide.ui.sheets;
 
 import android.app.Dialog;
 import android.content.Context;
-import android.graphics.PorterDuff;
 import android.os.Bundle;
 import android.text.Editable;
 import android.text.TextWatcher;
@@ -38,8 +37,10 @@ import java.nio.charset.StandardCharsets;
 public class NewFileBottomSheet extends BottomSheetDialogFragment {
 
     private final String[] extensions = {".html", ".css", ".js", ".json", ".md", ".txt"};
-    
-    /** Asset filenames for the initial boilerplate content. */
+
+    /**
+     * Asset filenames for the initial boilerplate content.
+     */
     private final String[] templateFiles = {
             "template_blank.html",
             "template_blank.css",
@@ -192,7 +193,8 @@ public class NewFileBottomSheet extends BottomSheetDialogFragment {
     private void setupListeners() {
         binding.etFileName.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -200,7 +202,8 @@ public class NewFileBottomSheet extends BottomSheetDialogFragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         binding.btnCreateFile.setOnClickListener(v -> {

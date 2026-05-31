@@ -1,6 +1,7 @@
 package com.cocode.vcode.ide.core.model;
 
 import com.cocode.vcode.ide.R;
+
 import java.util.Arrays;
 import java.util.List;
 
@@ -56,6 +57,7 @@ public enum FileType {
 
     /**
      * Inspects a raw file extension suffix string to identify its file type profile.
+     *
      * @param ext The raw extension string pulled from the file name.
      * @return The matching FileType configuration enum, defaulting to TEXT if unmatched or empty.
      */
@@ -68,7 +70,7 @@ public enum FileType {
                 return type;
             }
         }
-        
+
         return TEXT; // Default catch-all for unknown formats
     }
 

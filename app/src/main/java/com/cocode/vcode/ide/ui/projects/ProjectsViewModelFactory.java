@@ -19,6 +19,7 @@ public class ProjectsViewModelFactory implements ViewModelProvider.Factory {
 
     /**
      * Initializes the factory with the application context.
+     *
      * @param context The context used for repository initialization.
      */
     public ProjectsViewModelFactory(Context context) {

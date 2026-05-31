@@ -41,8 +41,10 @@ public class SnippetsBottomSheet extends BottomSheetDialogFragment {
     private BottomSheetSnippetManagerBinding binding;
     private SnippetsAdapter adapter;
     private SnippetRepository repository;
-    
-    /** Full list of snippets retrieved from the repository for local filtering. */
+
+    /**
+     * Full list of snippets retrieved from the repository for local filtering.
+     */
     private List<SnippetItem> allSnippets = new ArrayList<>();
     private SnippetsInteractionListener interactionListener;
 
@@ -175,7 +177,7 @@ public class SnippetsBottomSheet extends BottomSheetDialogFragment {
 
         // Apply standard list spacing
         binding.rvSnippets.addItemDecoration(new MarginItemDecorator(UiUtils.dpToPx(requireContext(), 24), UiUtils.dpToPx(requireContext(), 24), UiUtils.dpToPx(requireContext(), 12)));
-        
+
         // Auto-close open swipe menus during scroll
         binding.rvSnippets.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -193,7 +195,8 @@ public class SnippetsBottomSheet extends BottomSheetDialogFragment {
     private void setupSearchFilter() {
         binding.etSearch.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -201,7 +204,8 @@ public class SnippetsBottomSheet extends BottomSheetDialogFragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
     }
 
@@ -223,6 +227,7 @@ public class SnippetsBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Filters the snippet list locally based on title or content matches.
+     *
      * @param query The search text.
      */
     private void filterSnippets(String query) {

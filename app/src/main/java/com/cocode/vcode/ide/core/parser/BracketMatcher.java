@@ -12,6 +12,7 @@ public class BracketMatcher {
     /**
      * Inspects the character directly under the cursor and tracks its matching sibling balance
      * by scanning either forward or backward through the document text.
+     *
      * @param text      The complete text buffer of the document.
      * @param cursorPos The current 0-based index position of the cursor caret.
      * @return A MatchResult object detailing the pair coordinates and discovery status.
@@ -33,8 +34,10 @@ public class BracketMatcher {
 
             for (int i = cursorPos + 1; i < text.length(); i++) {
                 char ch = text.charAt(i);
-                if (ch == c) depth++;          // Found another identical open token; increment depth level
-                if (ch == closeChar) depth--;  // Found matching target closer; decrement depth level
+                if (ch == c)
+                    depth++;          // Found another identical open token; increment depth level
+                if (ch == closeChar)
+                    depth--;  // Found matching target closer; decrement depth level
 
                 // Nesting balanced out to zero; we found the exact sibling token match!
                 if (depth == 0) return new MatchResult(cursorPos, i, true);
@@ -46,7 +49,8 @@ public class BracketMatcher {
 
             for (int i = cursorPos - 1; i >= 0; i--) {
                 char ch = text.charAt(i);
-                if (ch == c) depth++;         // Found another identical close token; increment depth level
+                if (ch == c)
+                    depth++;         // Found another identical close token; increment depth level
                 if (ch == openChar) depth--;  // Found matching target opener; decrement depth level
 
                 // Nesting balanced out to zero; pair tracking successfully satisfied

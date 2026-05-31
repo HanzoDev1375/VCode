@@ -17,6 +17,7 @@ public class LanguageDetector {
 
     /**
      * Analyzes the textual content shapes to resolve the applicable system language type.
+     *
      * @param code The unmapped raw script text sequence.
      * @return The inferred destination Language enum configuration target.
      */

@@ -18,10 +18,10 @@ public class JsonFormatter extends BaseFormatter {
         StringBuilder out = new StringBuilder(code.length() + code.length() / 10);
         int indent = 0;
         boolean inString = false;
-        
+
         for (int i = 0; i < code.length(); i++) {
             char c = code.charAt(i);
-            
+
             // Protect internal literal string formats from being altered
             if (inString) {
                 out.append(c);
@@ -30,19 +30,19 @@ public class JsonFormatter extends BaseFormatter {
                 }
                 continue;
             }
-            
+
             // Start of a string literal
             if (c == '"') {
                 out.append(c);
                 inString = true;
                 continue;
             }
-            
+
             // Skip structural external whitespaces
             if (c == ' ' || c == '\t' || c == '\n' || c == '\r') {
                 continue;
             }
-            
+
             // Layout scoping rules
             if (c == '{' || c == '[') {
                 out.append(c).append('\n');
@@ -60,7 +60,7 @@ public class JsonFormatter extends BaseFormatter {
                 out.append(c);
             }
         }
-        
+
         // Post-processing cleanup for empty brackets
         String result = out.toString();
         result = EMPTY_OBJECT.matcher(result).replaceAll("{}");

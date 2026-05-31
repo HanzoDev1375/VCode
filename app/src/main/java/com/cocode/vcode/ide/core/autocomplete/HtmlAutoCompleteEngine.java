@@ -1,9 +1,12 @@
 package com.cocode.vcode.ide.core.autocomplete;
 
 import android.content.Context;
+
 import com.cocode.vcode.ide.core.parser.HtmlTagParser;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -21,12 +24,17 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
     private final CssAutoCompleteEngine cssEngine;
     private final JsAutoCompleteEngine jsEngine;
+    private java.io.File currentFile;
 
     public HtmlAutoCompleteEngine(Context context) {
         super(context);
         loadTags();
         this.cssEngine = new CssAutoCompleteEngine(context);
         this.jsEngine = new JsAutoCompleteEngine(context);
+    }
+
+    public void setCurrentFile(java.io.File file) {
+        this.currentFile = file;
     }
 
     /**
@@ -107,9 +115,16 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             int lastOpen = before.lastIndexOf('<');
             if (lastOpen != -1) {
                 String tagText = before.substring(lastOpen);
-                if (tagText.matches("(?s).*\\bstyle\\s*=\\s*\"[^\"]*$") || 
-                    tagText.matches("(?s).*\\bstyle\\s*=\\s*'[^']*$")) {
+                if (tagText.matches("(?s).*\\bstyle\\s*=\\s*\"[^\"]*$") ||
+                        tagText.matches("(?s).*\\bstyle\\s*=\\s*'[^']*$")) {
                     return cssEngine.getSuggestions(fullText, cursorPos, true);
+                }
+
+                // File path attribute check for src, href, action, poster, data
+                java.util.regex.Matcher pathMatcher = java.util.regex.Pattern.compile("(?s).*\\b(src|href|action|poster|data)\\s*=\\s*[\"']([^\"']*)$").matcher(tagText);
+                if (pathMatcher.matches()) {
+                    String typedPath = pathMatcher.group(2);
+                    return getFileSuggestions(typedPath);
                 }
             }
 
@@ -127,5 +142,108 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         return new ArrayList<>();
+    }
+
+    private java.io.File getProjectRoot(java.io.File file) {
+        if (file == null) return null;
+        java.io.File dir = file.isDirectory() ? file : file.getParentFile();
+        while (dir != null) {
+            if (new java.io.File(dir, "project_meta.json").exists()) {
+                return dir;
+            }
+            dir = dir.getParentFile();
+        }
+        return null;
+    }
+
+    private String getRelativeHtmlPath(java.io.File baseDir, java.io.File target) {
+        String[] basePath = baseDir.getAbsolutePath().split("/");
+        String[] targetPath = target.getAbsolutePath().split("/");
+
+        int common = 0;
+        while (common < basePath.length && common < targetPath.length && basePath[common].equals(targetPath[common])) {
+            common++;
+        }
+
+        StringBuilder rel = new StringBuilder();
+        for (int i = common; i < basePath.length; i++) {
+            rel.append("../");
+        }
+        for (int i = common; i < targetPath.length; i++) {
+            rel.append(targetPath[i]);
+            if (i < targetPath.length - 1) rel.append("/");
+        }
+        if (target.isDirectory() && rel.length() > 0 && rel.charAt(rel.length() - 1) != '/') {
+            rel.append("/");
+        }
+        if (rel.length() == 0) return "./";
+        return rel.toString();
+    }
+
+    private void findFilesRecursively(java.io.File dir, String query, List<java.io.File> results, int limit) {
+        if (results.size() >= limit) return;
+        java.io.File[] files = dir.listFiles();
+        if (files == null) return;
+        for (java.io.File f : files) {
+            if (f.getName().startsWith(".")) continue; // Skip hidden files/folders
+
+            if (f.getName().toLowerCase().startsWith(query)) {
+                results.add(f);
+                if (results.size() >= limit) return;
+            }
+            if (f.isDirectory()) {
+                findFilesRecursively(f, query, results, limit);
+            }
+        }
+    }
+
+    private List<CompletionItem> getFileSuggestions(String typedPath) {
+        if (currentFile == null) return new ArrayList<>();
+        java.io.File currentDir = currentFile.getParentFile();
+        if (currentDir == null) return new ArrayList<>();
+
+        List<CompletionItem> items = new ArrayList<>();
+        int lastSlash = typedPath.lastIndexOf('/');
+
+        if (lastSlash != -1) {
+            String dirPart = typedPath.substring(0, lastSlash);
+            String filterPrefix = typedPath.substring(lastSlash + 1);
+            java.io.File searchDir = currentDir;
+            if (!dirPart.isEmpty()) {
+                searchDir = new java.io.File(currentDir, dirPart);
+            }
+            if (searchDir.exists() && searchDir.isDirectory()) {
+                java.io.File[] files = searchDir.listFiles();
+                if (files != null) {
+                    for (java.io.File f : files) {
+                        String name = f.getName();
+                        if (name.toLowerCase().startsWith(filterPrefix.toLowerCase()) || filterPrefix.isEmpty()) {
+                            String completion = name + (f.isDirectory() ? "/" : "");
+                            items.add(new CompletionItem(completion, completion,
+                                    f.isDirectory() ? "Directory" : "File",
+                                    f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
+                        }
+                    }
+                }
+            }
+            return fuzzyFilter(items, filterPrefix);
+        } else {
+            java.io.File projectRoot = getProjectRoot(currentFile);
+            if (projectRoot == null) projectRoot = currentDir;
+
+            List<java.io.File> allMatching = new ArrayList<>();
+            findFilesRecursively(projectRoot, typedPath.toLowerCase(), allMatching, 50);
+
+            for (java.io.File f : allMatching) {
+                String relPath = getRelativeHtmlPath(currentDir, f);
+                String label = f.getName() + (f.isDirectory() ? "/" : "");
+
+                items.add(new CompletionItem(label, relPath,
+                        relPath,
+                        f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
+            }
+
+            return items; // No fuzzy filtering needed, already prefix filtered
+        }
     }
 }

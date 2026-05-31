@@ -26,8 +26,10 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 public class GoToLineBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetGoToLineBinding binding;
-    
-    /** The total number of lines in the current file, used for range validation. */
+
+    /**
+     * The total number of lines in the current file, used for range validation.
+     */
     private int maxLines = 1;
     private GoToLineListener listener;
 
@@ -66,7 +68,8 @@ public class GoToLineBottomSheet extends BottomSheetDialogFragment {
         // Clear error states as the user types
         binding.etLineNumber.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -74,7 +77,8 @@ public class GoToLineBottomSheet extends BottomSheetDialogFragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) {}
+            public void afterTextChanged(Editable s) {
+            }
         });
 
         binding.btnGoTo.setOnClickListener(v -> {

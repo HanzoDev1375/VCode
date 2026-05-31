@@ -1,6 +1,7 @@
 package com.cocode.vcode.ide.core.parser.json;
 
 import androidx.annotation.NonNull;
+
 import java.util.ArrayList;
 import java.util.List;
 
@@ -120,6 +121,7 @@ public class JsonValidator {
         }
 
         /* ----------------------------------------------------------------- */
+
         /**
          * Core processing loop driving token resolution workflows.
          */

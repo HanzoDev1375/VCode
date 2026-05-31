@@ -1,13 +1,13 @@
 package com.cocode.vcode.ide.data.repository;
 
+import androidx.lifecycle.LiveData;
+import androidx.lifecycle.MutableLiveData;
+
 import com.cocode.vcode.ide.data.model.Result;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FileUtils;
 
 import java.io.File;
-
-import androidx.lifecycle.LiveData;
-import androidx.lifecycle.MutableLiveData;
 
 /**
  * Low-level data repository coordinating disk I/O file operations.
@@ -19,13 +19,15 @@ public class FileRepository {
     /**
      * Instantiates the file repository component.
      */
-    public FileRepository() {}
+    public FileRepository() {
+    }
 
     // --- Section: Write ---
 
     /**
      * Asynchronously writes content to a target file on the disk storage system.
      * Shifts execution to an I/O thread pool and returns feedback to the active subscriber loop.
+     *
      * @param file    The local target file descriptor block to modify.
      * @param content The string character sequence data payload to push to disk.
      * @return A LiveData notification channel containing operation result states.
@@ -70,6 +72,7 @@ public class FileRepository {
 
     /**
      * Recursively targets and destroys a specified file or workspace directory branch.
+     *
      * @param file The file or folder node targeted for removal.
      * @return A LiveData channel delivering the final destruction outcome status.
      */

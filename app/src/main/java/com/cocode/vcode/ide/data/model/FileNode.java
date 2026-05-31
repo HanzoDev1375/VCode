@@ -2,6 +2,7 @@ package com.cocode.vcode.ide.data.model;
 
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.utils.FileUtils;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -12,10 +13,10 @@ import java.util.List;
  */
 public class FileNode {
 
+    private final int depth; // Nested indentation layout layer index in the sidebar list layout
     private File file;
     private List<FileNode> children;
     private boolean isExpanded;
-    private final int depth; // Nested indentation layout layer index in the sidebar list layout
 
     /**
      * Instantiates a tree index item bound to a specified nesting depth level.

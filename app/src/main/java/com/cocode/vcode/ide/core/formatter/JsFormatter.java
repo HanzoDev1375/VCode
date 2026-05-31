@@ -117,8 +117,7 @@ public class JsFormatter extends BaseFormatter {
                         }
                     }
                 }
-            }
-            else if (c == ';') {
+            } else if (c == ';') {
                 out.append(";");
                 // Only create line break for semicolons outside function or control loops parameters
                 if (inParens == 0) {
@@ -127,8 +126,7 @@ public class JsFormatter extends BaseFormatter {
                     }
                     isNewLine = true;
                 }
-            }
-            else if (c == ',') {
+            } else if (c == ',') {
                 out.append(",");
                 if (inParens == 0) {
                     if (haveNewLine) {
@@ -143,8 +141,7 @@ public class JsFormatter extends BaseFormatter {
             else if (c == '\n') {
                 out.append("\n");
                 isNewLine = true;
-            }
-            else {
+            } else {
                 if (c == ' ' && isNewLine) continue;
 
                 if (isNewLine) {

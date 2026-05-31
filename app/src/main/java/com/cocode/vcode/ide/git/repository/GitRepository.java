@@ -52,6 +52,7 @@ public class GitRepository {
     /**
      * Attaches to an existing repository on disk or sets up a brand new one
      * using the configured fallback branch configurations.
+     *
      * @param projectDir The root folder tracking active project files.
      */
     public void openRepository(File projectDir) throws Exception {
@@ -385,6 +386,7 @@ public class GitRepository {
 
     /**
      * Evaluates references maps definitions parameters to fetch lists cataloging working branches nodes.
+     *
      * @param remote True if the command layout loop should scan external remote tracking streams exclusively.
      */
     public List<BranchItem> getBranches(boolean remote) throws Exception {

@@ -3,14 +3,14 @@ package com.cocode.vcode.ide.views;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.PorterDuff;
 import android.graphics.Typeface;
 import android.graphics.drawable.ColorDrawable;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -19,10 +19,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
+import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.databinding.ItemAutocompleteSuggestionBinding;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
-import android.graphics.drawable.GradientDrawable;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -166,10 +166,10 @@ public class AutoCompletePopup {
      */
     private class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapter.ViewHolder> {
 
-        private List<CompletionItem> items = new ArrayList<>();
-        private OnItemSelectedListener listener;
         private final int colorPrimary, colorSecondary, colorSuccess, colorWarning, colorJson, colorTextSecondary, colorTextPrimary;
         private final Typeface uiFont, uiFontBold, codeFont;
+        private List<CompletionItem> items = new ArrayList<>();
+        private OnItemSelectedListener listener;
 
         AutoCompleteAdapter() {
             colorPrimary = ContextCompat.getColor(context, R.color.vcode_accent_primary);
@@ -207,12 +207,34 @@ public class AutoCompletePopup {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             CompletionItem item = items.get(position);
 
-            GradientDrawable badgeBg = (GradientDrawable) holder.binding.tvTypeBadge.getBackground();
-            if (badgeBg != null) {
-                badgeBg.setColor(getBadgeColor(item.getType()));
+            if (item.getType() == CompletionItem.Type.FILE || item.getType() == CompletionItem.Type.FOLDER) {
+                holder.binding.tvTypeBadge.setVisibility(View.GONE);
+                holder.binding.ivTypeIcon.setVisibility(View.VISIBLE);
+
+                if (item.getType() == CompletionItem.Type.FOLDER) {
+                    holder.binding.ivTypeIcon.setImageResource(R.drawable.ic_folder);
+                    holder.binding.ivTypeIcon.setColorFilter(colorPrimary, PorterDuff.Mode.SRC_IN);
+                } else {
+                    String label = item.getLabel();
+                    String ext = "";
+                    int lastDot = label.lastIndexOf('.');
+                    if (lastDot != -1) {
+                        ext = label.substring(lastDot + 1);
+                    }
+                    FileType fType = FileType.fromExtension(ext);
+                    holder.binding.ivTypeIcon.setImageResource(fType.getIconResId());
+                    holder.binding.ivTypeIcon.setColorFilter(ContextCompat.getColor(context, fType.getColorResId()), PorterDuff.Mode.SRC_IN);
+                }
+            } else {
+                holder.binding.ivTypeIcon.setVisibility(View.GONE);
+                holder.binding.tvTypeBadge.setVisibility(View.VISIBLE);
+                GradientDrawable badgeBg = (GradientDrawable) holder.binding.tvTypeBadge.getBackground();
+                if (badgeBg != null) {
+                    badgeBg.setColor(getBadgeColor(item.getType()));
+                }
+                holder.binding.tvTypeBadge.setText(getBadgeLetter(item.getType()));
+                holder.binding.tvTypeBadge.setTypeface(uiFontBold);
             }
-            holder.binding.tvTypeBadge.setText(getBadgeLetter(item.getType()));
-            holder.binding.tvTypeBadge.setTypeface(uiFontBold);
 
             String labelText = item.getLabel();
             if (labelText != null && labelText.length() > 20) {
@@ -241,16 +263,23 @@ public class AutoCompletePopup {
             if (type == null) return colorTextSecondary;
             switch (type) {
                 case TAG:
-                case BUILTIN: return colorPrimary;
+                case BUILTIN:
+                case FOLDER:
+                    return colorPrimary;
                 case ATTRIBUTE:
-                case CSS_PROPERTY: return colorSecondary;
+                case CSS_PROPERTY:
+                    return colorSecondary;
                 case VALUE:
                 case CSS_VALUE:
-                case FUNCTION: return colorSuccess;
-                case KEYWORD: return colorWarning;
+                case FUNCTION:
+                    return colorSuccess;
+                case KEYWORD:
+                    return colorWarning;
                 case SNIPPET:
-                case JSON_KEY: return colorJson;
-                default: return colorTextSecondary;
+                case JSON_KEY:
+                    return colorJson;
+                default:
+                    return colorTextSecondary;
             }
         }
 

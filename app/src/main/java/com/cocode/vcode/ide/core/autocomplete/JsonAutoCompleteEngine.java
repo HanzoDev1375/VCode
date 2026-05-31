@@ -1,8 +1,10 @@
 package com.cocode.vcode.ide.core.autocomplete;
 
 import android.content.Context;
+
 import org.json.JSONArray;
 import org.json.JSONObject;
+
 import java.util.ArrayList;
 import java.util.List;
 

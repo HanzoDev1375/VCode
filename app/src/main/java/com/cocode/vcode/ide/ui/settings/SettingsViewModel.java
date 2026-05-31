@@ -52,7 +52,9 @@ public class SettingsViewModel extends ViewModel {
         });
     }
 
-    /** Updates the editor font size. */
+    /**
+     * Updates the editor font size.
+     */
     public void updateFontSize(int size) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -61,7 +63,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles the visibility of line numbers in the editor. */
+    /**
+     * Toggles the visibility of line numbers in the editor.
+     */
     public void updateLineNumbers(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -70,7 +74,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles the automatic closing of brackets and quotes. */
+    /**
+     * Toggles the automatic closing of brackets and quotes.
+     */
     public void updateAutoCloseBrackets(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -79,7 +85,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles automatic indentation for new lines. */
+    /**
+     * Toggles automatic indentation for new lines.
+     */
     public void updateAutoIndent(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -88,7 +96,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles real-time JSON validation feedback. */
+    /**
+     * Toggles real-time JSON validation feedback.
+     */
     public void updateJsonValidateRealtime(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -97,7 +107,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Updates the global application theme (Light, Dark, or System). */
+    /**
+     * Updates the global application theme (Light, Dark, or System).
+     */
     public void updateTheme(AppSettings.Theme theme) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -106,7 +118,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Updates the default branch name used for new Git repositories. */
+    /**
+     * Updates the default branch name used for new Git repositories.
+     */
     public void updateDefaultBranch(String value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -115,7 +129,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles the confirmation requirement for destructive Hard resets. */
+    /**
+     * Toggles the confirmation requirement for destructive Hard resets.
+     */
     public void updateConfirmHardReset(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -136,7 +152,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles whether the web preview opens inside the app or in an external browser. */
+    /**
+     * Toggles whether the web preview opens inside the app or in an external browser.
+     */
     public void updateOpenPreviewInApp(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {
@@ -145,7 +163,9 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /** Toggles the background auto-save mechanism for the code editor. */
+    /**
+     * Toggles the background auto-save mechanism for the code editor.
+     */
     public void updateAutoSave(boolean value) {
         AppSettings current = settingsLiveData.getValue();
         if (current != null) {

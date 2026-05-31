@@ -20,13 +20,9 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
 
     private final List<FileNode> folders = new ArrayList<>();
     private final int indentWidthPx;
-    private File selectedFile = null;
     private final DestinationListener listener;
+    private File selectedFile = null;
     private String projectName;
-
-    public interface DestinationListener {
-        void onDestinationSelected(File file);
-    }
 
     public DestinationAdapter(DestinationListener listener, int indentDp, float screenDensity) {
         this.listener = listener;
@@ -36,7 +32,7 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
     public void setTree(File projectRoot, String projectName, List<FileNode> tree) {
         this.projectName = projectName;
         folders.clear();
-        
+
         boolean treeHasRoot = false;
         if (tree != null && !tree.isEmpty()) {
             FileNode first = tree.get(0);
@@ -44,22 +40,22 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
                 treeHasRoot = true;
             }
         }
-        
+
         if (!treeHasRoot) {
             // Add root project folder first
             FileNode rootNode = new FileNode(projectRoot, 0);
             folders.add(rootNode);
         }
-        
+
         // Flatten directory structure
         flattenDirectories(tree, folders);
-        
+
         // Auto-select root if nothing is selected
         if (selectedFile == null) {
             selectedFile = projectRoot;
             listener.onDestinationSelected(selectedFile);
         }
-        
+
         notifyDataSetChanged();
     }
 
@@ -99,7 +95,7 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
     @Override
     public void onBindViewHolder(@NonNull DestinationViewHolder holder, int position) {
         FileNode node = folders.get(position);
-        
+
         // Apply indentation
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.binding.viewIndent.getLayoutParams();
         params.width = node.getDepth() * indentWidthPx;
@@ -133,7 +129,7 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
 
             selectedFile = node.getFile();
             listener.onDestinationSelected(selectedFile);
-            
+
             int newSelectedPos = holder.getAdapterPosition();
 
             if (oldSelectedPos != -1) {
@@ -148,6 +144,10 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
     @Override
     public int getItemCount() {
         return folders.size();
+    }
+
+    public interface DestinationListener {
+        void onDestinationSelected(File file);
     }
 
     public static class DestinationViewHolder extends RecyclerView.ViewHolder {
