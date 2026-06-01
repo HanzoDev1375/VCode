@@ -317,11 +317,19 @@ public class PreviewActivity extends BaseActivity {
         int baseColor = value.data;
         int glassAccentColor = (baseColor & 0x00FFFFFF) | 0xD9000000;
 
-        android.graphics.drawable.GradientDrawable ovalDrawable = new android.graphics.drawable.GradientDrawable();
-        ovalDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        ovalDrawable.setColor(glassAccentColor);
-        binding.btnToggleDesktop.setBackground(ovalDrawable);
-        binding.btnToggleConsole.setBackground(ovalDrawable);
+        // Each button must get its own drawable instance.
+        // Sharing a single Drawable between two Views causes state mutations
+        // (press, focus) on one view to visually bleed onto the other.
+        android.graphics.drawable.GradientDrawable desktopDrawable = new android.graphics.drawable.GradientDrawable();
+        desktopDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        desktopDrawable.setColor(glassAccentColor);
+
+        android.graphics.drawable.GradientDrawable consoleDrawable = new android.graphics.drawable.GradientDrawable();
+        consoleDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        consoleDrawable.setColor(glassAccentColor);
+
+        binding.btnToggleDesktop.setBackground(desktopDrawable);
+        binding.btnToggleConsole.setBackground(consoleDrawable);
     }
 
     private void toggleConsoleMode() {
