@@ -35,6 +35,7 @@ public class PreviewActivity extends BaseActivity {
 
     private String currentUrl;
     private boolean isDesktopMode = false;
+    private int logCount = 0;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -53,6 +54,11 @@ public class PreviewActivity extends BaseActivity {
         UiUtils.applySystemBarInsets(binding.getRoot());
 
         binding.tvTitle.setText(currentUrl);
+
+        com.cocode.vcode.ide.utils.FontManager fm = com.cocode.vcode.ide.utils.FontManager.getInstance();
+        binding.tvConsoleTitle.setTypeface(fm.getUiSemiBold(this));
+        binding.tvConsoleCount.setTypeface(fm.getUiSemiBold(this));
+        binding.tvConsoleLogs.setTypeface(fm.getCodeFont(this));
 
         setupWebView();
         setupFloatingPreviewStyles();
@@ -120,6 +126,66 @@ public class PreviewActivity extends BaseActivity {
                     binding.progressLoading.setVisibility(View.GONE);
                 }
             }
+
+            @Override
+            public boolean onConsoleMessage(android.webkit.ConsoleMessage consoleMessage) {
+                String time = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
+                String prefix = "";
+                int prefixColorRes;
+                switch (consoleMessage.messageLevel()) {
+                    case ERROR:
+                        prefix = " ERR ";
+                        prefixColorRes = com.cocode.vcode.ide.R.color.vcode_accent_error;
+                        break;
+                    case WARNING:
+                        prefix = " WRN ";
+                        prefixColorRes = com.cocode.vcode.ide.R.color.vcode_accent_warning;
+                        break;
+                    default:
+                        prefix = " LOG ";
+                        prefixColorRes = com.cocode.vcode.ide.R.color.vcode_accent_primary;
+                        break;
+                }
+
+                String msgText = consoleMessage.message();
+                String timeStr = time + " ";
+                String fullLine = timeStr + prefix + "  " + msgText + "\n";
+
+                android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(fullLine);
+
+                // Dim timestamp
+                int dimColor = androidx.core.content.ContextCompat.getColor(PreviewActivity.this, com.cocode.vcode.ide.R.color.vcode_text_secondary);
+                ssb.setSpan(new android.text.style.ForegroundColorSpan(dimColor), 0, timeStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                // Colored + bold prefix badge
+                int prefixStart = timeStr.length();
+                int prefixEnd = prefixStart + prefix.length();
+                int prefixColor = androidx.core.content.ContextCompat.getColor(PreviewActivity.this, prefixColorRes);
+                ssb.setSpan(new android.text.style.ForegroundColorSpan(prefixColor), prefixStart, prefixEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), prefixStart, prefixEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                // Message text color
+                int msgStart = prefixEnd + 2;
+                int msgEnd = fullLine.length() - 1;
+                int msgColor = androidx.core.content.ContextCompat.getColor(PreviewActivity.this,
+                        consoleMessage.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR
+                                ? com.cocode.vcode.ide.R.color.vcode_accent_error
+                                : com.cocode.vcode.ide.R.color.vcode_text_primary);
+                if (msgStart < msgEnd) {
+                    ssb.setSpan(new android.text.style.ForegroundColorSpan(msgColor), msgStart, msgEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+
+                binding.tvConsoleLogs.append(ssb);
+
+                // Update count badge
+                logCount++;
+                binding.tvConsoleCount.setVisibility(View.VISIBLE);
+                binding.tvConsoleCount.setText(String.valueOf(logCount));
+
+                // Auto-scroll to bottom
+                binding.tvConsoleLogs.post(() -> binding.scrollConsole.fullScroll(View.FOCUS_DOWN));
+                return super.onConsoleMessage(consoleMessage);
+            }
         });
 
         // Manage page navigation events and error handling
@@ -159,6 +225,18 @@ public class PreviewActivity extends BaseActivity {
         binding.btnTryAgain.setOnClickListener(v -> loadUrl(currentUrl));
 
         binding.btnToggleDesktop.setOnClickListener(v -> toggleDesktopMode());
+        
+        binding.btnToggleConsole.setOnClickListener(v -> toggleConsoleMode());
+        binding.btnCloseConsole.setOnClickListener(v -> {
+            if (binding.layoutConsole.getVisibility() == View.VISIBLE) {
+                toggleConsoleMode();
+            }
+        });
+        binding.btnClearConsole.setOnClickListener(v -> {
+            binding.tvConsoleLogs.setText("");
+            logCount = 0;
+            binding.tvConsoleCount.setVisibility(View.GONE);
+        });
 
         // Attempt to open the current preview URL in an external system browser
         binding.btnOpenBrowser.setOnClickListener(v -> {
@@ -243,6 +321,20 @@ public class PreviewActivity extends BaseActivity {
         ovalDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         ovalDrawable.setColor(glassAccentColor);
         binding.btnToggleDesktop.setBackground(ovalDrawable);
+        binding.btnToggleConsole.setBackground(ovalDrawable);
+    }
+
+    private void toggleConsoleMode() {
+        androidx.transition.Transition transition = new androidx.transition.Slide(android.view.Gravity.BOTTOM);
+        transition.setDuration(250);
+        transition.setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator());
+        androidx.transition.TransitionManager.beginDelayedTransition((android.view.ViewGroup) binding.getRoot(), transition);
+        
+        if (binding.layoutConsole.getVisibility() == View.VISIBLE) {
+            binding.layoutConsole.setVisibility(View.GONE);
+        } else {
+            binding.layoutConsole.setVisibility(View.VISIBLE);
+        }
     }
 
     private void toggleDesktopMode() {
@@ -253,20 +345,15 @@ public class PreviewActivity extends BaseActivity {
             binding.btnToggleDesktop.setImageResource(com.cocode.vcode.ide.R.drawable.ic_mobile);
             String desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
             settings.setUserAgentString(desktopUserAgent);
-            settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(true);
-            settings.setSupportZoom(true);
-            settings.setBuiltInZoomControls(true);
-            settings.setDisplayZoomControls(false);
         } else {
             binding.btnToggleDesktop.setImageResource(com.cocode.vcode.ide.R.drawable.ic_monitor);
             settings.setUserAgentString(null); // restores default user agent
-            settings.setUseWideViewPort(true);
-            settings.setLoadWithOverviewMode(true);
-            settings.setSupportZoom(true);
-            settings.setBuiltInZoomControls(true);
-            settings.setDisplayZoomControls(false);
         }
+        settings.setUseWideViewPort(true);
+        settings.setLoadWithOverviewMode(true);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
+        settings.setDisplayZoomControls(false);
 
         binding.webView.reload();
         Toast.makeText(this, isDesktopMode ? "Desktop Mode" : "Mobile Mode", Toast.LENGTH_SHORT).show();
