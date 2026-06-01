@@ -77,11 +77,15 @@ public class SettingsActivity extends BaseActivity {
         binding.opGitCredentials.setOnClickListener(_view -> {
             AppSettings settings = viewModel.getSettingsLiveData().getValue();
             if (settings != null) {
+                String name = settings.gitAuthorName != null ? settings.gitAuthorName : "";
+                String email = settings.gitAuthorEmail != null ? settings.gitAuthorEmail : "";
+                String buttonText = (name.isEmpty() && email.isEmpty()) ? "Save" : "Edit";
                 GitAuthorInfoBottomSheet sheet = GitAuthorInfoBottomSheet.newInstance(
-                        settings.gitAuthorName,
-                        settings.gitAuthorEmail
+                        name,
+                        email,
+                        buttonText
                 );
-                sheet.setListener((name, email) -> viewModel.updateGitCredentials(name, email));
+                sheet.setListener((n, e) -> viewModel.updateGitCredentials(n, e));
                 sheet.show(getSupportFragmentManager(), "GitAuthorInfoBottomSheet");
             }
         });

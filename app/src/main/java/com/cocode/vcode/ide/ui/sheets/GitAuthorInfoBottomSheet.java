@@ -25,6 +25,7 @@ public class GitAuthorInfoBottomSheet extends BottomSheetDialogFragment {
 
     private static final String ARG_NAME = "arg_initial_name";
     private static final String ARG_EMAIL = "arg_initial_email";
+    private static final String ARG_BUTTON_TEXT = "arg_button_text";
     private BottomSheetGitAuthorInfoBinding binding;
     private AuthorInfoListener listener;
 
@@ -32,10 +33,17 @@ public class GitAuthorInfoBottomSheet extends BottomSheetDialogFragment {
      * Creates a new instance of the sheet, pre-filled with existing author details if available.
      */
     public static GitAuthorInfoBottomSheet newInstance(String name, String email) {
+        return newInstance(name, email, null);
+    }
+
+    public static GitAuthorInfoBottomSheet newInstance(String name, String email, String buttonText) {
         GitAuthorInfoBottomSheet sheet = new GitAuthorInfoBottomSheet();
         Bundle args = new Bundle();
         args.putString(ARG_NAME, name);
         args.putString(ARG_EMAIL, email);
+        if (buttonText != null) {
+            args.putString(ARG_BUTTON_TEXT, buttonText);
+        }
         sheet.setArguments(args);
         return sheet;
     }
@@ -72,8 +80,13 @@ public class GitAuthorInfoBottomSheet extends BottomSheetDialogFragment {
         if (getArguments() != null) {
             String initialName = getArguments().getString(ARG_NAME, "");
             String initialEmail = getArguments().getString(ARG_EMAIL, "");
+            String buttonText = getArguments().getString(ARG_BUTTON_TEXT);
             binding.etAuthorName.setText(initialName);
             binding.etAuthorEmail.setText(initialEmail);
+
+            if (buttonText != null && !buttonText.isEmpty()) {
+                binding.btnSaveAndCommit.setText(buttonText);
+            }
 
             // Show "Clear" button if data exists
             if (!initialName.isEmpty() || !initialEmail.isEmpty()) {
