@@ -38,7 +38,6 @@ import com.cocode.vcode.ide.ui.editor.viewer.ViewerManager;
 import com.cocode.vcode.ide.ui.filetree.FileTreeFragment;
 import com.cocode.vcode.ide.ui.git.GitActivity;
 import com.cocode.vcode.ide.ui.preview.PreviewActivity;
-import com.cocode.vcode.ide.ui.settings.SettingsActivity;
 import com.cocode.vcode.ide.ui.sheets.GoToLineBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.SnippetsBottomSheet;
 import com.cocode.vcode.ide.utils.CodeFormatter;
@@ -266,12 +265,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
     private void updateToolbarVisibility() {
         boolean isServerRunning = localWebServer != null && localWebServer.isRunning();
-        
+
         int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
         boolean isActiveHtml = false;
-        
+
         if (hasOpenFile) {
             EditorFile activeFile = files.get(activeIndex);
             if (activeFile.getFileType() == FileType.HTML) {
@@ -285,7 +284,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             binding.btnRedo.setVisibility(View.GONE);
             binding.btnSaveCurrent.setVisibility(View.GONE);
         }
-        
+
         if (isServerRunning || isActiveHtml) {
             binding.btnRun.setVisibility(View.VISIBLE);
         } else {
@@ -482,11 +481,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             EditorFile activeFile = files.get(activeIndex);
             FileType type = activeFile.getFileType();
             boolean isBinary = activeFile.isBinaryAsset();
-            
+
             boolean supportsPreview = type == FileType.CSV || type == FileType.SVG || type == FileType.MARKDOWN;
             String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
             boolean isPreviewMode = supportsPreview && viewModel.getPreviewState(relPath);
-            
+
             if (!isBinary && !isPreviewMode) {
                 showTextEditingOptions = true;
             }
@@ -505,7 +504,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
-        
+
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);
             if (viewModel.getProjectRoot() != null) {

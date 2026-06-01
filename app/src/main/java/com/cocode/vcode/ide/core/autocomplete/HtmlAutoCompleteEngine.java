@@ -79,7 +79,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             String template = loadAssetText("templates/template_blank.html");
             if (template != null && !template.trim().isEmpty()) {
                 htmlBoilerplate = template.replace("<body>\n\n", "<body>\n    |\n")
-                                          .replace("<body>\r\n\r\n", "<body>\r\n    |\r\n");
+                        .replace("<body>\r\n\r\n", "<body>\r\n    |\r\n");
                 if (!htmlBoilerplate.contains("|")) {
                     htmlBoilerplate = htmlBoilerplate.replace("<body>", "<body>\n    |");
                 }

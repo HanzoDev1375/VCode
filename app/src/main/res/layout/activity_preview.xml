@@ -137,6 +137,20 @@
                 android:textColor="@color/vcode_text_primary"
                 app:strokeColor="@color/vcode_divider" />
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/btn_toggle_desktop"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:padding="12dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:importantForAccessibility="no"
+            app:tint="@color/vcode_bg_surface"
+            android:src="@drawable/ic_monitor" />
     </FrameLayout>
 
 </LinearLayout>

@@ -34,6 +34,7 @@ public class PreviewActivity extends BaseActivity {
     private ActivityPreviewBinding binding;
 
     private String currentUrl;
+    private boolean isDesktopMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -54,6 +55,7 @@ public class PreviewActivity extends BaseActivity {
         binding.tvTitle.setText(currentUrl);
 
         setupWebView();
+        setupFloatingPreviewStyles();
         setupListeners();
 
         loadUrl(currentUrl);
@@ -127,6 +129,13 @@ public class PreviewActivity extends BaseActivity {
                 super.onPageStarted(view, url, favicon);
                 binding.layoutError.setVisibility(View.GONE);
                 binding.webView.setVisibility(View.VISIBLE);
+                enforceViewport(view);
+            }
+
+            @Override
+            public void onPageFinished(WebView view, String url) {
+                super.onPageFinished(view, url);
+                enforceViewport(view);
             }
 
             @Override
@@ -148,6 +157,8 @@ public class PreviewActivity extends BaseActivity {
         binding.btnRefresh.setOnClickListener(v -> binding.webView.reload());
 
         binding.btnTryAgain.setOnClickListener(v -> loadUrl(currentUrl));
+
+        binding.btnToggleDesktop.setOnClickListener(v -> toggleDesktopMode());
 
         // Attempt to open the current preview URL in an external system browser
         binding.btnOpenBrowser.setOnClickListener(v -> {
@@ -202,5 +213,62 @@ public class PreviewActivity extends BaseActivity {
         binding.webView.setVisibility(View.GONE);
         binding.layoutError.setVisibility(View.VISIBLE);
         binding.tvErrorMsg.setText(msg);
+    }
+
+    private void enforceViewport(WebView view) {
+        if (isDesktopMode) {
+            view.evaluateJavascript(
+                    "var meta = document.querySelector('meta[name=\"viewport\"]');" +
+                            "if (meta) { meta.setAttribute('content', 'width=1024'); }" +
+                            "else { " +
+                            "  meta = document.createElement('meta');" +
+                            "  meta.name = 'viewport';" +
+                            "  meta.content = 'width=1024';" +
+                            "  document.getElementsByTagName('head')[0].appendChild(meta);" +
+                            "}", null);
+        } else {
+            view.evaluateJavascript(
+                    "var meta = document.querySelector('meta[name=\"viewport\"]');" +
+                            "if (meta) { meta.setAttribute('content', 'width=device-width, initial-scale=1.0'); }", null);
+        }
+    }
+
+    private void setupFloatingPreviewStyles() {
+        android.util.TypedValue value = new android.util.TypedValue();
+        getTheme().resolveAttribute(androidx.appcompat.R.attr.colorPrimary, value, true);
+        int baseColor = value.data;
+        int glassAccentColor = (baseColor & 0x00FFFFFF) | 0xD9000000;
+
+        android.graphics.drawable.GradientDrawable ovalDrawable = new android.graphics.drawable.GradientDrawable();
+        ovalDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
+        ovalDrawable.setColor(glassAccentColor);
+        binding.btnToggleDesktop.setBackground(ovalDrawable);
+    }
+
+    private void toggleDesktopMode() {
+        isDesktopMode = !isDesktopMode;
+        android.webkit.WebSettings settings = binding.webView.getSettings();
+
+        if (isDesktopMode) {
+            binding.btnToggleDesktop.setImageResource(com.cocode.vcode.ide.R.drawable.ic_mobile);
+            String desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
+            settings.setUserAgentString(desktopUserAgent);
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setSupportZoom(true);
+            settings.setBuiltInZoomControls(true);
+            settings.setDisplayZoomControls(false);
+        } else {
+            binding.btnToggleDesktop.setImageResource(com.cocode.vcode.ide.R.drawable.ic_monitor);
+            settings.setUserAgentString(null); // restores default user agent
+            settings.setUseWideViewPort(true);
+            settings.setLoadWithOverviewMode(true);
+            settings.setSupportZoom(true);
+            settings.setBuiltInZoomControls(true);
+            settings.setDisplayZoomControls(false);
+        }
+
+        binding.webView.reload();
+        Toast.makeText(this, isDesktopMode ? "Desktop Mode" : "Mobile Mode", Toast.LENGTH_SHORT).show();
     }
 }

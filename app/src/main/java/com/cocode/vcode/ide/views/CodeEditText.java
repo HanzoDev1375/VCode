@@ -76,6 +76,7 @@ public class CodeEditText extends AppCompatEditText {
     };
 
     private final boolean autoCloseHtmlTags = true;
+    private final boolean isFormatting = false;
     private SyntaxHighlighter syntaxHighlighter;
     private AutoCompleteEngine autoCompleteEngine;
     private FileType fileType = FileType.TEXT;
@@ -89,8 +90,6 @@ public class CodeEditText extends AppCompatEditText {
     private boolean isSettingText = false;
     private boolean isTypingText = false;
     private File currentFile;
-    private final boolean isFormatting = false;
-
     private OnScrollChangeListener scrollChangeListener;
 
     public CodeEditText(Context context) {

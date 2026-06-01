@@ -115,6 +115,23 @@ public class DestinationAdapter extends RecyclerView.Adapter<DestinationAdapter.
         boolean isSelected = selectedFile != null && selectedFile.getAbsolutePath().equals(node.getFile().getAbsolutePath());
         holder.binding.ivCheck.setVisibility(isSelected ? View.VISIBLE : View.GONE);
 
+        // Chevron logic
+        boolean hasDirectoryChildren = false;
+        if (node.getChildren() != null) {
+            for (FileNode child : node.getChildren()) {
+                if (child.isDirectory()) {
+                    hasDirectoryChildren = true;
+                    break;
+                }
+            }
+        }
+        if (hasDirectoryChildren) {
+            holder.binding.ivChevron.setVisibility(View.VISIBLE);
+            holder.binding.ivChevron.setRotation(90f);
+        } else {
+            holder.binding.ivChevron.setVisibility(View.INVISIBLE);
+        }
+
         // Click listener
         holder.binding.getRoot().setOnClickListener(v -> {
             int oldSelectedPos = -1;

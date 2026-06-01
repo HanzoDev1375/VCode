@@ -13,8 +13,6 @@
 .externalNativeBuild
 .cxx
 local.properties
-GEMINI.md
-UI.md
 *.dm
 *.apk
 output-metadata.json

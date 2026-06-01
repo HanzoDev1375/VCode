@@ -35,6 +35,7 @@ import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.databinding.FragmentFileTreeBinding;
 import com.cocode.vcode.ide.databinding.ItemCustomPopupBinding;
 import com.cocode.vcode.ide.databinding.LayoutCustomPopupBinding;
+import com.cocode.vcode.ide.ui.dialogs.ImportDestinationDialog;
 import com.cocode.vcode.ide.ui.editor.EditorViewModel;
 import com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.NewFileBottomSheet;
@@ -253,44 +254,16 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             return;
         }
 
-        View dialogView = getLayoutInflater().inflate(com.cocode.vcode.ide.R.layout.dialog_import_destination, null);
-        androidx.appcompat.app.AlertDialog dialog = new androidx.appcompat.app.AlertDialog.Builder(requireContext())
-                .setView(dialogView)
-                .create();
-
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(android.graphics.Color.TRANSPARENT));
-        }
-
-        android.widget.TextView tvTitle = dialogView.findViewById(com.cocode.vcode.ide.R.id.tv_dialog_title);
-        tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
-
-        androidx.recyclerview.widget.RecyclerView rvFolders = dialogView.findViewById(com.cocode.vcode.ide.R.id.rv_destination_folders);
-        rvFolders.setLayoutManager(new LinearLayoutManager(getContext()));
-
-        File[] selected = new File[]{viewModel.getProjectRoot()};
-
-        DestinationAdapter destAdapter = new DestinationAdapter(file -> {
-            selected[0] = file;
-        }, 16, getResources().getDisplayMetrics().density);
-
-        rvFolders.setAdapter(destAdapter);
-        destAdapter.setTree(viewModel.getProjectRoot(), viewModel.getProjectName(), viewModel.getFileTree().getValue());
-
-        com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_cancel);
-        com.google.android.material.button.MaterialButton btnConfirm = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_confirm);
-
-        btnCancel.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
-        btnConfirm.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
-
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-        btnConfirm.setOnClickListener(v -> {
-            selectedImportDestination = selected[0];
-            dialog.dismiss();
+        ImportDestinationDialog dialog = ImportDestinationDialog.newInstance(
+                viewModel.getProjectRoot(),
+                viewModel.getProjectName(),
+                viewModel.getFileTree().getValue()
+        );
+        dialog.setListener(destination -> {
+            selectedImportDestination = destination;
             onConfirmed.run();
         });
-
-        dialog.show();
+        dialog.show(getChildFragmentManager(), "ImportDestinationDialog");
     }
 
     /**

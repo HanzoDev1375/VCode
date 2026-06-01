@@ -9,7 +9,7 @@ public class CompletionItem {
 
     private final String label;       // The text displayed to the user in the popup list
     private final String insertText;  // The actual snippet or text injected into the document
-    private int cursorOffset;   // Relative cursor positioning adjustments post-insertion
+    private final int cursorOffset;   // Relative cursor positioning adjustments post-insertion
     private String detail;            // Optional context info (e.g., "Method", "Tag", description)
     private Type type;                // The syntactic category of this token
     private int replaceLength = -1;   // Explicit number of chars to remove before insertion (-1 for default)
