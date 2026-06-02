@@ -19,7 +19,6 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
 
     private static final List<CompletionItem> PSEUDO_ITEMS;
     private static final List<CompletionItem> AT_RULE_ITEMS;
-    private static final List<CompletionItem> COLOR_ITEMS;
 
     // Static Initialization Block: Set up standard language definitions once on class load
     static {
@@ -41,30 +40,49 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             AT_RULE_ITEMS.add(new CompletionItem(r, r + " ", "At-rule",
                     CompletionItem.Type.CSS_VALUE, 0));
         }
-        
-        String[] colors = {
-            "aliceblue", "antiquewhite", "aqua", "aquamarine", "azure", "beige", "bisque", "black", "blanchedalmond", "blue", "blueviolet", "brown", "burlywood", "cadetblue", "chartreuse", "chocolate", "coral", "cornflowerblue", "cornsilk", "crimson", "cyan", "darkblue", "darkcyan", "darkgoldenrod", "darkgray", "darkgreen", "darkgrey", "darkkhaki", "darkmagenta", "darkolivegreen", "darkorange", "darkorchid", "darkred", "darksalmon", "darkseagreen", "darkslateblue", "darkslategray", "darkslategrey", "darkturquoise", "darkviolet", "deeppink", "deepskyblue", "dimgray", "dimgrey", "dodgerblue", "firebrick", "floralwhite", "forestgreen", "fuchsia", "gainsboro", "ghostwhite", "gold", "goldenrod", "gray", "green", "greenyellow", "grey", "honeydew", "hotpink", "indianred", "indigo", "ivory", "khaki", "lavender", "lavenderblush", "lawngreen", "lemonchiffon", "lightblue", "lightcoral", "lightcyan", "lightgoldenrodyellow", "lightgray", "lightgreen", "lightgrey", "lightpink", "lightsalmon", "lightseagreen", "lightskyblue", "lightslategray", "lightslategrey", "lightsteelblue", "lightyellow", "lime", "limegreen", "linen", "magenta", "maroon", "mediumaquamarine", "mediumblue", "mediumorchid", "mediumpurple", "mediumseagreen", "mediumslateblue", "mediumspringgreen", "mediumturquoise", "mediumvioletred", "midnightblue", "mintcream", "mistyrose", "moccasin", "navajowhite", "navy", "oldlace", "olive", "olivedrab", "orange", "orangered", "orchid", "palegoldenrod", "palegreen", "paleturquoise", "palevioletred", "papayawhip", "peachpuff", "peru", "pink", "plum", "powderblue", "purple", "rebeccapurple", "red", "rosybrown", "royalblue", "saddlebrown", "salmon", "sandybrown", "seagreen", "seashell", "sienna", "silver", "skyblue", "slateblue", "slategray", "slategrey", "snow", "springgreen", "steelblue", "tan", "teal", "thistle", "tomato", "transparent", "turquoise", "violet", "wheat", "white", "whitesmoke", "yellow", "yellowgreen"
-        };
-        COLOR_ITEMS = new ArrayList<>();
-        for (String c : colors) {
-            COLOR_ITEMS.add(new CompletionItem(c, c, "Color", CompletionItem.Type.CSS_VALUE, 0));
-        }
-        
-        String[] colorFuncs = {"rgb()", "rgba()", "hsl()", "hsla()", "var()"};
-        for (String f : colorFuncs) {
-            COLOR_ITEMS.add(new CompletionItem(f, f, "Function", CompletionItem.Type.CSS_VALUE, -1));
-        }
-        COLOR_ITEMS.add(new CompletionItem("currentcolor", "currentcolor", "Color", CompletionItem.Type.CSS_VALUE, 0));
     }
 
     private final List<CompletionItem> propertyItems = new ArrayList<>();
     private final Map<String, List<String>> valueMap = new HashMap<>();
     private final List<CompletionItem> htmlTagItems = new ArrayList<>();
+    private final List<CompletionItem> colorItems = new ArrayList<>();
+    private final List<CompletionItem> globalValueItems = new ArrayList<>();
 
     public CssAutoCompleteEngine(Context context) {
         super(context);
         loadProperties();
         loadHtmlTags();
+        loadColors();
+    }
+
+    private void loadColors() {
+        try {
+            String json = loadAssetJson("completions/css_colors.json");
+            JSONObject obj = new JSONObject(json);
+            JSONArray colors = obj.optJSONArray("colors");
+            if (colors != null) {
+                for (int i = 0; i < colors.length(); i++) {
+                    String c = colors.optString(i);
+                    colorItems.add(new CompletionItem(c, c, "Color", CompletionItem.Type.CSS_VALUE, 0));
+                }
+            }
+            JSONArray colorFuncs = obj.optJSONArray("color_functions");
+            if (colorFuncs != null) {
+                for (int i = 0; i < colorFuncs.length(); i++) {
+                    String f = colorFuncs.optString(i);
+                    colorItems.add(new CompletionItem(f, f, "Function", CompletionItem.Type.CSS_VALUE, -1));
+                }
+            }
+            JSONArray globalFuncs = obj.optJSONArray("global_functions");
+            if (globalFuncs != null) {
+                for (int i = 0; i < globalFuncs.length(); i++) {
+                    String f = globalFuncs.optString(i);
+                    globalValueItems.add(new CompletionItem(f, f, "Function", CompletionItem.Type.CSS_VALUE, -1));
+                }
+            }
+        } catch (Exception e) {
+            // Non-critical
+        }
     }
 
     private void loadHtmlTags() {
@@ -149,11 +167,13 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
                 }
             }
 
+            items.addAll(globalValueItems);
+
             if (propertyPart.endsWith("color") || propertyPart.equals("background") || 
                 propertyPart.equals("border") || propertyPart.endsWith("shadow") || 
                 propertyPart.equals("fill") || propertyPart.equals("stroke") || 
                 propertyPart.equals("outline")) {
-                items.addAll(COLOR_ITEMS);
+                items.addAll(colorItems);
             }
 
             if (!items.isEmpty()) {
