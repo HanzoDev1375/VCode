@@ -1,5 +1,9 @@
 package com.cocode.vcode.ide.core.formatter;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.UUID;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
@@ -17,6 +21,42 @@ public class HtmlFormatter extends BaseFormatter {
     @Override
     public String format(String code) {
         if (code == null || code.isEmpty()) return "";
+
+        String uuid = UUID.randomUUID().toString().replace("-", "");
+        List<String> styleContents = new ArrayList<>();
+        List<String> scriptContents = new ArrayList<>();
+
+        CssFormatter cssFormatter = new CssFormatter();
+        JsFormatter jsFormatter = new JsFormatter();
+
+        Matcher styleMatcher = Pattern.compile("(?is)(<style[^>]*>)(.*?)(</style>)").matcher(code);
+        StringBuffer sb1 = new StringBuffer();
+        while (styleMatcher.find()) {
+            String content = styleMatcher.group(2);
+            if (content.trim().isEmpty()) {
+                styleMatcher.appendReplacement(sb1, Matcher.quoteReplacement(styleMatcher.group(0)));
+            } else {
+                styleContents.add(cssFormatter.format(content));
+                styleMatcher.appendReplacement(sb1, Matcher.quoteReplacement(styleMatcher.group(1) + "\n___STYLE_" + uuid + "_" + (styleContents.size() - 1) + "___\n" + styleMatcher.group(3)));
+            }
+        }
+        styleMatcher.appendTail(sb1);
+        code = sb1.toString();
+
+        Matcher scriptMatcher = Pattern.compile("(?is)(<script[^>]*>)(.*?)(</script>)").matcher(code);
+        StringBuffer sb2 = new StringBuffer();
+        while (scriptMatcher.find()) {
+            String content = scriptMatcher.group(2);
+            if (content.trim().isEmpty()) {
+                scriptMatcher.appendReplacement(sb2, Matcher.quoteReplacement(scriptMatcher.group(0)));
+            } else {
+                scriptContents.add(jsFormatter.format(content));
+                scriptMatcher.appendReplacement(sb2, Matcher.quoteReplacement(scriptMatcher.group(1) + "\n___SCRIPT_" + uuid + "_" + (scriptContents.size() - 1) + "___\n" + scriptMatcher.group(3)));
+            }
+        }
+        scriptMatcher.appendTail(sb2);
+        code = sb2.toString();
+
         // Strip trailing horizontal whitespaces between tags and insert newlines
         String clean = TAG_SPLIT.matcher(code).replaceAll(">\n<");
         String[] lines = clean.split("\n", -1);
@@ -51,7 +91,47 @@ public class HtmlFormatter extends BaseFormatter {
         }
 
         String result = out.toString();
+
+        for (int i = 0; i < styleContents.size(); i++) {
+            String placeholder = "___STYLE_" + uuid + "_" + i + "___";
+            String formattedCss = styleContents.get(i);
+            Pattern p = Pattern.compile("(?m)^([ \\t]*)" + placeholder + "$");
+            Matcher m = p.matcher(result);
+            if (m.find()) {
+                String indentStr = m.group(1);
+                String indentedCss = indentLines(formattedCss, indentStr);
+                result = result.replace(m.group(0), indentedCss);
+            }
+        }
+
+        for (int i = 0; i < scriptContents.size(); i++) {
+            String placeholder = "___SCRIPT_" + uuid + "_" + i + "___";
+            String formattedJs = scriptContents.get(i);
+            Pattern p = Pattern.compile("(?m)^([ \\t]*)" + placeholder + "$");
+            Matcher m = p.matcher(result);
+            if (m.find()) {
+                String indentStr = m.group(1);
+                String indentedJs = indentLines(formattedJs, indentStr);
+                result = result.replace(m.group(0), indentedJs);
+            }
+        }
+
         result = MULTI_NEWLINES.matcher(result).replaceAll("\n\n");
         return result.trim();
+    }
+
+    private String indentLines(String text, String indentStr) {
+        if (text == null || text.trim().isEmpty()) return "";
+        String[] lines = text.split("\n", -1);
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < lines.length; i++) {
+            if (lines[i].trim().isEmpty()) {
+                if (i < lines.length - 1) sb.append("\n");
+            } else {
+                sb.append(indentStr).append(lines[i]);
+                if (i < lines.length - 1) sb.append("\n");
+            }
+        }
+        return sb.toString();
     }
 }

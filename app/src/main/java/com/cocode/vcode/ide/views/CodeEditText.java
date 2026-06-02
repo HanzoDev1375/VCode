@@ -502,8 +502,13 @@ public class CodeEditText extends AppCompatEditText {
         if (item.getReplaceLength() >= 0) {
             wordStart = Math.max(0, cursor - item.getReplaceLength());
         } else {
-            while (wordStart > 0 && Character.isLetterOrDigit(text.charAt(wordStart - 1))) {
-                wordStart--;
+            while (wordStart > 0) {
+                char c = text.charAt(wordStart - 1);
+                if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$') {
+                    wordStart--;
+                } else {
+                    break;
+                }
             }
 
             if (wordStart > 0 && text.charAt(wordStart - 1) == '<' && insertText.startsWith("<")) {

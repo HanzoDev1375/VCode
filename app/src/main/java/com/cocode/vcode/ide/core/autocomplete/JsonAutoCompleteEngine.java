@@ -19,14 +19,14 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
     // Static Initialization Block: Prepare primitive structural JSON choices
     static {
         VALUE_ITEMS = new ArrayList<>();
-        VALUE_ITEMS.add(new CompletionItem("\"\"", "\"\"", "String value", CompletionItem.Type.JSON_KEY, 1));
+        VALUE_ITEMS.add(new CompletionItem("\"\"", "\"\"", "String value", CompletionItem.Type.JSON_KEY, -1));
         VALUE_ITEMS.add(new CompletionItem("0", "0", "Number", CompletionItem.Type.JSON_KEY, 0));
         VALUE_ITEMS.add(new CompletionItem("true", "true", "Boolean", CompletionItem.Type.JSON_KEY, 0));
         VALUE_ITEMS.add(new CompletionItem("false", "false", "Boolean", CompletionItem.Type.JSON_KEY, 0));
         VALUE_ITEMS.add(new CompletionItem("null", "null", "Null", CompletionItem.Type.JSON_KEY, 0));
         // Multi-line templates with explicit formatting offsets to position cursor right inside the blocks
-        VALUE_ITEMS.add(new CompletionItem("{}", "{\n  \n}", "Object", CompletionItem.Type.JSON_KEY, 3));
-        VALUE_ITEMS.add(new CompletionItem("[]", "[\n  \n]", "Array", CompletionItem.Type.JSON_KEY, 3));
+        VALUE_ITEMS.add(new CompletionItem("{}", "{\n  \n}", "Object", CompletionItem.Type.JSON_KEY, -3));
+        VALUE_ITEMS.add(new CompletionItem("[]", "[\n  \n]", "Array", CompletionItem.Type.JSON_KEY, -3));
     }
 
     private final List<CompletionItem> snippetItems = new ArrayList<>();

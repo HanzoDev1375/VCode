@@ -73,7 +73,7 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                 // Evaluate explicit placement indices using the internal pipe code token '|'
                 if (snippet.contains("|")) {
                     String after = snippet.substring(snippet.indexOf('|') + 1);
-                    offset = after.length();
+                    offset = -after.length();
                     snippet = snippet.replace("|", "");
                 }
                 builtinItems.add(new CompletionItem(label, snippet, detail, type, offset));

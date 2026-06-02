@@ -22,6 +22,7 @@ public class CssFormatter extends BaseFormatter {
         int indent = 0;
         boolean inString = false; // State flag to avoid scrambling characters inside literal text blocks
         char stringChar = 0;      // Tracks quote boundaries matching double vs single bounds
+        boolean inPropertyValue = false;
 
         // Clean out erratic tabs and double whitespaces, keeping baseline structural spaces intact
         String cleanCode = SPACES.matcher(code).replaceAll(" ");
@@ -55,6 +56,7 @@ public class CssFormatter extends BaseFormatter {
 
             boolean haveNewLine = i + 1 >= cleanCode.length() || cleanCode.charAt(i + 1) != '\n';
             if (c == '{') {
+                inPropertyValue = false;
                 // Ensure a nice clear space precedes an open bracket block if missing
                 if (!isNewLine && out.length() > 0 && out.charAt(out.length() - 1) != ' ')
                     out.append(" ");
@@ -65,6 +67,7 @@ public class CssFormatter extends BaseFormatter {
                 indent++;
                 isNewLine = true;
             } else if (c == '}') {
+                inPropertyValue = false;
                 indent = Math.max(0, indent - 1); // Step back an indent depth level safely
                 if (!isNewLine) out.append("\n");
                 out.append(getIndentString(indent)).append("}");
@@ -75,6 +78,7 @@ public class CssFormatter extends BaseFormatter {
             }
             // Separate single rule declarations safely without forcing line breaks
             else if (c == ';') {
+                inPropertyValue = false;
                 out.append(";");
                 // We no longer force isNewLine = true here to allow inline properties
             } else {
@@ -82,9 +86,45 @@ public class CssFormatter extends BaseFormatter {
 
                 // Keep look and feel legible by placing single clean spaces behind structural property colons
                 if (c == ':') {
+                    boolean isPropColon = false;
+                    if (!inPropertyValue) {
+                        // Default to false so incomplete selectors at EOF don't get spaced
+                        boolean lookaheadInString = false;
+                        char lookaheadStringChar = 0;
+                        for (int j = i + 1; j < cleanCode.length(); j++) {
+                            char forwardChar = cleanCode.charAt(j);
+                            if (lookaheadInString) {
+                                if (forwardChar == lookaheadStringChar && cleanCode.charAt(j - 1) != '\\') {
+                                    lookaheadInString = false;
+                                }
+                                continue;
+                            }
+                            if (forwardChar == '"' || forwardChar == '\'') {
+                                lookaheadInString = true;
+                                lookaheadStringChar = forwardChar;
+                                continue;
+                            }
+                            if (forwardChar == '{') {
+                                isPropColon = false;
+                                break;
+                            }
+                            if (forwardChar == ';') {
+                                isPropColon = true;
+                                break;
+                            }
+                            if (forwardChar == '}') {
+                                isPropColon = false;
+                                break;
+                            }
+                        }
+                    }
+
                     out.append(":");
-                    if (b) {
-                        out.append(" ");
+                    if (isPropColon) {
+                        inPropertyValue = true;
+                        if (b) {
+                            out.append(" ");
+                        }
                     }
                 }
                 // Put clear spaces following selector separator commas
