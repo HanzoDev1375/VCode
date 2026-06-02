@@ -48,9 +48,9 @@ public class GitActivity extends BaseActivity {
         binding = ActivityGitBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
-        // Configure system bar insets for consistent edge-to-edge layout
+        // Configure system and IME insets for consistent edge-to-edge layout across all tabs
         ViewCompat.setOnApplyWindowInsetsListener(binding.getRoot(), (v, insets) -> {
-            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars());
+            Insets systemBars = insets.getInsets(WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.ime());
             v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
             return insets;
         });

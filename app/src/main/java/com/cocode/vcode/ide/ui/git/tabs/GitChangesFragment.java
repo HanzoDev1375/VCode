@@ -66,19 +66,6 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
         setupRecyclerViews();
         setupCommitUI();
         observeData();
-
-        // Adjust the commit section bottom margin to stay above the system IME (keyboard)
-        ViewCompat.setOnApplyWindowInsetsListener(binding.cardCommitSection, (v, insets) -> {
-            int imeHeight = insets.getInsets(androidx.core.view.WindowInsetsCompat.Type.ime()).bottom;
-
-            ConstraintLayout.LayoutParams params =
-                    (ConstraintLayout.LayoutParams) v.getLayoutParams();
-
-            params.bottomMargin = imeHeight;
-            v.setLayoutParams(params);
-
-            return insets;
-        });
     }
 
     /**
