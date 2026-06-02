@@ -10,17 +10,18 @@
         android:id="@+id/layout_header_container"
         android:layout_width="match_parent"
         android:layout_height="@dimen/vcode_app_toolbar_height"
-        android:paddingHorizontal="@dimen/vcode_app_gap_horizontal"
-        android:gravity="center_vertical">
+        android:gravity="center_vertical"
+        android:paddingHorizontal="@dimen/vcode_app_gap_horizontal">
 
         <TextView
             android:id="@+id/tv_git_workspace_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Git Workspace"
+            android:text="@string/vcode_git_workspace"
             android:textAppearance="@style/TextAppearance.Material3.ActionBar.Title" />
 
     </LinearLayout>
+
     <com.google.android.material.progressindicator.LinearProgressIndicator
         android:id="@+id/git_loading_indicator"
         android:layout_width="match_parent"
@@ -42,10 +43,10 @@
             android:id="@+id/tabLayout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            app:tabMode="scrollable"
-            app:tabIndicatorHeight="3dp"
-            app:tabSelectedTextColor="?attr/colorPrimary"
             app:tabIndicatorColor="?attr/colorPrimary"
+            app:tabIndicatorHeight="3dp"
+            app:tabMode="scrollable"
+            app:tabSelectedTextColor="?attr/colorPrimary"
             app:tabTextAppearance="@style/TextAppearance.Material3.LabelLarge" />
 
         <androidx.viewpager2.widget.ViewPager2
@@ -61,11 +62,11 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:layout_below="@id/layout_header_container"
+        android:background="?attr/colorSurface"
         android:gravity="center"
         android:orientation="vertical"
         android:padding="32dp"
-        android:visibility="visible"
-        android:background="?attr/colorSurface">
+        android:visibility="visible">
 
         <ImageView
             android:id="@+id/iv_empty_state_git_icon"
@@ -80,7 +81,7 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginTop="24dp"
-            android:text="Not a Git repository"
+            android:text="@string/vcode_not_a_git_repository"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="?attr/colorOnSurface" />
 
@@ -91,7 +92,7 @@
             android:layout_marginTop="8dp"
             android:layout_marginBottom="32dp"
             android:gravity="center"
-            android:text="Initialize a new repository in this project to track changes, manage local branches, and push modifications upstream to GitHub."
+            android:text="@string/vcode_initialize_git_desc"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -99,11 +100,10 @@
             android:id="@+id/btn_initialize_repo"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Initialize Repo"
+            android:text="@string/vcode_initialize_btn"
             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
             android:textColor="?attr/colorOnPrimary"
             app:backgroundTint="?attr/colorPrimary" />
 
     </LinearLayout>
-
 </RelativeLayout>

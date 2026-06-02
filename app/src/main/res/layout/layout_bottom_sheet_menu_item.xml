@@ -15,8 +15,8 @@
         android:id="@+id/iv_option_icon"
         android:layout_width="22dp"
         android:layout_height="22dp"
-        android:padding="2dp"
         android:importantForAccessibility="no"
+        android:padding="2dp"
         app:tint="?attr/colorOnSurfaceVariant" />
 
     <TextView
@@ -24,7 +24,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginStart="16dp"
-        android:textColor="?attr/colorOnSurface"
-        android:textAppearance="?attr/textAppearanceLabelLarge" />
+        android:textAppearance="?attr/textAppearanceLabelLarge"
+        android:textColor="?attr/colorOnSurface" />
 
 </LinearLayout>

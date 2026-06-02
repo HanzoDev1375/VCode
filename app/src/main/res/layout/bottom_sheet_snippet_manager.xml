@@ -11,7 +11,7 @@
     <com.google.android.material.bottomsheet.BottomSheetDragHandleView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"/>
+        android:layout_gravity="center_horizontal" />
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -24,19 +24,19 @@
             android:id="@+id/tv_title"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_weight="1"
-            android:text="@string/vcode_snippet_manager"
             android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
             android:layout_marginEnd="0dp"
+            android:layout_weight="1"
+            android:text="@string/vcode_snippet_manager"
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
         <ImageView
             android:id="@+id/btn_add_snippet"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
             android:layout_marginStart="0dp"
             android:layout_marginEnd="20dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
             android:importantForAccessibility="no"
             android:padding="4dp"
             android:src="@drawable/ic_plus"
@@ -48,12 +48,12 @@
         android:id="@+id/search_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:layout_marginTop="20dp"
         android:background="?attr/colorSurfaceContainerHigh"
         android:gravity="center_vertical"
         android:orientation="horizontal"
-        android:padding="8dp"
-        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal">
+        android:padding="8dp">
 
         <ImageView
             android:layout_width="28dp"

@@ -408,11 +408,11 @@
                         android:id="@+id/op_git_credentials"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
+                        android:background="?attr/selectableItemBackground"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingHorizontal="16dp"
-                        android:paddingVertical="12dp"
-                        android:background="?attr/selectableItemBackground">
+                        android:paddingVertical="12dp">
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -424,7 +424,7 @@
                                 android:id="@+id/tv_git_credentials"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Git Credentials"
+                                android:text="@string/vcode_git_credentials"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                                 android:textColor="?attr/colorOnBackground" />
 
@@ -432,7 +432,7 @@
                                 android:id="@+id/tv_git_credentials_desc"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Not configured"
+                                android:text="@string/vcode_not_configured"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
@@ -557,10 +557,10 @@
                 app:cardBackgroundColor="?attr/colorSurfaceContainer"
                 app:cardCornerRadius="12dp"
                 app:cardElevation="0dp"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintEnd_toEndOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_general_setting"
-                app:layout_constraintBottom_toBottomOf="parent"
                 app:strokeWidth="0dp">
 
                 <LinearLayout

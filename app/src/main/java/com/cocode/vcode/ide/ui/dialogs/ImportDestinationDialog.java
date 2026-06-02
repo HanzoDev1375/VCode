@@ -43,7 +43,7 @@ public class ImportDestinationDialog extends DialogFragment {
     @NonNull
     @Override
     public Dialog onCreateDialog(@Nullable Bundle savedInstanceState) {
-        DialogImportDestinationBinding binding = DialogImportDestinationBinding.inflate(LayoutInflater.from(requireContext()));
+        DialogImportDestinationBinding binding = DialogImportDestinationBinding.inflate(getLayoutInflater());
         AlertDialog dialog = new AlertDialog.Builder(requireContext())
                 .setView(binding.getRoot())
                 .create();

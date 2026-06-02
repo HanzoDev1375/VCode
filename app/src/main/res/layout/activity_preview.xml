@@ -5,8 +5,8 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@color/vcode_bg_surface"
-    android:orientation="vertical"
-    android:fitsSystemWindows="false">
+    android:fitsSystemWindows="false"
+    android:orientation="vertical">
 
     <LinearLayout
         android:layout_width="match_parent"
@@ -21,6 +21,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:importantForAccessibility="no"
             android:padding="10dp"
             android:src="@drawable/ic_arrow_left"
             app:tint="@color/vcode_accent_primary" />
@@ -38,6 +39,7 @@
             <ImageView
                 android:layout_width="14dp"
                 android:layout_height="14dp"
+                android:importantForAccessibility="no"
                 android:src="@drawable/ic_lock"
                 app:tint="@color/vcode_accent_success" />
 
@@ -60,6 +62,7 @@
             android:layout_height="40dp"
             android:layout_marginStart="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:importantForAccessibility="no"
             android:padding="10dp"
             android:src="@drawable/ic_arrows_rotate"
             app:tint="@color/vcode_text_secondary" />
@@ -69,6 +72,7 @@
             android:layout_width="40dp"
             android:layout_height="40dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:importantForAccessibility="no"
             android:padding="10dp"
             android:src="@drawable/ic_globe"
             app:tint="@color/vcode_text_secondary" />
@@ -105,6 +109,7 @@
             <ImageView
                 android:layout_width="48dp"
                 android:layout_height="48dp"
+                android:importantForAccessibility="no"
                 android:src="@drawable/ic_triangle_exclamation"
                 app:tint="@color/vcode_accent_error" />
 
@@ -113,7 +118,7 @@
                 android:layout_height="wrap_content"
                 android:layout_marginTop="16dp"
                 android:fontFamily="sans-serif-medium"
-                android:text="Page couldn't load"
+                android:text="@string/vcode_page_could_not_load"
                 android:textColor="@color/vcode_text_primary"
                 android:textSize="18sp" />
 
@@ -134,7 +139,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="24dp"
-                android:text="Try Again"
+                android:text="@string/vcode_try_again_btn"
                 android:textColor="@color/vcode_text_primary"
                 app:strokeColor="@color/vcode_divider" />
         </LinearLayout>
@@ -220,7 +225,7 @@
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
                     android:letterSpacing="0.04"
-                    android:text="CONSOLE LOGS"
+                    android:text="@string/vcode_console_logs"
                     android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                     android:textColor="@color/vcode_text_primary" />
 
@@ -236,7 +241,8 @@
                     android:text="0"
                     android:textColor="@color/vcode_accent_primary"
                     android:textSize="10sp"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    tools:ignore="HardcodedText,SmallSp" />
 
                 <!-- Clear button -->
                 <ImageView

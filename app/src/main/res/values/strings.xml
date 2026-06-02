@@ -37,6 +37,8 @@
     <string name="dark_theme">Dark Theme</string>
     <string name="light_theme">Light Theme</string>
     <string name="general">GENERAL</string>
+    <string name="vcode_git_credentials">Git Credentials</string>
+    <string name="vcode_not_configured">Not configured</string>
 
     <!--    Activity: Debug-->
     <string name="vcode_app_crashed">App Crashed</string>
@@ -44,6 +46,31 @@
     <string name="vcode_copy_error">Copy Error</string>
     <string name="vcode_restart_app">Restart App</string>
 
+<!--    Activity: Commit Details-->
+    <string name="vcode_commit_details">Commit Details</string>
+    <string name="vcode_commit_id_sha_label">COMMIT ID / SHA</string>
+    <string name="vcode_author_label">AUTHOR</string>
+    <string name="vcode_timestamp_label">TIMESTAMP</string>
+    <string name="vcode_commit_message_label">COMMIT MESSAGE</string>
+    <string name="vcode_changed_files_label">CHANGED FILES</string>
+    <string name="vcode_revert_commit_btn">Revert Commit</string>
+    <string name="vcode_reset_to_here_btn">Reset to Here</string>
+
+<!--    Activity: Preview-->
+    <string name="vcode_page_could_not_load">Page couldn\'t load</string>
+    <string name="vcode_try_again_btn">Try Again</string>
+    <string name="vcode_console_logs">CONSOLE LOGS</string>
+
+<!--    Activity: Git-->
+    <string name="vcode_git_workspace">Git Workspace</string>
+
+<!--    Bottom Sheet: Diff Viewer-->
+    <string name="vcode_go_to_file">Go to file</string>
+
+<!--    Bottom Sheet: Git Action Confirmed-->
+    <string name="vcode_confirm_action">Confirm Action</string>
+    <string name="vcode_commit_ref_hint">HEAD~1 or SHA-1...</string>
+    <string name="vcode_confirm_btn">Confirm</string>
 
     <!--    Bottom Sheet: Create Project-->
     <string name="vcode_create_new_project">Create New Project</string>
@@ -118,11 +145,50 @@
     <string name="vcode_git_author_name_label">Full Name</string>
     <string name="vcode_git_author_email_label">Email Address</string>
     <string name="vcode_btn_save_and_commit">Save &amp; Commit</string>
+    <string name="vcode_btn_clear">Clear</string>
 
     <!--    Bottom Sheet: Go To Line-->
     <string name="vcode_go_to_line">Go to Line</string>
     <string name="vcode_line_number">Line Number</string>
     <string name="vcode_btn_go">Go</string>
+
+<!--    Bottom Sheet: New Branch-->
+    <string name="vcode_new_branch">New Branch</string>
+    <string name="vcode_branch_name_hint">Branch name</string>
+    <string name="vcode_create_from_hint">Create from</string>
+    <string name="vcode_create_branch_btn">Create Branch</string>
+
+<!--    Bottom Sheet: Reset Confirm-->
+    <string name="vcode_reset_to_commit">Reset to Commit</string>
+    <string name="vcode_soft_reset">Soft Reset (Keep changes staged)</string>
+    <string name="vcode_mixed_reset">Mixed Reset (Keep changes unstaged)</string>
+    <string name="vcode_hard_reset">Hard Reset (Discard all changes)</string>
+    <string name="vcode_hard_reset_warning">Warning: This will discard all uncommitted changes permanently.</string>
+    <string name="vcode_confirm_reset_btn">Confirm Reset</string>
+
+<!--    Bottom Sheet: Git Clone Repo-->
+    <string name="vcode_clone_title">Clone Repository</string>
+    <string name="vcode_enter_url_to_clone">Enter a remote Git repository URL to clone it into your active local workspace.</string>
+    <string name="vcode_repo_url_label">REPOSITORY URL</string>
+    <string name="vcode_repo_url_hint">https://github.com/username/repo.git</string>
+    <string name="vcode_project_display_name_label">PROJECT DISPLAY NAME</string>
+    <string name="vcode_project_display_name_hint">e.g., My Cloned App</string>
+    <string name="vcode_clone_workspace_btn">Clone Workspace</string>
+    <string name="vcode_initialize_remote_workspace">Initializing remote workspace...</string>
+    <string name="vcode_resolving_delta_objects">Resolving delta objects...</string>
+    <string name="vcode_run_in_background_btn">Run in Background</string>
+
+<!--    Dialog: Hard Reset Confirmed-->
+    <string name="vcode_confirm_hard_reset">Confirm Hard Reset</string>
+    <string name="vcode_confirm_hard_reset_desc">This operation will permanently discard all local uncommitted changes, staged files, and modifications back to this snapshot. This action cannot be undone.</string>
+    <string name="vcode_reset_anyway_btn">Reset Anyway</string>
+
+<!--    Dialog: Import Destination-->
+    <string name="vcode_choose_destination">Choose Destination</string>
+
+<!--    Dialog: Merge Confirm-->
+    <string name="vcode_merge_branch">Merge Branch</string>
+    <string name="vcode_merge_btn">Merge</string>
 
     <!--    Fragment: File Explorer-->
     <string name="vcode_file_explorer">File Explorer</string>
@@ -179,6 +245,10 @@
     <string name="vcode_link_github_account">Link GitHub Account</string>
     <string name="vcode_link_github_desc">Connect your GitHub configuration profile to interact seamlessly with online repositories and publish revisions.</string>
 
+<!--    Empty State: No Git Repository-->
+    <string name="vcode_not_a_git_repository">Not a Git repository</string>
+    <string name="vcode_initialize_git_desc">Initialize a new repository in this project to track changes, manage local branches, and push modifications upstream to GitHub.</string>
+    <string name="vcode_initialize_btn">Initialize</string>
 
     <!--    State: Storage Access-->
     <string name="vcode_storage_access_required">Storage Access Required</string>
@@ -192,4 +262,13 @@
     <string name="vcode_valid_json">Valid JSON</string>
     <string name="vcode_invalid_json">Invalid JSON</string>
     <string name="vcode_validating_json">Validating…</string>
+
+<!--    Custom View: Find and Replace-->
+    <string name="vcode_find_hint">Find...</string>
+    <string name="vcode_replace_with_hint">Replace with...</string>
+    <string name="vcode_replace_btn">Replace</string>
+    <string name="vcode_replace_all_btn">Replace all</string>
+    <string name="vcode_find_case">Aa</string>
+    <string name="vcode_find_word">W</string>
+    <string name="vcode_find_regex">.*</string>
 </resources>

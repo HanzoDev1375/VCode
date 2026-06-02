@@ -11,16 +11,16 @@
         android:layout_height="match_parent"
         android:layout_gravity="end|center_vertical"
         android:gravity="center"
+        android:orientation="horizontal"
         android:paddingStart="0dp"
-        android:paddingEnd="@dimen/vcode_app_gap_horizontal"
-        android:orientation="horizontal">
+        android:paddingEnd="@dimen/vcode_app_gap_horizontal">
 
         <ImageView
             android:id="@+id/btn_action_rename"
             android:layout_width="44dp"
             android:layout_height="44dp"
-            android:padding="12dp"
             android:importantForAccessibility="no"
+            android:padding="12dp"
             android:src="@drawable/ic_pen"
             app:tint="?attr/colorOnPrimary" />
 
@@ -55,8 +55,8 @@
                 android:id="@+id/badges_container"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:orientation="horizontal"
                 android:layout_marginTop="@dimen/vcode_app_gap_horizontal"
+                android:orientation="horizontal"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toTopOf="parent" />
 
@@ -78,9 +78,9 @@
                 android:layout_marginBottom="@dimen/vcode_app_gap_horizontal"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                 android:textColor="?attr/colorOnSurfaceVariant"
+                app:layout_constraintBottom_toBottomOf="parent"
                 app:layout_constraintStart_toStartOf="parent"
                 app:layout_constraintTop_toBottomOf="@id/tv_project_name"
-                app:layout_constraintBottom_toBottomOf="parent"
                 tools:text="42 files · last modified 2h ago" />
         </androidx.constraintlayout.widget.ConstraintLayout>
     </com.google.android.material.card.MaterialCardView>

@@ -8,8 +8,8 @@
     android:clickable="true"
     android:focusable="true"
     android:gravity="center_vertical"
-    android:minWidth="@dimen/vcode_editor_tab_min_width"
     android:maxWidth="@dimen/vcode_editor_tab_max_width"
+    android:minWidth="@dimen/vcode_editor_tab_min_width"
     android:orientation="horizontal"
     android:paddingHorizontal="12dp">
 
@@ -19,9 +19,10 @@
         android:layout_height="wrap_content"
         android:layout_marginEnd="6dp"
         android:fontFamily="sans-serif-black"
-        android:textColor="@color/vcode_text_secondary"
         android:includeFontPadding="false"
+        android:textColor="@color/vcode_text_secondary"
         android:textSize="9sp"
+        tools:ignore="SmallSp"
         tools:text="HTML" />
 
     <TextView
@@ -31,9 +32,9 @@
         android:layout_weight="1"
         android:ellipsize="end"
         android:fontFamily="sans-serif-medium"
+        android:includeFontPadding="false"
         android:maxLines="1"
         android:textColor="@color/vcode_text_primary"
-        android:includeFontPadding="false"
         android:textSize="13sp"
         tools:text="index.html" />
 

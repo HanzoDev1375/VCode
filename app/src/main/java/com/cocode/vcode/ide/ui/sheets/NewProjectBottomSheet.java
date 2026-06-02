@@ -174,6 +174,8 @@ public class NewProjectBottomSheet extends BottomSheetDialogFragment {
             }
         });
 
+        binding.initGitRepoBtn.setOnClickListener(v -> binding.switchGit.setChecked(!binding.switchGit.isChecked()));
+
         binding.btnCreateProject.setOnClickListener(v -> {
             String name = binding.etProjectName.getText() != null ? binding.etProjectName.getText().toString().trim() : "";
 

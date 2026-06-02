@@ -4,17 +4,17 @@
     xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:orientation="vertical"
-    android:background="?attr/colorSurface">
+    android:background="?attr/colorSurface"
+    android:orientation="vertical">
 
     <LinearLayout
         android:id="@+id/search_bar_layout"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:layout_marginTop="20dp"
         android:layout_marginBottom="8dp"
         android:background="?attr/colorSurfaceContainerHigh"
-        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:gravity="center_vertical"
         android:orientation="horizontal"
         android:padding="8dp">
@@ -37,9 +37,9 @@
             android:importantForAutofill="no"
             android:inputType="text"
             android:maxLines="1"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="?attr/colorOnSurface"
-            android:textColorHint="?attr/colorOnSurfaceVariant"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
+            android:textColorHint="?attr/colorOnSurfaceVariant" />
 
     </LinearLayout>
 
@@ -64,9 +64,9 @@
             android:id="@+id/iv_empty_history_icon"
             android:layout_width="@dimen/vcode_empty_state_icon_size"
             android:layout_height="@dimen/vcode_empty_state_icon_size"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_clock_rotate"
-            app:tint="?attr/colorOutlineVariant"
-            android:importantForAccessibility="no" />
+            app:tint="?attr/colorOutlineVariant" />
 
         <TextView
             android:id="@+id/tv_empty_history_title"
@@ -82,10 +82,10 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
+            android:lineSpacingMultiplier="1.2"
             android:text="@string/vcode_commits_you_make_appear_here"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:lineSpacingMultiplier="1.2" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
     </LinearLayout>
 
 </LinearLayout>

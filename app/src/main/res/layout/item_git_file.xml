@@ -39,10 +39,10 @@
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            android:textSize="10sp"
             android:textColor="@color/vcode_text_secondary"
-            tools:text="app/src/main/java/com/package"
-            tools:ignore="SmallSp" />
+            android:textSize="10sp"
+            tools:ignore="SmallSp"
+            tools:text="app/src/main/java/com/package" />
     </LinearLayout>
 
     <TextView
@@ -51,10 +51,11 @@
         android:layout_height="24dp"
         android:layout_marginHorizontal="8dp"
         android:gravity="center"
-        android:textColor="@android:color/white"
         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+        android:textColor="@android:color/white"
         android:textSize="10sp"
         tools:background="@color/vcode_git_modified_color"
+        tools:ignore="SmallSp"
         tools:text="M" />
 
     <ImageView

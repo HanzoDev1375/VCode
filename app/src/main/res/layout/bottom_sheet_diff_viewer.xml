@@ -21,26 +21,27 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="?attr/colorOnSurface"
-            android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+            android:textColor="?attr/colorOnSurface" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_go_to_file"
             style="@style/Widget.Material3.Button.TextButton"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="Go to file"
-            android:textColor="?attr/colorPrimary"
-            android:layout_marginEnd="8dp" />
+            android:layout_marginEnd="8dp"
+            android:text="@string/vcode_go_to_file"
+            android:textColor="?attr/colorPrimary" />
 
         <ImageView
             android:id="@+id/btn_close_diff"
             android:layout_width="32dp"
             android:layout_height="32dp"
-            android:padding="5dp"
-            app:tint="?attr/colorOnSurface"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_xmark" />
+            android:importantForAccessibility="no"
+            android:padding="5dp"
+            android:src="@drawable/ic_xmark"
+            app:tint="?attr/colorOnSurface" />
     </LinearLayout>
 
     <HorizontalScrollView

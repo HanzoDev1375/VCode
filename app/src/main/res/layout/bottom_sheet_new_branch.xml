@@ -14,7 +14,7 @@
     <TextView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="New Branch"
+        android:text="@string/vcode_new_branch"
         android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
     <com.google.android.material.textfield.TextInputLayout
@@ -23,7 +23,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:hint="Branch name"
+        android:hint="@string/vcode_branch_name_hint"
         app:errorEnabled="true">
 
         <com.google.android.material.textfield.TextInputEditText
@@ -39,7 +39,7 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:layout_marginTop="8dp"
-        android:hint="Create from">
+        android:hint="@string/vcode_create_from_hint">
 
         <com.google.android.material.textfield.MaterialAutoCompleteTextView
             android:id="@+id/auto_create_from"
@@ -51,8 +51,9 @@
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_create_branch"
         android:layout_width="match_parent"
-        android:layout_height="54dp"
+        android:layout_height="wrap_content"
         android:layout_marginTop="24dp"
-        android:text="Create Branch" />
+        android:text="@string/vcode_create_branch_btn"
+        android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
 </LinearLayout>

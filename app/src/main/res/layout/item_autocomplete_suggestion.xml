@@ -23,16 +23,18 @@
             android:gravity="center"
             android:textColor="@android:color/white"
             android:textSize="10sp"
+            tools:ignore="SmallSp"
             tools:text="T" />
 
         <ImageView
             android:id="@+id/iv_type_icon"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:importantForAccessibility="no"
             android:padding="2dp"
             android:visibility="gone"
-            tools:visibility="visible"
-            tools:src="@drawable/ic_folder" />
+            tools:src="@drawable/ic_folder"
+            tools:visibility="visible" />
     </FrameLayout>
 
     <TextView
@@ -40,10 +42,10 @@
         android:layout_width="0dp"
         android:layout_height="wrap_content"
         android:layout_weight="1"
+        android:ellipsize="end"
+        android:maxLines="1"
         android:textColor="@color/vcode_text_primary"
         android:textSize="13sp"
-        android:maxLines="1"
-        android:ellipsize="end"
         tools:text="div" />
 
     <TextView
@@ -51,10 +53,11 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_marginStart="8dp"
+        android:ellipsize="end"
+        android:maxLines="1"
         android:textColor="@color/vcode_text_secondary"
         android:textSize="10sp"
-        android:maxLines="1"
-        android:ellipsize="end"
+        tools:ignore="SmallSp"
         tools:text="HTML Tag" />
 
 </LinearLayout>

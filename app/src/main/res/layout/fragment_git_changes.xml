@@ -195,11 +195,11 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:orientation="vertical"
+        android:paddingHorizontal="@dimen/vcode_app_gap_horizontal"
+        android:paddingVertical="16dp"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        android:paddingHorizontal="@dimen/vcode_app_gap_horizontal"
-        android:paddingVertical="16dp">
+        app:layout_constraintStart_toStartOf="parent">
 
         <EditText
             android:id="@+id/et_commit_message"
@@ -214,9 +214,9 @@
             android:maxLines="7"
             android:minLines="5"
             android:padding="12dp"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="?attr/colorOnSurface"
-            android:textColorHint="?attr/colorOnSurfaceVariant"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"/>
+            android:textColorHint="?attr/colorOnSurfaceVariant" />
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -228,10 +228,10 @@
                 android:id="@+id/cb_amend_commit"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="@string/vcode_amend_last_commit"
-                android:textColor="?attr/colorOnSurfaceVariant"
                 android:layout_weight="1"
+                android:text="@string/vcode_amend_last_commit"
                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorOnSurfaceVariant"
                 app:useMaterialThemeColors="true" />
 
             <TextView

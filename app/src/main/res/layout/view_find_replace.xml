@@ -23,8 +23,9 @@
             android:layout_weight="1"
             android:background="@null"
             android:fontFamily="sans-serif"
-            android:hint="Find..."
+            android:hint="@string/vcode_find_hint"
             android:imeOptions="actionNext"
+            android:importantForAutofill="no"
             android:inputType="textNoSuggestions"
             android:textColor="@color/vcode_text_primary"
             android:textColorHint="@color/vcode_text_hint"
@@ -47,6 +48,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
+            android:importantForAccessibility="no"
             android:padding="6dp"
             android:src="@drawable/ic_chevron_left"
             app:tint="@color/vcode_text_secondary" />
@@ -58,6 +60,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
+            android:importantForAccessibility="no"
             android:padding="6dp"
             android:src="@drawable/ic_chevron_right"
             app:tint="@color/vcode_text_secondary" />
@@ -70,6 +73,7 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
             android:focusable="true"
+            android:importantForAccessibility="no"
             android:padding="6dp"
             android:src="@drawable/ic_xmark"
             app:tint="@color/vcode_text_primary" />
@@ -89,8 +93,9 @@
             android:layout_weight="1"
             android:background="@null"
             android:fontFamily="sans-serif"
-            android:hint="Replace with..."
+            android:hint="@string/vcode_replace_with_hint"
             android:imeOptions="actionDone"
+            android:importantForAutofill="no"
             android:inputType="textNoSuggestions"
             android:textColor="@color/vcode_text_primary"
             android:textColorHint="@color/vcode_text_hint"
@@ -105,10 +110,9 @@
             android:minHeight="0dp"
             android:paddingHorizontal="12dp"
             android:paddingVertical="4dp"
-            android:text="Replace"
-            android:textColor="@color/vcode_accent_primary"
-            android:textSize="12sp"
-            app:cornerRadius="@dimen/vcode_button_corner_radius" />
+            android:text="@string/vcode_replace_btn"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="@color/vcode_accent_primary" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_replace_all"
@@ -119,10 +123,9 @@
             android:minHeight="0dp"
             android:paddingHorizontal="12dp"
             android:paddingVertical="4dp"
-            android:text="All"
-            android:textColor="@color/vcode_accent_primary"
-            android:textSize="12sp"
-            app:cornerRadius="@dimen/vcode_button_corner_radius" />
+            android:text="@string/vcode_replace_all_btn"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="@color/vcode_accent_primary" />
     </LinearLayout>
 
     <LinearLayout
@@ -141,7 +144,7 @@
             android:insetBottom="0dp"
             android:minWidth="0dp"
             android:paddingHorizontal="12dp"
-            android:text="Aa"
+            android:text="@string/vcode_find_case"
             android:textAllCaps="false"
             android:textColor="@color/vcode_text_secondary"
             android:textSize="12sp"
@@ -158,7 +161,7 @@
             android:insetBottom="0dp"
             android:minWidth="0dp"
             android:paddingHorizontal="12dp"
-            android:text="W"
+            android:text="@string/vcode_find_word"
             android:textAllCaps="false"
             android:textColor="@color/vcode_text_secondary"
             android:textSize="12sp"
@@ -174,7 +177,7 @@
             android:insetBottom="0dp"
             android:minWidth="0dp"
             android:paddingHorizontal="12dp"
-            android:text=".*"
+            android:text="@string/vcode_find_regex"
             android:textAllCaps="false"
             android:textColor="@color/vcode_text_secondary"
             android:textSize="12sp"

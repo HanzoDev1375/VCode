@@ -9,54 +9,49 @@
     <com.google.android.material.bottomsheet.BottomSheetDragHandleView
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_gravity="center_horizontal"/>
+        android:layout_gravity="center_horizontal" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <ImageView
+        android:layout_width="40dp"
+        android:layout_height="40dp"
+        android:layout_marginStart="18dp"
+        android:layout_marginEnd="0dp"
+        android:importantForAccessibility="no"
+        android:padding="6dp"
+        android:src="@drawable/ic_trash"
+        app:tint="?attr/colorError" />
+
+    <TextView
+        android:id="@+id/tv_delete"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginStart="19dp"
-        android:gravity="center_vertical"
-        android:layout_marginEnd="0dp">
-
-        <ImageView
-            android:layout_width="30dp"
-            android:layout_height="30dp"
-            android:src="@drawable/ic_trash"
-            app:tint="?attr/colorError"
-            android:padding="6dp"/>
-
-        <TextView
-            android:id="@+id/tv_delete"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:text="@string/vcode_delete_project"
-            android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
-            android:textSize="18sp"
-            android:textColor="?attr/colorError"/>
-
-    </LinearLayout>
+        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+        android:text="@string/vcode_delete_project"
+        android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
+        android:textColor="?attr/colorError"
+        android:textSize="18sp" />
 
     <TextView
         android:id="@+id/tv_desc"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="@string/vcode_action_cannot_be_undone"
-        android:layout_marginTop="4dp"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-        android:textColor="?attr/colorOnSurfaceVariant"
         android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
-        android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"/>
+        android:layout_marginTop="4dp"
+        android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
+        android:text="@string/vcode_action_cannot_be_undone"
+        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/btn_delete"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
+        android:layout_gravity="end"
         android:layout_marginStart="0dp"
+        android:layout_marginTop="40dp"
+        android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
         android:layout_marginBottom="20dp"
         android:paddingHorizontal="24dp"
-        android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
-        android:layout_gravity="end"
         android:text="@string/vcode_action_delete"
         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
         android:textColor="?attr/colorOnError"

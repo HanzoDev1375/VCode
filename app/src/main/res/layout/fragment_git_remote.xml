@@ -1,9 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
 <androidx.constraintlayout.widget.ConstraintLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    xmlns:tools="http://schemas.android.com/tools"
     android:background="?attr/colorSurface">
 
     <ScrollView
@@ -13,11 +13,11 @@
         android:clipToPadding="false"
         android:fillViewport="true"
         android:visibility="gone"
-        tools:visibility="visible"
         app:layout_constraintBottom_toTopOf="@id/layout_status_area"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible">
 
         <LinearLayout
             android:layout_width="match_parent"
@@ -43,9 +43,9 @@
                     android:id="@+id/tv_active_origin"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    tools:text="origin/main"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                    android:textColor="?attr/colorOnSurfaceVariant" />
+                    android:textColor="?attr/colorOnSurfaceVariant"
+                    tools:text="origin/main" />
             </LinearLayout>
 
             <com.google.android.material.card.MaterialCardView
@@ -75,8 +75,8 @@
                         <ImageView
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            android:src="@drawable/ic_github"
                             android:importantForAccessibility="no"
+                            android:src="@drawable/ic_github"
                             app:tint="?attr/colorOnSurface" />
 
                         <LinearLayout
@@ -99,17 +99,17 @@
                                 android:id="@+id/tv_account_username"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                tools:text="cocodestudio"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                                android:textColor="?attr/colorOnSurfaceVariant" />
+                                android:textColor="?attr/colorOnSurfaceVariant"
+                                tools:text="cocodestudio" />
                         </LinearLayout>
 
                         <ImageView
                             android:id="@+id/btn_disconnect_github"
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            android:importantForAccessibility="no"
                             android:background="?attr/selectableItemBackgroundBorderless"
+                            android:importantForAccessibility="no"
                             android:padding="6dp"
                             android:src="@drawable/ic_right_from_bracket"
                             app:tint="?attr/colorOnSurfaceVariant" />
@@ -201,8 +201,8 @@
                 android:layout_height="wrap_content"
                 android:text="@string/vcode_action_push"
                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                app:backgroundTint="?attr/colorPrimary"
                 android:textColor="?attr/colorOnPrimary"
+                app:backgroundTint="?attr/colorPrimary"
                 app:elevation="2dp" />
 
         </LinearLayout>
@@ -216,26 +216,26 @@
         android:orientation="vertical"
         android:padding="32dp"
         android:visibility="gone"
-        tools:visibility="visible"
         app:layout_constraintBottom_toTopOf="@id/layout_status_area"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent">
+        app:layout_constraintTop_toTopOf="parent"
+        tools:visibility="visible">
 
         <ImageView
             android:id="@+id/iv_empty_remote_icon"
             android:layout_width="@dimen/vcode_empty_state_icon_size"
             android:layout_height="@dimen/vcode_empty_state_icon_size"
+            android:importantForAccessibility="no"
             android:src="@drawable/ic_github"
-            app:tint="?attr/colorOutlineVariant"
-            android:importantForAccessibility="no" />
+            app:tint="?attr/colorOutlineVariant" />
 
         <TextView
             android:id="@+id/tv_empty_remote_title"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/vcode_link_github_account"
             android:layout_marginTop="4dp"
+            android:text="@string/vcode_link_github_account"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="?attr/colorOnSurface" />
 
@@ -245,20 +245,20 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="8dp"
             android:gravity="center"
+            android:lineSpacingMultiplier="1.2"
             android:text="@string/vcode_link_github_desc"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            android:lineSpacingMultiplier="1.2" />
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_link_account"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="@string/vcode_action_link_account"
             android:layout_marginTop="32dp"
+            android:text="@string/vcode_action_link_account"
             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            app:backgroundTint="?attr/colorPrimary"
-            android:textColor="?attr/colorOnPrimary"/>
+            android:textColor="?attr/colorOnPrimary"
+            app:backgroundTint="?attr/colorPrimary" />
     </LinearLayout>
 
     <LinearLayout

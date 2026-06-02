@@ -16,8 +16,8 @@
             android:id="@+id/iv_json_status_icon"
             android:layout_width="14dp"
             android:layout_height="14dp"
-            android:importantForAccessibility="no"
             android:layout_marginEnd="8dp"
+            android:importantForAccessibility="no"
             app:tint="?attr/colorTertiary"
             tools:src="@drawable/ic_circle_check" />
 
@@ -26,8 +26,8 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:textColor="?attr/colorOnSurface"
             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:textColor="?attr/colorOnSurface"
             tools:text="@string/vcode_valid_json" />
 
         <com.google.android.material.progressindicator.CircularProgressIndicator

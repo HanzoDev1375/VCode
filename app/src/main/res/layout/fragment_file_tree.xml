@@ -10,10 +10,10 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
         android:orientation="horizontal"
         android:paddingHorizontal="20dp"
-        android:paddingVertical="10dp"
-        android:layout_marginBottom="8dp">
+        android:paddingVertical="10dp">
 
         <TextView
             android:id="@+id/tv_file_explorer"
@@ -30,8 +30,8 @@
             android:layout_height="32dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:clickable="true"
-            android:importantForAccessibility="no"
             android:focusable="true"
+            android:importantForAccessibility="no"
             android:padding="6dp"
             android:src="@drawable/ic_arrows_rotate"
             app:tint="?attr/colorOnSurfaceVariant" />
@@ -69,7 +69,6 @@
         android:layout_width="match_parent"
         android:layout_height="1dp"
         android:background="?attr/colorOutline" />
-
 
 
     <androidx.recyclerview.widget.RecyclerView

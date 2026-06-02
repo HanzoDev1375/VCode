@@ -19,13 +19,12 @@ import com.cocode.vcode.ide.utils.UiUtils;
 public class DebugActivity extends AppCompatActivity {
 
     public static final String EXTRA_CRASH_LOG = "extra_crash_log";
-    private ActivityDebugBinding binding;
 
     @Override
     protected void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         EdgeToEdge.enable(this);
-        binding = ActivityDebugBinding.inflate(getLayoutInflater());
+        ActivityDebugBinding binding = ActivityDebugBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
 
         UiUtils.applySystemBarInsets(binding.getRoot());

@@ -9,6 +9,7 @@
     android:focusable="true"
     android:gravity="center_vertical"
     android:orientation="horizontal"
+    android:paddingStart="0dp"
     android:paddingEnd="16dp">
 
     <Space
@@ -22,6 +23,7 @@
         android:layout_height="16dp"
         android:layout_marginStart="4dp"
         android:layout_marginEnd="4dp"
+        android:importantForAccessibility="no"
         android:src="@drawable/ic_chevron_right"
         android:tint="@color/vcode_text_secondary"
         tools:ignore="UseAppTint" />
@@ -38,6 +40,7 @@
         android:textColor="@color/vcode_accent_primary"
         android:textSize="8sp"
         android:visibility="gone"
+        tools:ignore="SmallSp"
         tools:text="HTML"
         tools:visibility="visible" />
 
@@ -46,6 +49,7 @@
         android:layout_width="18dp"
         android:layout_height="18dp"
         android:layout_marginEnd="8dp"
+        android:importantForAccessibility="no"
         android:src="@drawable/ic_folder"
         android:tint="@color/vcode_accent_warning"
         android:visibility="gone"
@@ -75,6 +79,7 @@
             android:layout_width="28dp"
             android:layout_height="28dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:importantForAccessibility="no"
             android:padding="6dp"
             android:src="@drawable/ic_file_plus"
             android:tint="@color/vcode_text_secondary"
@@ -86,6 +91,7 @@
             android:layout_height="28dp"
             android:layout_marginStart="4dp"
             android:background="?attr/selectableItemBackgroundBorderless"
+            android:importantForAccessibility="no"
             android:padding="6dp"
             android:src="@drawable/ic_folder_plus"
             android:tint="@color/vcode_text_secondary"

@@ -26,9 +26,9 @@
                 android:id="@+id/app_bar_title"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
+                android:includeFontPadding="false"
                 android:text="@string/vcode_app_name"
-                android:textAppearance="@style/TextAppearance.Material3.ActionBar.Title"
-                android:includeFontPadding="false"/>
+                android:textAppearance="@style/TextAppearance.Material3.ActionBar.Title" />
 
             <TextView
                 android:id="@+id/your_projects_text"
@@ -47,8 +47,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:importantForAccessibility="no"
             android:padding="3dp"
-            app:tint="?attr/colorOnSurface"
-            android:src="@drawable/ic_triangle_merge" />
+            android:src="@drawable/ic_triangle_merge"
+            app:tint="?attr/colorOnSurface" />
 
         <ImageView
             android:id="@+id/icon_github"
@@ -58,8 +58,8 @@
             android:background="?attr/selectableItemBackgroundBorderless"
             android:importantForAccessibility="no"
             android:padding="3dp"
-            app:tint="?attr/colorOnSurface"
-            android:src="@drawable/ic_github" />
+            android:src="@drawable/ic_github"
+            app:tint="?attr/colorOnSurface" />
 
         <ImageView
             android:id="@+id/icon_settings"
@@ -68,9 +68,9 @@
             android:layout_marginStart="8dp"
             android:background="?attr/selectableItemBackgroundBorderless"
             android:importantForAccessibility="no"
-            app:tint="?attr/colorOnSurface"
             android:padding="4dp"
-            android:src="@drawable/ic_gear" />
+            android:src="@drawable/ic_gear"
+            app:tint="?attr/colorOnSurface" />
 
     </LinearLayout>
 
@@ -142,11 +142,11 @@
                         android:id="@+id/tv_total_projects_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="10"
                         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                         android:textColor="?attr/colorPrimary"
                         app:layout_constraintStart_toStartOf="parent"
-                        app:layout_constraintTop_toBottomOf="@id/tv_total_projects" />
+                        app:layout_constraintTop_toBottomOf="@id/tv_total_projects"
+                        tools:text="10" />
 
                     <View
                         android:id="@+id/view_middle_line"
@@ -177,11 +177,11 @@
                         android:id="@+id/tv_total_commits_count"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="10"
                         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
                         android:textColor="?attr/colorTertiary"
                         app:layout_constraintStart_toStartOf="@id/tv_total_commits_today"
-                        app:layout_constraintTop_toBottomOf="@id/tv_total_commits_today" />
+                        app:layout_constraintTop_toBottomOf="@id/tv_total_commits_today"
+                        tools:text="10" />
 
                     <LinearLayout
                         android:id="@+id/search_bar_layout"
@@ -214,9 +214,9 @@
                             android:importantForAutofill="no"
                             android:inputType="text"
                             android:maxLines="1"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                             android:textColor="?attr/colorOnSurface"
-                            android:textColorHint="?attr/colorOnSurfaceVariant"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
+                            android:textColorHint="?attr/colorOnSurfaceVariant" />
 
                     </LinearLayout>
 
