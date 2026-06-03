@@ -156,11 +156,17 @@ public class TabBar extends HorizontalScrollView {
         updateTabActiveState(binding, index == activeIndex);
 
         binding.getRoot().setOnClickListener(v -> {
-            if (tabClickListener != null) tabClickListener.onTabClick(index);
+            if (tabClickListener != null) {
+                int currentIndex = tabContainer.indexOfChild(binding.getRoot());
+                if (currentIndex >= 0) tabClickListener.onTabClick(currentIndex);
+            }
         });
 
         binding.btnClose.setOnClickListener(v -> {
-            if (tabCloseListener != null) tabCloseListener.onTabClose(index);
+            if (tabCloseListener != null) {
+                int currentIndex = tabContainer.indexOfChild(binding.getRoot());
+                if (currentIndex >= 0) tabCloseListener.onTabClose(currentIndex);
+            }
         });
 
         // Cache view binding objects inside layout tags to expedite simple runtime parameter changes later

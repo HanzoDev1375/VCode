@@ -100,6 +100,12 @@ public class LocalWebServer {
 
             File file = new File(documentRoot, path);
 
+            if (!file.getCanonicalPath().startsWith(documentRoot.getCanonicalPath())) {
+                out.write(("HTTP/1.1 403 Forbidden\r\n\r\n").getBytes());
+                out.flush();
+                return;
+            }
+
             if (file.exists() && !file.isDirectory()) {
                 String mimeType = getMimeType(path);
 

@@ -689,8 +689,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     .setTitle("Unsaved Changes")
                     .setMessage("You have unsaved files. Save them before leaving?")
                     .setPositiveButton("Save All", (d, w) -> {
-                        viewModel.saveAll();
-                        navigateAction.run();
+                        viewModel.saveAll(() -> navigateAction.run());
                     })
                     .setNegativeButton("Discard", (d, w) -> navigateAction.run())
                     .setNeutralButton("Cancel", null)

@@ -588,12 +588,13 @@ public class CodeEditText extends AppCompatEditText {
             } else {
                 setSelection(cursor + formattedSnippet.length());
             }
-            isApplyingHighlight = false;
 
             if (mainHandler != null) {
                 scheduleHighlight();
             }
         } catch (Exception ignored) {
+        } finally {
+            isApplyingHighlight = false;
         }
     }
 

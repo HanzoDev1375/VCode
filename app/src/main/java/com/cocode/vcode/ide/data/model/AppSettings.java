@@ -81,28 +81,28 @@ public class AppSettings {
      * Resolves the configured branch destination metadata rule.
      */
     public String getDefaultBranch() {
-        return gitDefaultRemote;
+        return gitDefaultBranch;
     }
 
     /**
      * Updates the default target remote branch destination assignment marker.
      */
     public void setDefaultBranch(String branch) {
-        this.gitDefaultRemote = branch;
+        this.gitDefaultBranch = branch;
     }
 
     /**
      * Checks verification rules for deletion and reset confirmations.
      */
     public boolean isConfirmHardReset() {
-        return confirmOnProjectDelete;
+        return gitConfirmHardReset;
     }
 
     /**
      * Configures the enforcement prompt checks before permanent item teardowns.
      */
     public void setConfirmHardReset(boolean confirm) {
-        this.confirmOnProjectDelete = confirm;
+        this.gitConfirmHardReset = confirm;
     }
 
     public Theme getTheme() {

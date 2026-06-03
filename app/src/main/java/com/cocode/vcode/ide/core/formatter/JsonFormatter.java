@@ -25,7 +25,7 @@ public class JsonFormatter extends BaseFormatter {
             // Protect internal literal string formats from being altered
             if (inString) {
                 out.append(c);
-                if (c == '"' && code.charAt(i - 1) != '\\') {
+                if (c == '"' && (i == 0 || code.charAt(i - 1) != '\\')) {
                     inString = false;
                 }
                 continue;

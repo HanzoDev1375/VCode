@@ -675,10 +675,14 @@ public class EditorViewModel extends ViewModel {
         return false;
     }
 
+    public void saveAll() {
+        saveAll(null);
+    }
+
     /**
      * Bulk saves all open files that have unsaved changes.
      */
-    public void saveAll() {
+    public void saveAll(Runnable onComplete) {
         List<EditorFile> docs = getOpenFilesList();
         ExecutorProvider.getInstance().runOnIo(() -> {
             boolean allSuccess = true;
@@ -710,6 +714,7 @@ public class EditorViewModel extends ViewModel {
                 } else {
                     fileSaveResult.setValue(Result.error("Failed to save some files"));
                 }
+                if (onComplete != null) onComplete.run();
             });
         });
     }
