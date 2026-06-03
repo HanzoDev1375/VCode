@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
 public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
 
     // Regular Expression patterns isolating explicit markup syntax boundaries
-    private static final Pattern PAT_COMMENT = Pattern.compile("", Pattern.DOTALL);
+    private static final Pattern PAT_COMMENT = Pattern.compile("<!--[\\s\\S]*?-->", Pattern.DOTALL);
     private static final Pattern PAT_DOCTYPE = Pattern.compile("<!DOCTYPE[^>]*>", Pattern.CASE_INSENSITIVE);
     private static final Pattern PAT_TAG_NAME = Pattern.compile("(?<=</?)[\\w-]+"); // Positive lookbehind isolates target tag keyword
     private static final Pattern PAT_BRACKET = Pattern.compile("</?|/?>|>");

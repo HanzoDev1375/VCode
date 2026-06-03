@@ -8,6 +8,13 @@ import java.util.regex.Pattern;
 
 public class EmmetParser {
 
+    private static final Pattern PAT_ABBR = Pattern.compile("^[a-zA-Z0-9_\\-#.*+>]+$");
+    private static final Pattern PAT_CSS_ABBR = Pattern.compile("^[a-z]+-?[a-z]*[0-9]+[a-z%]*$");
+    private static final Pattern PAT_CSS_PROP = Pattern.compile("^([a-z]+)(-?[a-z]*)([0-9]+)([a-z%]*)$");
+    private static final Pattern PAT_EMMET_NODE = Pattern.compile("([>+])?([a-zA-Z0-9_\\-#.*]+)");
+    private static final Pattern PAT_EMMET_PARSE = Pattern.compile("^([a-zA-Z0-9_-]*)(#[a-zA-Z0-9_-]+)?((?:\\.[a-zA-Z0-9_-]+)*)(?:\\*([0-9]+))?$");
+
+
     public static String expandHtml(String abbr, String boilerplate) {
         if (abbr == null || abbr.trim().isEmpty()) return null;
         if (abbr.equals("!")) {
@@ -17,7 +24,7 @@ public class EmmetParser {
             return "<!DOCTYPE html>\n<html lang=\"en\">\n<head>\n    <meta charset=\"UTF-8\">\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0\">\n    <title>Document</title>\n</head>\n<body>\n    |\n</body>\n</html>";
         }
 
-        if (!abbr.matches("^[a-zA-Z0-9_\\-#.*+>]+$")) {
+        if (!PAT_ABBR.matcher(abbr).matches()) {
             return null;
         }
 
@@ -54,9 +61,8 @@ public class EmmetParser {
                 return "background-color: #|;";
         }
 
-        if (abbr.matches("^[a-z]+-?[a-z]*[0-9]+[a-z%]*$")) {
-            Pattern p = Pattern.compile("^([a-z]+)(-?[a-z]*)([0-9]+)([a-z%]*)$");
-            Matcher m = p.matcher(abbr);
+        if (PAT_CSS_ABBR.matcher(abbr).matches()) {
+            Matcher m = PAT_CSS_PROP.matcher(abbr);
             if (m.matches()) {
                 String propMap = getCssProp(Objects.requireNonNull(m.group(1)));
                 if (propMap != null) {
@@ -107,8 +113,7 @@ public class EmmetParser {
     }
 
     private static String parseEmmet(String abbr) {
-        Pattern p = Pattern.compile("([>+])?([a-zA-Z0-9_\\-#.*]+)");
-        Matcher m = p.matcher(abbr);
+        Matcher m = PAT_EMMET_NODE.matcher(abbr);
 
         Node root = new Node("root");
         Node current = root;
@@ -190,8 +195,7 @@ public class EmmetParser {
     }
 
     private static Node[] parseNode(String str) {
-        Pattern p = Pattern.compile("^([a-zA-Z0-9_-]*)(#[a-zA-Z0-9_-]+)?((?:\\.[a-zA-Z0-9_-]+)*)(?:\\*([0-9]+))?$");
-        Matcher m = p.matcher(str);
+        Matcher m = PAT_EMMET_PARSE.matcher(str);
         if (!m.matches()) return null;
 
         String tag = m.group(1);

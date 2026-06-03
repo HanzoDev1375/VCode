@@ -23,6 +23,8 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
     private static final Pattern PAT_USER_FUNC = Pattern.compile(
             "(function|const|let|var|class)\\s+([a-zA-Z_$][\\w$]*)");
 
+    private static final Pattern PAT_WORD = Pattern.compile("[a-zA-Z_$][\\w$]*");
+
     // Built-in API global namespace method dictionary maps
     private static final String[][] DOT_METHODS = {
             {"console", "log,warn,error,info,table,time,timeEnd,assert,clear,count"},
@@ -138,7 +140,7 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // Add all other words in the document as generic suggestions
-        Matcher wordMatcher = Pattern.compile("[a-zA-Z_$][\\w$]*").matcher(fullText);
+        Matcher wordMatcher = PAT_WORD.matcher(fullText);
         while (wordMatcher.find() && wordMatcher.start() < scanLimit) {
             String w = wordMatcher.group();
             if (w.length() >= 2 && seen.add(w)) {
