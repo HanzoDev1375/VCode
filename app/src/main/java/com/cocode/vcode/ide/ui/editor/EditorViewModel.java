@@ -643,18 +643,23 @@ public class EditorViewModel extends ViewModel {
             return;
         }
 
-        fileRepo.writeFile(ef.getFile(), ef.getContent()).observeForever(result -> {
-            if (result != null && result.isSuccess()) {
-                ef.markSaved();
-                openFilesLiveData.setValue(new ArrayList<>(docs));
-                projectRepo.touchProjectById(projectId);
+        androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<Boolean>> liveData = fileRepo.writeFile(ef.getFile(), ef.getContent());
+        liveData.observeForever(new androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<Boolean>>() {
+            @Override
+            public void onChanged(com.cocode.vcode.ide.data.model.Result<Boolean> result) {
+                liveData.removeObserver(this);
+                if (result != null && result.isSuccess()) {
+                    ef.markSaved();
+                    openFilesLiveData.setValue(new ArrayList<>(docs));
+                    projectRepo.touchProjectById(projectId);
 
-                // Update Git status as the file change is now committed to the filesystem
-                refreshGitStatuses();
+                    // Update Git status as the file change is now committed to the filesystem
+                    refreshGitStatuses();
 
-                if (onComplete != null) onComplete.run();
+                    if (onComplete != null) onComplete.run();
+                }
+                fileSaveResult.setValue(result);
             }
-            fileSaveResult.setValue(result);
         });
     }
 

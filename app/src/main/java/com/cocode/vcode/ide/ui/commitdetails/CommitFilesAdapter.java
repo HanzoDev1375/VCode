@@ -50,7 +50,7 @@ public class CommitFilesAdapter extends ListAdapter<GitFileItem, CommitFilesAdap
     @Override
     public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemGitFileBinding binding = ItemGitFileBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-        return new ViewHolder(binding);
+        return new ViewHolder(binding, this);
     }
 
     @Override
@@ -68,12 +68,14 @@ public class CommitFilesAdapter extends ListAdapter<GitFileItem, CommitFilesAdap
     /**
      * ViewHolder for representing a single modified file in a commit.
      */
-    public class ViewHolder extends RecyclerView.ViewHolder {
+    public static class ViewHolder extends RecyclerView.ViewHolder {
         private final ItemGitFileBinding binding;
+        private final CommitFilesAdapter adapter;
 
-        ViewHolder(ItemGitFileBinding binding) {
+        ViewHolder(ItemGitFileBinding binding, CommitFilesAdapter adapter) {
             super(binding.getRoot());
             this.binding = binding;
+            this.adapter = adapter;
         }
 
         /**
@@ -117,7 +119,7 @@ public class CommitFilesAdapter extends ListAdapter<GitFileItem, CommitFilesAdap
             // Resolve and style the file icon based on extension and language
             FileIconHelper.setFileIconAndColor(binding.ivFileIcon, item.getFileName());
 
-            binding.getRoot().setOnClickListener(v -> listener.onFileClick(item));
+            binding.getRoot().setOnClickListener(v -> adapter.listener.onFileClick(item));
         }
     }
 }

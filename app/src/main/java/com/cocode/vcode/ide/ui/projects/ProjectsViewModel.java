@@ -40,11 +40,26 @@ public class ProjectsViewModel extends ViewModel {
         return projectsLiveData;
     }
 
+    private androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<java.util.List<com.cocode.vcode.ide.data.model.Project>>> currentProjectsLiveData;
+    private final androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<java.util.List<com.cocode.vcode.ide.data.model.Project>>> projectsObserver = projectsLiveData::setValue;
+
     /**
      * Refetches the complete list of projects from the repository.
      */
     public void loadProjects() {
-        projectRepo.getAllProjects().observeForever(projectsLiveData::setValue);
+        if (currentProjectsLiveData != null) {
+            currentProjectsLiveData.removeObserver(projectsObserver);
+        }
+        currentProjectsLiveData = projectRepo.getAllProjects();
+        currentProjectsLiveData.observeForever(projectsObserver);
+    }
+
+    @Override
+    protected void onCleared() {
+        super.onCleared();
+        if (currentProjectsLiveData != null) {
+            currentProjectsLiveData.removeObserver(projectsObserver);
+        }
     }
 
     /**
@@ -67,45 +82,57 @@ public class ProjectsViewModel extends ViewModel {
             activeDefaultBranch = currentSettings.gitDefaultBranch.trim();
         }
 
-        projectRepo.createProject(name, mainFile, templateContent, initGit, activeDefaultBranch)
-                .observeForever(result -> {
-                    actionResultLiveData.setValue(result);
-                    if (result != null && result.isSuccess()) {
-                        // Refresh the list upon successful project creation
-                        loadProjects();
-                    }
-                });
+        androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<com.cocode.vcode.ide.data.model.Project>> liveData = projectRepo.createProject(name, mainFile, templateContent, initGit, activeDefaultBranch);
+        liveData.observeForever(new androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<com.cocode.vcode.ide.data.model.Project>>() {
+            @Override
+            public void onChanged(com.cocode.vcode.ide.data.model.Result<com.cocode.vcode.ide.data.model.Project> result) {
+                liveData.removeObserver(this);
+                actionResultLiveData.setValue(result);
+                if (result != null && result.isSuccess()) {
+                    // Refresh the list upon successful project creation
+                    loadProjects();
+                }
+            }
+        });
     }
 
     /**
      * Renames an existing project.
      */
     public void renameProject(Project project, String newName) {
-        projectRepo.renameProject(project, newName)
-                .observeForever(result -> {
-                    actionResultLiveData.setValue(result);
-                    if (result != null && result.isSuccess()) {
-                        loadProjects();
-                    }
-                });
+        androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<com.cocode.vcode.ide.data.model.Project>> liveData = projectRepo.renameProject(project, newName);
+        liveData.observeForever(new androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<com.cocode.vcode.ide.data.model.Project>>() {
+            @Override
+            public void onChanged(com.cocode.vcode.ide.data.model.Result<com.cocode.vcode.ide.data.model.Project> result) {
+                liveData.removeObserver(this);
+                actionResultLiveData.setValue(result);
+                if (result != null && result.isSuccess()) {
+                    loadProjects();
+                }
+            }
+        });
     }
 
     /**
      * Deletes a project and its associated files from disk.
      */
     public void deleteProject(Project project) {
-        projectRepo.deleteProject(project)
-                .observeForever(deleteResult -> {
-                    if (deleteResult != null && deleteResult.isSuccess()) {
-                        actionResultLiveData.setValue(Result.success(project));
-                        loadProjects();
-                    } else {
-                        String err = (deleteResult != null && deleteResult.getError() != null)
-                                ? deleteResult.getError()
-                                : "Delete failed";
-                        actionResultLiveData.setValue(Result.error(err));
-                    }
-                });
+        androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<Boolean>> liveData = projectRepo.deleteProject(project);
+        liveData.observeForever(new androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<Boolean>>() {
+            @Override
+            public void onChanged(com.cocode.vcode.ide.data.model.Result<Boolean> deleteResult) {
+                liveData.removeObserver(this);
+                if (deleteResult != null && deleteResult.isSuccess()) {
+                    actionResultLiveData.setValue(com.cocode.vcode.ide.data.model.Result.success(project));
+                    loadProjects();
+                } else {
+                    String err = (deleteResult != null && deleteResult.getError() != null)
+                            ? deleteResult.getError()
+                            : "Delete failed";
+                    actionResultLiveData.setValue(com.cocode.vcode.ide.data.model.Result.error(err));
+                }
+            }
+        });
     }
 
     /**

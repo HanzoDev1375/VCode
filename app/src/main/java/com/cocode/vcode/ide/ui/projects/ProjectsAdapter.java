@@ -103,7 +103,7 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
     public ProjectViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemProjectCardBinding binding = ItemProjectCardBinding.inflate(
                 LayoutInflater.from(parent.getContext()), parent, false);
-        return new ProjectViewHolder(binding);
+        return new ProjectViewHolder(binding, this);
     }
 
     @Override
@@ -176,14 +176,16 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
     /**
      * ViewHolder class that handles the lifecycle and logic of a single project card item.
      */
-    public class ProjectViewHolder extends RecyclerView.ViewHolder {
+    public static class ProjectViewHolder extends RecyclerView.ViewHolder {
 
         private final ItemProjectCardBinding binding;
+        private final ProjectsAdapter adapter;
         private String currentBoundProjectId = "";
 
-        public ProjectViewHolder(@NonNull ItemProjectCardBinding binding) {
+        public ProjectViewHolder(@NonNull ItemProjectCardBinding binding, ProjectsAdapter adapter) {
             super(binding.getRoot());
             this.binding = binding;
+            this.adapter = adapter;
 
             setupCircularActionButtons(itemView.getContext());
             setupTypefaces(itemView.getContext());
@@ -208,8 +210,8 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
                     switch (event.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
                             // Close any other open swipe menus before starting a new interaction
-                            if (currentlySwipedView != null && currentlySwipedView != v) {
-                                closeSwipedItem();
+                            if (adapter.currentlySwipedView != null && adapter.currentlySwipedView != v) {
+                                adapter.closeSwipedItem();
                             }
                             startX = event.getRawX();
                             startY = event.getRawY();
@@ -256,8 +258,8 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
 
                                 if (finalDx < 15 && finalDy < 15) {
                                     int pos = getBindingAdapterPosition();
-                                    if (pos != RecyclerView.NO_POSITION && listener != null) {
-                                        listener.onProjectClick(projects.get(pos));
+                                    if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                                        adapter.listener.onProjectClick(adapter.projects.get(pos));
                                     }
                                 }
                             } else {
@@ -291,28 +293,28 @@ public class ProjectsAdapter extends RecyclerView.Adapter<ProjectsAdapter.Projec
                     if (finalTranslateX < -maxW / 2) {
                         // More than halfway open; snap to fully open
                         v.animate().translationX(-maxW).setDuration(200).start();
-                        currentlySwipedView = v;
+                        adapter.currentlySwipedView = v;
                     } else {
                         // Less than halfway open; snap back to closed
                         v.animate().translationX(0).setDuration(200).start();
-                        if (currentlySwipedView == v) currentlySwipedView = null;
+                        if (adapter.currentlySwipedView == v) adapter.currentlySwipedView = null;
                     }
                 }
             });
 
             binding.btnActionRename.setOnClickListener(v -> {
-                closeSwipedItem();
+                adapter.closeSwipedItem();
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onProjectRenameClick(projects.get(pos));
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    adapter.listener.onProjectRenameClick(adapter.projects.get(pos));
                 }
             });
 
             binding.btnActionDelete.setOnClickListener(v -> {
-                closeSwipedItem();
+                adapter.closeSwipedItem();
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    listener.onProjectDeleteClick(projects.get(pos));
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    adapter.listener.onProjectDeleteClick(adapter.projects.get(pos));
                 }
             });
         }

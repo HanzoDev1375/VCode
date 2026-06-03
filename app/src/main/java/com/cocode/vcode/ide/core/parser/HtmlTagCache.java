@@ -37,13 +37,10 @@ public class HtmlTagCache {
      */
     public static synchronized void load(Context context) {
         if (isLoaded) return; // Prevent parsing multiple times if already cached
-        try {
-            // Assumes html_tags.json is placed in your app's assets folder
-            InputStream is = context.getAssets().open("html_tags.json");
+        try (InputStream is = context.getAssets().open("html_tags.json")) {
             int size = is.available();
             byte[] buffer = new byte[size];
             is.read(buffer);
-            is.close();
             String jsonStr = new String(buffer, StandardCharsets.UTF_8);
 
             JSONArray tags = new JSONArray(jsonStr);

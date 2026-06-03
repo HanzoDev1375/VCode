@@ -64,7 +64,7 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
     @Override
     public SnippetViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemSnippetBinding binding = ItemSnippetBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-        return new SnippetViewHolder(binding);
+        return new SnippetViewHolder(binding, this);
     }
 
     @Override
@@ -91,13 +91,15 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
     /**
      * ViewHolder for representing a single code snippet card.
      */
-    public class SnippetViewHolder extends RecyclerView.ViewHolder {
+    public static class SnippetViewHolder extends RecyclerView.ViewHolder {
         private final ItemSnippetBinding binding;
+        private final SnippetsAdapter adapter;
 
         @SuppressLint("ClickableViewAccessibility")
-        public SnippetViewHolder(@NonNull ItemSnippetBinding binding) {
+        public SnippetViewHolder(@NonNull ItemSnippetBinding binding, SnippetsAdapter adapter) {
             super(binding.getRoot());
             this.binding = binding;
+            this.adapter = adapter;
 
             setupCircularActionButtons(itemView.getContext());
 
@@ -138,8 +140,8 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
                     switch (event.getActionMasked()) {
                         case MotionEvent.ACTION_DOWN:
                             // Close other swiped items before starting a new interaction
-                            if (currentlySwipedView != null && currentlySwipedView != v)
-                                closeSwipedItem();
+                            if (adapter.currentlySwipedView != null && adapter.currentlySwipedView != v)
+                                adapter.closeSwipedItem();
                             startX = event.getRawX();
                             startY = event.getRawY();
                             startTranslateX = v.getTranslationX();
@@ -179,8 +181,8 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
                                 float finalDy = Math.abs(event.getRawY() - startY);
                                 if (finalDx < 15 && finalDy < 15) {
                                     int pos = getBindingAdapterPosition();
-                                    if (pos != RecyclerView.NO_POSITION && listener != null) {
-                                        listener.onSnippetClick(snippets.get(pos));
+                                    if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                                        adapter.listener.onSnippetClick(adapter.snippets.get(pos));
                                     }
                                 }
                             } else {
@@ -206,26 +208,26 @@ public class SnippetsAdapter extends RecyclerView.Adapter<SnippetsAdapter.Snippe
 
                     if (finalTranslateX < -maxW / 2) {
                         v.animate().translationX(-maxW).setDuration(200).start();
-                        currentlySwipedView = v;
+                        adapter.currentlySwipedView = v;
                     } else {
                         v.animate().translationX(0).setDuration(200).start();
-                        if (currentlySwipedView == v) currentlySwipedView = null;
+                        if (adapter.currentlySwipedView == v) adapter.currentlySwipedView = null;
                     }
                 }
             });
 
             binding.btnActionEdit.setOnClickListener(v -> {
-                closeSwipedItem();
+                adapter.closeSwipedItem();
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null)
-                    listener.onSnippetEditClick(snippets.get(pos));
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null)
+                    adapter.listener.onSnippetEditClick(adapter.snippets.get(pos));
             });
 
             binding.btnActionDelete.setOnClickListener(v -> {
-                closeSwipedItem();
+                adapter.closeSwipedItem();
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null)
-                    listener.onSnippetDeleteClick(snippets.get(pos));
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null)
+                    adapter.listener.onSnippetDeleteClick(adapter.snippets.get(pos));
             });
         }
 

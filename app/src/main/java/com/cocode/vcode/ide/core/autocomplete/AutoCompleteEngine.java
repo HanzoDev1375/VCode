@@ -132,14 +132,12 @@ public abstract class AutoCompleteEngine {
      * Standard utility to extract and parse string configuration data out of local JSON asset documents.
      */
     protected String loadAssetJson(String assetPath) {
-        try {
-            java.io.InputStream is = context.getAssets().open(assetPath);
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8));
+        try (java.io.InputStream is = context.getAssets().open(assetPath);
+             java.io.BufferedReader reader = new java.io.BufferedReader(
+                     new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) sb.append(line);
-            reader.close();
             return sb.toString();
         } catch (Exception e) {
             return "[]"; // Structural fallback payload preventing crash downstream
@@ -150,16 +148,14 @@ public abstract class AutoCompleteEngine {
      * Standard utility to extract raw text data out of local asset documents, preserving newlines.
      */
     protected String loadAssetText(String assetPath) {
-        try {
-            java.io.InputStream is = context.getAssets().open(assetPath);
-            java.io.BufferedReader reader = new java.io.BufferedReader(
-                    new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8));
+        try (java.io.InputStream is = context.getAssets().open(assetPath);
+             java.io.BufferedReader reader = new java.io.BufferedReader(
+                     new java.io.InputStreamReader(is, java.nio.charset.StandardCharsets.UTF_8))) {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = reader.readLine()) != null) {
                 sb.append(line).append("\n");
             }
-            reader.close();
             return sb.toString();
         } catch (Exception e) {
             return null;

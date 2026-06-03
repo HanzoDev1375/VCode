@@ -38,12 +38,16 @@ public class GitCloneService extends Service {
 
     private static final String CHANNEL_ID = "git_clone_channel";
     private static final int NOTIFICATION_ID = 1001;
-    private static CloneListener sListener;
+    private static java.lang.ref.WeakReference<CloneListener> sListenerRef;
     private NotificationManager notificationManager;
     private NotificationCompat.Builder notificationBuilder;
 
     public static void setListener(CloneListener listener) {
-        sListener = listener;
+        sListenerRef = new java.lang.ref.WeakReference<>(listener);
+    }
+
+    private static CloneListener getListener() {
+        return sListenerRef != null ? sListenerRef.get() : null;
     }
 
     public static String parseGitError(Exception e) {
@@ -186,15 +190,17 @@ public class GitCloneService extends Service {
                 public void onProgress(String task, int done, int total) {
                     int percentage = total > 0 ? (int) (((float) done / total) * 100) : 0;
                     updateNotification(task, done, total);
-                    if (sListener != null) {
-                        sListener.onProgress(task, done, total, percentage);
+                    CloneListener listener = getListener();
+                    if (listener != null) {
+                        listener.onProgress(task, done, total, percentage);
                     }
                 }
 
                 @Override
                 public void onUpdate(int completed) {
-                    if (sListener != null) {
-                        sListener.onUpdate(completed);
+                    CloneListener listener = getListener();
+                    if (listener != null) {
+                        listener.onUpdate(completed);
                     }
                 }
 
@@ -231,19 +237,22 @@ public class GitCloneService extends Service {
                             .putString(targetProjectDirectory.getAbsolutePath() + "_url", repoUrl)
                             .apply();
 
-                    if (sListener != null) sListener.onSuccess();
+                    CloneListener listener = getListener();
+                    if (listener != null) listener.onSuccess();
                     showCompletionNotification(true, projectName + " cloned successfully.");
                 } catch (Exception e) {
                     e.printStackTrace();
                     String traceMessage = parseGitError(e);
                     FileUtils.deleteRecursive(targetProjectDirectory);
-                    if (sListener != null) sListener.onFailure(traceMessage);
+                    CloneListener listener = getListener();
+                    if (listener != null) listener.onFailure(traceMessage);
                     showCompletionNotification(false, traceMessage);
                 }
             } else {
                 String errMsg = result.getMessage() != null ? parseGitError(new Exception(result.getMessage())) : "Unknown critical failure.";
                 FileUtils.deleteRecursive(targetProjectDirectory);
-                if (sListener != null) sListener.onFailure(errMsg);
+                CloneListener listener = getListener();
+                if (listener != null) listener.onFailure(errMsg);
                 showCompletionNotification(false, errMsg);
             }
         });

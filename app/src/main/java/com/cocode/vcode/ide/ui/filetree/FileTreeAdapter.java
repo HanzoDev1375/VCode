@@ -158,7 +158,7 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
     public FileViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
         ItemFileTreeNodeBinding binding = ItemFileTreeNodeBinding.inflate(
                 LayoutInflater.from(parent.getContext()), parent, false);
-        return new FileViewHolder(binding);
+        return new FileViewHolder(binding, this);
     }
 
     @Override
@@ -188,13 +188,15 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
      * ViewHolder for a single node in the file tree.
      * Manages click, long-press, and expansion animations.
      */
-    public class FileViewHolder extends RecyclerView.ViewHolder {
+    public static class FileViewHolder extends RecyclerView.ViewHolder {
 
         private final ItemFileTreeNodeBinding binding;
+        private final FileTreeAdapter adapter;
 
-        public FileViewHolder(@NonNull ItemFileTreeNodeBinding binding) {
+        public FileViewHolder(@NonNull ItemFileTreeNodeBinding binding, FileTreeAdapter adapter) {
             super(binding.getRoot());
             this.binding = binding;
+            this.adapter = adapter;
             setupClickListeners();
         }
 
@@ -202,10 +204,10 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             // "New File" action button
             binding.btnAddFile.setOnClickListener(v -> {
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    FileNode node = flatNodes.get(pos);
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    FileNode node = adapter.flatNodes.get(pos);
                     if (node.isDirectory()) {
-                        listener.onAddFileClick(node.getFile());
+                        adapter.listener.onAddFileClick(node.getFile());
                     }
                 }
             });
@@ -213,10 +215,10 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             // "New Folder" action button
             binding.btnAddFolder.setOnClickListener(v -> {
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    FileNode node = flatNodes.get(pos);
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    FileNode node = adapter.flatNodes.get(pos);
                     if (node.isDirectory()) {
-                        listener.onAddFolderClick(node.getFile());
+                        adapter.listener.onAddFolderClick(node.getFile());
                     }
                 }
             });
@@ -225,7 +227,7 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             binding.getRoot().setOnClickListener(v -> {
                 int pos = getBindingAdapterPosition();
                 if (pos == RecyclerView.NO_POSITION) return;
-                FileNode node = flatNodes.get(pos);
+                FileNode node = adapter.flatNodes.get(pos);
 
                 if (node.isDirectory()) {
                     handleDirectoryClick(node, pos);
@@ -237,9 +239,9 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             // Long click to reveal rename, delete, copy, cut, paste actions
             binding.getRoot().setOnLongClickListener(v -> {
                 int pos = getBindingAdapterPosition();
-                if (pos != RecyclerView.NO_POSITION && listener != null) {
-                    FileNode node = flatNodes.get(pos);
-                    listener.onNodeLongClick(binding.getRoot(), node);
+                if (pos != RecyclerView.NO_POSITION && adapter.listener != null) {
+                    FileNode node = adapter.flatNodes.get(pos);
+                    adapter.listener.onNodeLongClick(binding.getRoot(), node);
                     return true;
                 }
                 return false;
@@ -254,31 +256,31 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
             if (node.isExpanded()) {
                 // Flatten child nodes and insert them below the parent
                 List<FileNode> toAdd = new ArrayList<>();
-                flatten(node.getChildren(), toAdd);
-                flatNodes.addAll(pos + 1, toAdd);
-                notifyItemRangeInserted(pos + 1, toAdd.size());
+                adapter.flatten(node.getChildren(), toAdd);
+                adapter.flatNodes.addAll(pos + 1, toAdd);
+                adapter.notifyItemRangeInserted(pos + 1, toAdd.size());
             } else {
                 // Remove all visible descendants of the collapsed folder
                 int removeCount = 0;
                 int nextPos = pos + 1;
-                while (nextPos < flatNodes.size() && flatNodes.get(nextPos).getDepth() > node.getDepth()) {
+                while (nextPos < adapter.flatNodes.size() && adapter.flatNodes.get(nextPos).getDepth() > node.getDepth()) {
                     removeCount++;
                     nextPos++;
                 }
                 if (removeCount > 0) {
-                    flatNodes.subList(pos + 1, pos + 1 + removeCount).clear();
-                    notifyItemRangeRemoved(pos + 1, removeCount);
+                    adapter.flatNodes.subList(pos + 1, pos + 1 + removeCount).clear();
+                    adapter.notifyItemRangeRemoved(pos + 1, removeCount);
                 }
             }
-            notifyItemChanged(pos); // Update chevron and icon
+            adapter.notifyItemChanged(pos); // Update chevron and icon
         }
 
         /**
          * Handles file selection; opens internal editor or delegates to system.
          */
         private void handleFileClick(File clickedFile) {
-            if (isSupportedByEditor(clickedFile)) {
-                if (listener != null) listener.onFileClick(clickedFile);
+            if (adapter.isSupportedByEditor(clickedFile)) {
+                if (adapter.listener != null) adapter.listener.onFileClick(clickedFile);
             } else {
                 // Hand over unsupported formats (e.g., PDF) to external system apps
                 FileUtils.openFileExternally(binding.getRoot().getContext(), clickedFile);
@@ -291,12 +293,12 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
         public void bind(FileNode node) {
             // Apply indentation based on tree depth
             ViewGroup.LayoutParams params = binding.indentSpacer.getLayoutParams();
-            params.width = node.getDepth() * indentWidthPx;
+            params.width = node.getDepth() * adapter.indentWidthPx;
             binding.indentSpacer.setLayoutParams(params);
 
             // Special case for root node naming
-            if (node.getFile().getAbsolutePath().equals(rootPath) && projectName != null) {
-                binding.tvName.setText(projectName);
+            if (node.getFile().getAbsolutePath().equals(adapter.rootPath) && adapter.projectName != null) {
+                binding.tvName.setText(adapter.projectName);
             } else {
                 binding.tvName.setText(node.getName());
             }
@@ -305,9 +307,9 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
 
             // Apply opacity if node is cut
             boolean isCut = false;
-            if (isCutAction && clipboardFile != null) {
+            if (adapter.isCutAction && adapter.clipboardFile != null) {
                 String nodePath = node.getFile().getAbsolutePath();
-                String cutPath = clipboardFile.getAbsolutePath();
+                String cutPath = adapter.clipboardFile.getAbsolutePath();
                 if (nodePath.equals(cutPath) || nodePath.startsWith(cutPath + File.separator)) {
                     isCut = true;
                 }
@@ -372,9 +374,9 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
          * Resolves the Git status for the node and displays a colored status dot if applicable.
          */
         private void updateGitStatus(FileNode node) {
-            if (gitStatusMap != null && rootPath != null) {
+            if (adapter.gitStatusMap != null && adapter.rootPath != null) {
                 String relativePath = getRelativePath(node.getFile().getAbsolutePath());
-                FileStatus.Type status = gitStatusMap.get(relativePath);
+                FileStatus.Type status = adapter.gitStatusMap.get(relativePath);
                 if (status != null) {
                     binding.gitStatusBadge.setVisibility(View.VISIBLE);
                     binding.gitStatusBadge.setStatus(status);
@@ -390,8 +392,8 @@ public class FileTreeAdapter extends RecyclerView.Adapter<FileTreeAdapter.FileVi
          * Converts an absolute path to a project-relative path with normalized separators.
          */
         private String getRelativePath(String absPath) {
-            if (absPath.startsWith(rootPath)) {
-                String rel = absPath.substring(rootPath.length());
+            if (absPath.startsWith(adapter.rootPath)) {
+                String rel = absPath.substring(adapter.rootPath.length());
                 if (rel.startsWith(File.separator)) {
                     rel = rel.substring(1);
                 }
