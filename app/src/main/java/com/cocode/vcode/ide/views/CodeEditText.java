@@ -58,9 +58,9 @@ import java.util.Objects;
 public class CodeEditText extends AppCompatEditText {
 
     private static final long HIGHLIGHT_DELAY_MS = 150;
-    private static final long AUTOCOMPLETE_DELAY_MS = 80;  // Fast enough to feel instant, VS Code uses ~75ms
+    private static final long AUTOCOMPLETE_DELAY_MS = 100;
 
-    /** Characters that trigger a new autocomplete session in VS Code — never dismiss on these. */
+    /** Characters that trigger a new autocomplete session — never dismiss on these. */
     private static final String TRIGGER_CHARS = ".<>/:'\"@#";
 
     private final HtmlTagParser htmlTagParser = new HtmlTagParser();
@@ -88,9 +88,11 @@ public class CodeEditText extends AppCompatEditText {
     private boolean isAutoClosing = false;
     private boolean isApplyingHighlight = false;
     private final Runnable highlightRunnable = this::triggerHighlight;
+    private final Runnable autoCompleteRunnable = this::triggerAutoComplete;
     private boolean isUndoRedoActive = false;
     private boolean isSettingText = false;
     private boolean isTypingText = false;
+    private boolean isInsertingCompletion = false;
     private File currentFile;
     private OnScrollChangeListener scrollChangeListener;
 
@@ -275,7 +277,30 @@ public class CodeEditText extends AppCompatEditText {
         if (isApplyingHighlight || isUndoRedoActive || isSettingText)
             return super.onKeyDown(keyCode, event);
 
-        // Map tab physical key key codes to inject custom spaced layouts instead of standard spacing skips
+        // ── Autocomplete keyboard navigation ─────────────────────────────────
+        if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
+            switch (keyCode) {
+                case KeyEvent.KEYCODE_DPAD_DOWN:
+                    autoCompletePopup.moveSelection(1);
+                    return true;
+                case KeyEvent.KEYCODE_DPAD_UP:
+                    autoCompletePopup.moveSelection(-1);
+                    return true;
+                case KeyEvent.KEYCODE_TAB:
+                case KeyEvent.KEYCODE_ENTER:
+                    CompletionItem selected = autoCompletePopup.getSelectedItem();
+                    if (selected != null) {
+                        insertCompletion(selected);
+                        return true;
+                    }
+                    break;
+                case KeyEvent.KEYCODE_ESCAPE:
+                    autoCompletePopup.dismiss();
+                    return true;
+            }
+        }
+
+        // Map tab physical key to inject custom spaced layouts
         if (keyCode == KeyEvent.KEYCODE_TAB) {
             int start = Math.max(0, getSelectionStart());
             int end = Math.max(start, getSelectionEnd());
@@ -464,17 +489,17 @@ public class CodeEditText extends AppCompatEditText {
     }
 
     private void scheduleAutoComplete() {
-        mainHandler.removeCallbacksAndMessages("ac");
-        mainHandler.postAtTime(this::triggerAutoComplete,
-                "ac", android.os.SystemClock.uptimeMillis() + AUTOCOMPLETE_DELAY_MS);
+        mainHandler.removeCallbacks(autoCompleteRunnable);
+        mainHandler.postDelayed(autoCompleteRunnable, AUTOCOMPLETE_DELAY_MS);
     }
 
     /**
-     * Evaluates cursor location bounds to prompt contextual vocabulary proposals.
+     * Evaluates cursor location to prompt contextual vocabulary proposals.
      * Mirrors VS Code's trigger logic:
      * — Always trigger on identifier characters (letters, digits, _, $, -).
      * — Also trigger on designated trigger characters (., <, /, :, @, #, quotes).
-     * — Dismiss only on whitespace that is NOT a trigger character.
+     * — Dismiss on whitespace, newlines, or non-trigger punctuation.
+     * — Dismiss when cursor is at position 0.
      */
     private void triggerAutoComplete() {
         if (autoCompleteEngine == null || getText() == null) return;
@@ -482,26 +507,42 @@ public class CodeEditText extends AppCompatEditText {
         String text   = getText().toString();
         int    cursor = getSelectionStart();
 
+        // Must have at least one char before cursor and valid position
         if (cursor <= 0 || cursor > text.length()) {
-            mainHandler.post(autoCompletePopup::dismiss);
+            autoCompletePopup.dismiss();
             return;
         }
 
         char lastChar = text.charAt(cursor - 1);
 
-        // Dismiss on plain whitespace, but NOT if it is a trigger character
-        // (a space inside an attribute value or after a keyword may still be relevant,
-        //  but we keep it simple: only trigger on non-whitespace or explicit trigger chars).
-        if (Character.isWhitespace(lastChar) && TRIGGER_CHARS.indexOf(lastChar) < 0) {
-            mainHandler.post(autoCompletePopup::dismiss);
+        // Newlines never trigger — dismiss immediately
+        if (lastChar == '\n' || lastChar == '\r') {
+            autoCompletePopup.dismiss();
             return;
         }
 
+        // Trigger on identifier chars or explicit trigger characters
+        boolean isIdentifier = Character.isLetterOrDigit(lastChar)
+                || lastChar == '_' || lastChar == '-' || lastChar == '$';
+        boolean isTriggerChar = TRIGGER_CHARS.indexOf(lastChar) >= 0;
+
+        if (!isIdentifier && !isTriggerChar) {
+            autoCompletePopup.dismiss();
+            return;
+        }
+
+        // Capture cursor for the lambda — prevents stale reference
+        final int capturedCursor = cursor;
+        final String capturedText = text;
+
         ExecutorProvider.getInstance().runOnCpu(() -> {
-            List<CompletionItem> items = autoCompleteEngine.getSuggestions(text, cursor);
+            List<CompletionItem> items = autoCompleteEngine.getSuggestions(capturedText, capturedCursor);
             mainHandler.post(() -> {
+                // Verify cursor hasn't moved since we started computing
+                if (getSelectionStart() != capturedCursor) return;
+
                 if (items != null && !items.isEmpty()) {
-                    autoCompletePopup.show(items, this, cursor);
+                    autoCompletePopup.show(items, CodeEditText.this, capturedCursor);
                 } else {
                     autoCompletePopup.dismiss();
                 }
@@ -510,7 +551,16 @@ public class CodeEditText extends AppCompatEditText {
     }
 
     /**
-     * Injects selected autocomplete text choices, adjusting line padding values and cursor offsets.
+     * Injects selected autocomplete text, properly computing replace range.
+     *
+     * <p>Key behaviors matching professional IDEs:
+     * <ul>
+     *   <li>If replaceLength is explicitly set (e.g., Emmet), uses that exact range.</li>
+     *   <li>For dot-member completions (e.g., Math.floor), only replaces the word AFTER the dot.</li>
+     *   <li>For tag completions starting with '<', also replaces the '<' character.</li>
+     *   <li>Sets isInsertingCompletion + isAutoClosing to prevent auto-close brackets from
+     *       firing on inserted parentheses like "floor()".</li>
+     * </ul>
      */
     private void insertCompletion(CompletionItem item) {
         if (item == null || getText() == null) return;
@@ -519,29 +569,35 @@ public class CodeEditText extends AppCompatEditText {
 
         int cursor = getSelectionStart();
         String text = getText().toString();
-        int wordStart = cursor;
+
+        // ── Compute wordStart (the position from which to replace) ───────────
+        int wordStart;
         if (item.getReplaceLength() >= 0) {
+            // Explicit replace length set by the engine (e.g., Emmet abbreviations)
             wordStart = Math.max(0, cursor - item.getReplaceLength());
         } else {
+            // Default: walk back over word characters to find the start of the typed prefix
+            wordStart = cursor;
             while (wordStart > 0) {
                 char c = text.charAt(wordStart - 1);
-                if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$') {
+                if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$' || c == '@') {
                     wordStart--;
                 } else {
                     break;
                 }
             }
-
+            // If the insert text starts with '<' and the char before wordStart is '<',
+            // extend the replace range to include it (tag completion like typing "di" after "<")
             if (wordStart > 0 && text.charAt(wordStart - 1) == '<' && insertText.startsWith("<")) {
                 wordStart--;
             }
         }
 
+        // ── Handle indentation for multi-line insertions ─────────────────────
         int lineStart = wordStart;
         while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') {
             lineStart--;
         }
-
         StringBuilder baseIndent = new StringBuilder();
         for (int i = lineStart; i < wordStart; i++) {
             char c = text.charAt(i);
@@ -551,26 +607,50 @@ public class CodeEditText extends AppCompatEditText {
                 break;
             }
         }
-
         if (insertText.contains("\n")) {
             insertText = insertText.replace("\n", "\n" + baseIndent);
         }
 
+        // ── Handle pipe cursor marker ────────────────────────────────────────
         int pipeIdx = insertText.indexOf('|');
         String cleanInsert;
         int finalCursor;
         if (pipeIdx >= 0) {
-            cleanInsert = insertText.replace("|", "");
+            cleanInsert = insertText.substring(0, pipeIdx) + insertText.substring(pipeIdx + 1);
             finalCursor = wordStart + pipeIdx;
         } else {
             cleanInsert = insertText;
             finalCursor = wordStart + cleanInsert.length() + item.getCursorOffset();
         }
 
+        // ── Deduplicate: if the text after cursor already matches the suffix of cleanInsert,
+        //    avoid double-inserting (e.g., inserting ">" when ">" already exists) ─────────
+        // Only do this for single-char suffixes like closing brackets/quotes that might be
+        // auto-closed already
+        if (cleanInsert.length() > 0 && cursor < text.length()) {
+            char lastInserted = cleanInsert.charAt(cleanInsert.length() - 1);
+            char nextInDoc = text.charAt(cursor);
+            // If the insertion ends with a closing bracket/quote and the next char matches,
+            // skip consuming it only if no cursor offset is pushing us back
+            if (item.getCursorOffset() == 0 && pipeIdx < 0
+                    && (lastInserted == ')' || lastInserted == ']' || lastInserted == '}' || lastInserted == '"' || lastInserted == '\'')
+                    && lastInserted == nextInDoc) {
+                // Remove the trailing char from insertion since it's already there
+                cleanInsert = cleanInsert.substring(0, cleanInsert.length() - 1);
+                finalCursor = wordStart + cleanInsert.length();
+            }
+        }
+
+        // ── Apply the text replacement ───────────────────────────────────────
+        // Set flags to prevent auto-close and popup dismissal during insertion
+        isInsertingCompletion = true;
+        isAutoClosing = true;
         isApplyingHighlight = true;
         getText().replace(wordStart, cursor, cleanInsert);
         setSelection(Math.min(finalCursor, getText().length()));
         isApplyingHighlight = false;
+        isAutoClosing = false;
+        isInsertingCompletion = false;
 
         autoCompletePopup.dismiss();
         scheduleHighlight();
@@ -827,8 +907,15 @@ public class CodeEditText extends AppCompatEditText {
     @Override
     protected void onSelectionChanged(int selStart, int selEnd) {
         super.onSelectionChanged(selStart, selEnd);
-        if (!isTypingText && !isSettingText && !isAutoClosing && !isUndoRedoActive) {
+        // Only dismiss on explicit cursor placement (tap/selection drag) — NOT during
+        // typing, undo/redo, auto-close, or completion insertion. This prevents the bug
+        // where tapping an autocomplete item triggers onSelectionChanged before the click
+        // handler fires, causing the popup to dismiss before the item can be selected.
+        if (!isTypingText && !isSettingText && !isAutoClosing && !isUndoRedoActive
+                && !isApplyingHighlight && !isInsertingCompletion) {
             if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
+                // If the selection is a range (dragging), dismiss immediately.
+                // If it's a cursor move (single position), dismiss immediately.
                 autoCompletePopup.dismiss();
             }
         }
@@ -837,6 +924,8 @@ public class CodeEditText extends AppCompatEditText {
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        mainHandler.removeCallbacks(highlightRunnable);
+        mainHandler.removeCallbacks(autoCompleteRunnable);
         mainHandler.removeCallbacksAndMessages(null);
         autoCompletePopup.dismiss();
     }

@@ -391,8 +391,22 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         // ── 4. Embedded <style> / <script> block delegation ───────────────────
         String unclosedBlock = tagParser.getUnclosedTagAt(fullText, cursorPos);
         if ("style".equals(unclosedBlock)) {
+            // Extract only the CSS content between <style> and cursor
+            int styleStart = findBlockContentStart(fullText, cursorPos, "style");
+            if (styleStart >= 0) {
+                String cssContent = fullText.substring(styleStart, cursorPos);
+                int cssCursor = cursorPos - styleStart;
+                return cssEngine.getSuggestions(cssContent, cssCursor);
+            }
             return cssEngine.getSuggestions(fullText, cursorPos);
         } else if ("script".equals(unclosedBlock)) {
+            // Extract only the JS content between <script> and cursor
+            int scriptStart = findBlockContentStart(fullText, cursorPos, "script");
+            if (scriptStart >= 0) {
+                String jsContent = fullText.substring(scriptStart, cursorPos);
+                int jsCursor = cursorPos - scriptStart;
+                return jsEngine.getSuggestions(jsContent, jsCursor);
+            }
             return jsEngine.getSuggestions(fullText, cursorPos);
         }
 
@@ -479,6 +493,47 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
+    }
+
+    // ─── Embedded block content extraction ─────────────────────────────────────
+
+    /**
+     * Finds the content start position of the last unclosed &lt;style&gt; or &lt;script&gt; block
+     * before the cursor. Returns the position right after the closing '>' of the opening tag.
+     *
+     * @param tag "style" or "script"
+     * @return index of first char of content, or -1 if not found
+     */
+    private int findBlockContentStart(String text, int cursorPos, String tag) {
+        String searchText = text.substring(0, Math.min(cursorPos, text.length()));
+        // Find last opening <style...> or <script...> tag
+        String openPattern = "<" + tag;
+        int lastOpen = -1;
+        int pos = 0;
+        while (true) {
+            int idx = searchText.indexOf(openPattern, pos);
+            if (idx < 0) break;
+            // Verify it's a proper tag (not e.g. <styled>)
+            int afterTag = idx + openPattern.length();
+            if (afterTag < searchText.length()) {
+                char next = searchText.charAt(afterTag);
+                if (next == '>' || next == ' ' || next == '\n' || next == '\r' || next == '\t') {
+                    // Find the closing > of this opening tag
+                    int closeAngle = searchText.indexOf('>', afterTag);
+                    if (closeAngle >= 0) {
+                        // Make sure there isn't a </style> or </script> between this open and cursor
+                        String closeTag = "</" + tag;
+                        int closeIdx = searchText.indexOf(closeTag, closeAngle);
+                        if (closeIdx < 0) {
+                            // No closing tag found before cursor — this is the active block
+                            lastOpen = closeAngle + 1;
+                        }
+                    }
+                }
+            }
+            pos = idx + 1;
+        }
+        return lastOpen;
     }
 
     // ─── File / folder path suggestions ────────────────────────────────────────

@@ -31,42 +31,45 @@ import java.util.List;
  * Custom completion suggestion overlay for the editor view.
  * Uses a lightweight, non-focusable PopupWindow wrapping a RecyclerView to display
  * context-aware code completions without stealing key events from the soft keyboard.
+ *
+ * <p>Supports keyboard navigation via moveSelection() and getSelectedItem().
  */
 public class AutoCompletePopup {
 
     private static final int WIDTH_DP = 280;
+    private static final int MAX_VISIBLE_ITEMS = 5;
+    private static final int ITEM_HEIGHT_DP = 38;
+
     private final Context context;
     private final PopupWindow popupWindow;
     private final AutoCompleteAdapter adapter;
+    private final RecyclerView recyclerView;
+    private int selectedIndex = 0;
 
-    /**
-     * Initializes the autocomplete popup component with default styling, structures, and sizing layouts.
-     */
     public AutoCompletePopup(Context context) {
         this.context = context;
         this.adapter = new AutoCompleteAdapter();
 
-        RecyclerView recyclerView = new RecyclerView(context);
+        recyclerView = new RecyclerView(context);
         recyclerView.setLayoutManager(new LinearLayoutManager(context));
         recyclerView.setAdapter(adapter);
         recyclerView.setBackground(ContextCompat.getDrawable(context, R.drawable.vcode_bg_autocomplete_popup));
         recyclerView.setOverScrollMode(View.OVER_SCROLL_NEVER);
 
-        // Configure the popup panel window frame characteristics
         popupWindow = new PopupWindow(recyclerView,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 ViewGroup.LayoutParams.WRAP_CONTENT,
                 false);
         popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
         popupWindow.setOutsideTouchable(false);
-        popupWindow.setFocusable(false); // Keeps soft input focus firmly inside the main text editing window
+        popupWindow.setFocusable(false);
         popupWindow.setElevation(8f);
         popupWindow.setAnimationStyle(R.style.VCodePopupMenuAnimation);
     }
 
     /**
-     * Measures layout alignments and displays code proposals adjacent to the text cursor coordinates.
-     * Integrates boundary collision processing to prevent rendering clipping zones behind keyboard areas.
+     * Shows or updates the popup adjacent to the cursor. If already showing, smoothly
+     * updates position and content without re-creating the window (prevents flicker).
      */
     public void show(List<CompletionItem> items, View editorView, int cursorOffset) {
         if (items == null || items.isEmpty()) {
@@ -74,17 +77,20 @@ public class AutoCompletePopup {
             return;
         }
 
+        // Reset selection to top when new items arrive
+        selectedIndex = 0;
         adapter.setItems(items);
+        adapter.setSelectedIndex(selectedIndex);
 
         int screenWidth = context.getResources().getDisplayMetrics().widthPixels;
         int popupWidth = Math.min(UiUtils.dpToPx(context, WIDTH_DP), screenWidth - UiUtils.dpToPx(context, 32));
         popupWindow.setWidth(popupWidth);
 
-        // Calculate estimated height for collision detection (roughly 38dp per item)
-        int estimatedHeight = items.size() > 5 ? UiUtils.dpToPx(context, 190) : items.size() * UiUtils.dpToPx(context, 38);
+        int itemCount = Math.min(items.size(), MAX_VISIBLE_ITEMS);
+        int estimatedHeight = itemCount * UiUtils.dpToPx(context, ITEM_HEIGHT_DP);
 
-        if (items.size() > 5) {
-            popupWindow.setHeight(UiUtils.dpToPx(context, 190));
+        if (items.size() > MAX_VISIBLE_ITEMS) {
+            popupWindow.setHeight(UiUtils.dpToPx(context, MAX_VISIBLE_ITEMS * ITEM_HEIGHT_DP));
         } else {
             popupWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
         }
@@ -105,7 +111,6 @@ public class AutoCompletePopup {
 
             if (et.getLayout() != null && cursorOffset >= 0 && cursorOffset <= et.getText().length()) {
                 cursorX = et.getLayout().getPrimaryHorizontal(cursorOffset);
-
                 int line = et.getLayout().getLineForOffset(cursorOffset);
                 cursorYBottom = et.getLayout().getLineBottom(line);
                 cursorYTop = et.getLayout().getLineTop(line);
@@ -114,19 +119,15 @@ public class AutoCompletePopup {
 
         int x = editorLocation[0] + (int) cursorX - editorView.getScrollX();
 
-        // Android screen bounds (dynamically shrinks when keyboard opens)
         android.graphics.Rect visibleFrame = new android.graphics.Rect();
         editorView.getWindowVisibleDisplayFrame(visibleFrame);
 
-        // Theoretical placement coords
         int yBelow = editorLocation[1] + paddingTop + (int) cursorYBottom - scrollY + UiUtils.dpToPx(context, 4);
         int yAbove = editorLocation[1] + paddingTop + (int) cursorYTop - scrollY - estimatedHeight - UiUtils.dpToPx(context, 4);
 
         int y;
-
-        // If placing it below pushes into the keyboard area, flip it to the top
         if (yBelow + estimatedHeight > visibleFrame.bottom) {
-            y = Math.max(visibleFrame.top, yAbove); // Prevent clipping off-screen bounds
+            y = Math.max(visibleFrame.top, yAbove);
         } else {
             y = yBelow;
         }
@@ -147,10 +148,35 @@ public class AutoCompletePopup {
         if (popupWindow.isShowing()) {
             popupWindow.dismiss();
         }
+        selectedIndex = 0;
     }
 
     public boolean isShowing() {
         return popupWindow.isShowing();
+    }
+
+    /**
+     * Moves the keyboard selection highlight up or down.
+     * @param direction +1 for down, -1 for up
+     */
+    public void moveSelection(int direction) {
+        int count = adapter.getItemCount();
+        if (count == 0) return;
+        int newIndex = selectedIndex + direction;
+        if (newIndex < 0) newIndex = 0;
+        if (newIndex >= count) newIndex = count - 1;
+        if (newIndex != selectedIndex) {
+            selectedIndex = newIndex;
+            adapter.setSelectedIndex(selectedIndex);
+            recyclerView.scrollToPosition(selectedIndex);
+        }
+    }
+
+    /**
+     * Returns the currently keyboard-selected item, or the first item if none selected.
+     */
+    public CompletionItem getSelectedItem() {
+        return adapter.getItemAt(selectedIndex);
     }
 
     public void setOnItemSelectedListener(OnItemSelectedListener listener) {
@@ -162,7 +188,7 @@ public class AutoCompletePopup {
     }
 
     /**
-     * Internal data management adapter linking suggestible completions lists into presentation line items.
+     * Internal adapter linking completion items to RecyclerView rows.
      */
     private class AutoCompleteAdapter extends RecyclerView.Adapter<AutoCompleteAdapter.ViewHolder> {
 
@@ -170,6 +196,7 @@ public class AutoCompletePopup {
         private final Typeface uiFont, uiFontBold, codeFont;
         private List<CompletionItem> items = new ArrayList<>();
         private OnItemSelectedListener listener;
+        private int highlightedIndex = 0;
 
         AutoCompleteAdapter() {
             colorPrimary = ContextCompat.getColor(context, R.color.vcode_accent_primary);
@@ -194,6 +221,17 @@ public class AutoCompletePopup {
             this.listener = l;
         }
 
+        @SuppressLint("NotifyDataSetChanged")
+        void setSelectedIndex(int index) {
+            this.highlightedIndex = index;
+            notifyDataSetChanged();
+        }
+
+        CompletionItem getItemAt(int index) {
+            if (index >= 0 && index < items.size()) return items.get(index);
+            return items.isEmpty() ? null : items.get(0);
+        }
+
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
@@ -207,6 +245,7 @@ public class AutoCompletePopup {
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             CompletionItem item = items.get(position);
 
+            // ── Type badge / icon ────────────────────────────────────────────
             if (item.getType() == CompletionItem.Type.FILE || item.getType() == CompletionItem.Type.FOLDER) {
                 holder.binding.tvTypeBadge.setVisibility(View.GONE);
                 holder.binding.ivTypeIcon.setVisibility(View.VISIBLE);
@@ -218,9 +257,7 @@ public class AutoCompletePopup {
                     String label = item.getLabel();
                     String ext = "";
                     int lastDot = label.lastIndexOf('.');
-                    if (lastDot != -1) {
-                        ext = label.substring(lastDot + 1);
-                    }
+                    if (lastDot != -1) ext = label.substring(lastDot + 1);
                     FileType fType = FileType.fromExtension(ext);
                     holder.binding.ivTypeIcon.setImageResource(fType.getIconResId());
                     holder.binding.ivTypeIcon.setColorFilter(ContextCompat.getColor(context, fType.getColorResId()), PorterDuff.Mode.SRC_IN);
@@ -236,19 +273,20 @@ public class AutoCompletePopup {
                 holder.binding.tvTypeBadge.setTypeface(uiFontBold);
             }
 
+            // ── Label ────────────────────────────────────────────────────────
             String labelText = item.getLabel();
-            if (labelText != null && labelText.length() > 20) {
-                holder.binding.tvLabel.setText(labelText.substring(0, 20) + "...");
+            if (labelText != null && labelText.length() > 24) {
+                holder.binding.tvLabel.setText(labelText.substring(0, 24) + "\u2026");
             } else {
                 holder.binding.tvLabel.setText(labelText != null ? labelText : "");
             }
+            holder.binding.tvLabel.setTypeface(codeFont, position == highlightedIndex ? Typeface.BOLD : Typeface.NORMAL);
 
-            // Bold styling for top suggestion
-            holder.binding.tvLabel.setTypeface(codeFont, position == 0 ? Typeface.BOLD : Typeface.NORMAL);
-
+            // ── Detail ───────────────────────────────────────────────────────
             holder.binding.tvDetail.setText(item.getDetail() != null ? item.getDetail() : "");
             holder.binding.tvDetail.setTypeface(uiFont);
 
+            // ── Click handler ────────────────────────────────────────────────
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) listener.onItemSelected(item);
             });

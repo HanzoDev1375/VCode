@@ -36,9 +36,6 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
     // ─── At-rules ─────────────────────────────────────────────────────────────
     private static final List<CompletionItem> AT_RULE_ITEMS;
 
-    // ─── @media features ──────────────────────────────────────────────────────
-    private static final List<CompletionItem> MEDIA_FEATURE_ITEMS;
-
     static {
         // Format: { label (displayed), insertText (what is typed after ":"), detail }
         // insertText does NOT include the leading ":" — the user already typed it.
@@ -113,33 +110,6 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         for (String[] r : atRules) {
             // Label = "@media" so fuzzy match works; insertText = "@media " with trailing space
             AT_RULE_ITEMS.add(new CompletionItem(r[0], r[1], "At-rule", CompletionItem.Type.CSS_VALUE, 0));
-        }
-
-        // @media features — shown inside @media ( … )
-        String[][] mediaFeatures = {
-                {"max-width",                 "max-width: |"},
-                {"min-width",                 "min-width: |"},
-                {"max-height",                "max-height: |"},
-                {"min-height",                "min-height: |"},
-                {"width",                     "width: |"},
-                {"height",                    "height: |"},
-                {"orientation: portrait",     "orientation: portrait"},
-                {"orientation: landscape",    "orientation: landscape"},
-                {"prefers-color-scheme: dark","prefers-color-scheme: dark"},
-                {"prefers-color-scheme: light","prefers-color-scheme: light"},
-                {"prefers-reduced-motion",    "prefers-reduced-motion: reduce"},
-                {"hover: hover",              "hover: hover"},
-                {"hover: none",               "hover: none"},
-                {"pointer: fine",             "pointer: fine"},
-                {"pointer: coarse",           "pointer: coarse"},
-                {"display-mode: standalone",  "display-mode: standalone"},
-                {"aspect-ratio",              "aspect-ratio: |"},
-                {"resolution",                "resolution: |"},
-        };
-        MEDIA_FEATURE_ITEMS = new ArrayList<>();
-        for (String[] mf : mediaFeatures) {
-            MEDIA_FEATURE_ITEMS.add(new CompletionItem(mf[0], mf[1], "Media feature",
-                    CompletionItem.Type.CSS_VALUE, 0));
         }
     }
 
@@ -266,58 +236,69 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         String trimmed = line.trim();
         String word    = getWordBeforeCursor(fullText, cursorPos);
 
-        // ── 1. @media feature completions — MUST come BEFORE the "@" check ────
-        // Without this ordering, "@media (" would be caught by the "@" check and
-        // show at-rule completions instead of media features.
-        if (isInsideMediaQuery(fullText, cursorPos)) {
-            return fuzzyFilter(MEDIA_FEATURE_ITEMS, word);
+        // ── 1. @media/@supports/@container CONDITION completions ───────────────
+        // Only triggers when writing the condition BEFORE the opening brace.
+        if (isInsideAtRuleCondition(fullText, cursorPos)) {
+            return getMediaSuggestions(fullText, cursorPos, word);
         }
 
         // ── 2. At-rule completions — triggered when line starts with "@" ───────
+        // Only at top-level (depth 0) or inside an at-rule body (depth 1 from @media etc.)
         if (trimmed.startsWith("@")) {
-            // Strip the "@" for matching (AT_RULE_ITEMS labels start with "@")
-            String atWord = trimmed.startsWith("@") ? "@" + word : word;
+            String atWord = "@" + word;
             return fuzzyFilter(AT_RULE_ITEMS, atWord);
         }
 
         // ── 3. Pseudo-class / pseudo-element completions ─────────────────────
-        // Triggered when:
-        //   a) The typed word is preceded immediately by ":" (e.g. user typed "p:hov")
-        //   b) The cursor is right after ":" (word is empty, but last char is ":")
-        //
-        // INSERTION FIX: PSEUDO_ITEMS use insertText WITHOUT the leading ":" so that
-        // clicking ":hover" after "a:" inserts "hover" → "a:hover" (not "a::hover").
         int wordStartPos = cursorPos - word.length();
         boolean directlyAfterColon = wordStartPos > 0 && fullText.charAt(wordStartPos - 1) == ':';
         boolean cursorRightAfterColon = word.isEmpty() && cursorPos > 0
                 && fullText.charAt(cursorPos - 1) == ':';
 
         if (directlyAfterColon || cursorRightAfterColon) {
-            // Only show pseudo-classes in selector zone (outside rule blocks), UNLESS
-            // the block contains nested rules (e.g. SASS/modern CSS nesting)
             return fuzzyFilter(PSEUDO_ITEMS, word);
         }
 
-        // ── 4. State-machine context detection ─────────────────────────────────
+        // ── 4. Intelligent context detection with nesting awareness ────────────
         CssContext ctx = detectContext(fullText, cursorPos, isInlineStyle);
 
         switch (ctx.zone) {
-            case VALUE:    return getValueSuggestions(ctx.propertyName, word, fullText);
-            case PROPERTY: return getPropertySuggestions(word, fullText, cursorPos);
+            case VALUE:
+                return getValueSuggestions(ctx.propertyName, word, fullText);
+            case PROPERTY:
+                return getPropertySuggestions(word, fullText, cursorPos);
+            case NESTED_SELECTOR:
+                // Inside a CSS nesting block — show BOTH selectors and properties
+                return getNestedSuggestions(word, trimmed, fullText, cursorPos);
             case SELECTOR:
-            default:       return getSelectorSuggestions(word, trimmed);
+            default:
+                return getSelectorSuggestions(word, trimmed);
         }
     }
 
     // ─── Context detection ─────────────────────────────────────────────────────
 
-    private enum Zone { SELECTOR, PROPERTY, VALUE }
+    private enum Zone { SELECTOR, PROPERTY, VALUE, NESTED_SELECTOR }
 
     private static class CssContext {
         Zone zone = Zone.SELECTOR;
         String propertyName = "";
     }
 
+    /**
+     * Detects context with full nesting depth awareness.
+     *
+     * <p>Depth semantics:
+     * <ul>
+     *   <li>depth 0 → top-level (selectors only)</li>
+     *   <li>depth 1 → inside first rule block OR inside @media body (selectors + properties)</li>
+     *   <li>depth 2+ → nested CSS rule OR rule inside @media (selectors + properties)</li>
+     * </ul>
+     *
+     * <p>Inside an at-rule body (@media, @supports, @container, @layer), depth 1 means
+     * "inside the at-rule but not inside a selector block" → show selectors.
+     * Depth 2 means "inside a selector block within the at-rule" → show properties.
+     */
     private CssContext detectContext(String text, int cursorPos, boolean isInlineStyle) {
         CssContext ctx = new CssContext();
 
@@ -329,53 +310,131 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             return ctx;
         }
 
-        // Count braces up to cursor
-        int open = 0, close = 0;
+        // Compute nesting depth and track at-rule context
+        int depth = 0;
+        boolean insideAtRuleBody = false;
+        int atRuleDepth = -1; // the depth at which the at-rule was opened
+
         for (int i = 0; i < cursorPos && i < text.length(); i++) {
             char c = text.charAt(i);
-            if (c == '{') open++;
-            else if (c == '}') close++;
+            if (c == '{') {
+                // Check if this brace opens an at-rule body
+                if (!insideAtRuleBody && isAtRuleBraceAt(text, i)) {
+                    insideAtRuleBody = true;
+                    atRuleDepth = depth;
+                }
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth < 0) depth = 0;
+                // If we've closed back to the at-rule level, we're no longer in it
+                if (insideAtRuleBody && depth <= atRuleDepth) {
+                    insideAtRuleBody = false;
+                    atRuleDepth = -1;
+                }
+            }
         }
 
-        if (open <= close) {
+        if (depth == 0) {
             ctx.zone = Zone.SELECTOR;
             return ctx;
         }
 
-        ctx.zone = detectDeclarationZone(text, cursorPos);
-        if (ctx.zone == Zone.VALUE) {
+        // Check if on the current line we're writing a value (has colon after last separator)
+        Zone declZone = detectDeclarationZone(text, cursorPos);
+        if (declZone == Zone.VALUE) {
+            ctx.zone = Zone.VALUE;
             ctx.propertyName = extractPropertyBeforeColon(getLineBeforeCursor(text, cursorPos));
+            return ctx;
         }
+
+        // Determine what zone based on depth and at-rule context
+        if (insideAtRuleBody && depth == atRuleDepth + 1) {
+            // Inside at-rule body but NOT inside a selector block → show selectors
+            // e.g. @media (max-width: 768px) { HERE }
+            ctx.zone = Zone.SELECTOR;
+        } else if (depth == 1 && !insideAtRuleBody) {
+            // Inside a regular rule block at depth 1 (e.g. .class { HERE })
+            // Modern CSS allows nesting, so show both
+            ctx.zone = Zone.NESTED_SELECTOR;
+        } else if (depth >= 2) {
+            // Deeper nesting — could be nested rule or property
+            ctx.zone = Zone.NESTED_SELECTOR;
+        } else {
+            ctx.zone = Zone.PROPERTY;
+        }
+
         return ctx;
     }
 
     /**
+     * Checks whether the opening brace at position {@code bracePos} belongs to an at-rule
+     * (@media, @supports, @container, @layer, @keyframes, @font-face).
+     */
+    private boolean isAtRuleBraceAt(String text, int bracePos) {
+        // Walk backward from the brace to find the most recent @ symbol
+        int searchStart = Math.max(0, bracePos - 200);
+        String before = text.substring(searchStart, bracePos);
+        // Find last unmatched at-rule (no { between it and our brace)
+        int lastAt = before.lastIndexOf('@');
+        if (lastAt < 0) return false;
+        // Check there's no other { between the @rule and this brace
+        String between = before.substring(lastAt);
+        if (between.indexOf('{') >= 0) return false;
+        // Verify it's actually an at-rule keyword
+        Matcher m = Pattern.compile("@(media|supports|container|layer|keyframes|font-face|property|counter-style)\\b")
+                .matcher(between);
+        return m.find();
+    }
+
+    /**
      * Within a declaration block, determines if cursor is in property-name or value zone.
-     * Finds the last meaningful separator (;, {, or } ) then checks if there's a colon after it.
      */
     private Zone detectDeclarationZone(String text, int cursorPos) {
-        String line = getLineBeforeCursor(text, cursorPos);
-        // Isolate the current declaration (after last ; or {)
-        int blockStart = Math.max(line.lastIndexOf(';'), line.lastIndexOf('{'));
-        String currentDecl = blockStart >= 0 ? line.substring(blockStart + 1) : line;
-        // Also handle inline styles with multiple properties: split on ';'
-        int semiInDecl = currentDecl.lastIndexOf(';');
-        if (semiInDecl >= 0) currentDecl = currentDecl.substring(semiInDecl + 1);
-
-        return currentDecl.contains(":") ? Zone.VALUE : Zone.PROPERTY;
+        // Look back from cursor to find the start of the current declaration
+        int i = cursorPos - 1;
+        while (i >= 0) {
+            char c = text.charAt(i);
+            if (c == ';' || c == '{' || c == '}') break;
+            i--;
+        }
+        // Check if there's a colon in the current declaration segment
+        String currentDecl = text.substring(i + 1, cursorPos);
+        // Ignore colons inside url() or other function calls
+        int colonIdx = -1;
+        int parenDepth = 0;
+        for (int j = 0; j < currentDecl.length(); j++) {
+            char c = currentDecl.charAt(j);
+            if (c == '(') parenDepth++;
+            else if (c == ')') parenDepth--;
+            else if (c == ':' && parenDepth == 0) { colonIdx = j; break; }
+        }
+        return colonIdx >= 0 ? Zone.VALUE : Zone.PROPERTY;
     }
 
     private String extractPropertyBeforeColon(String line) {
-        int blockStart = Math.max(line.lastIndexOf(';'), line.lastIndexOf('{'));
+        // Walk backward from cursor on the line to find colon, ignoring function parens
+        int blockStart = -1;
+        for (int i = line.length() - 1; i >= 0; i--) {
+            char c = line.charAt(i);
+            if (c == ';' || c == '{') { blockStart = i; break; }
+        }
         String decl = blockStart >= 0 ? line.substring(blockStart + 1) : line;
-        int colon = decl.lastIndexOf(':');
+        int colon = -1;
+        int parenDepth = 0;
+        for (int i = 0; i < decl.length(); i++) {
+            char c = decl.charAt(i);
+            if (c == '(') parenDepth++;
+            else if (c == ')') parenDepth--;
+            else if (c == ':' && parenDepth == 0) { colon = i; break; }
+        }
         return colon < 0 ? "" : decl.substring(0, colon).trim();
     }
 
     // ─── Zone-specific suggestion builders ────────────────────────────────────
 
     private List<CompletionItem> getValueSuggestions(String propertyName, String word, String fullText) {
-        // Emmet CSS shorthand in value position (e.g. "bgc" → "background-color: #|;")
+        // Emmet CSS shorthand in value position
         String expanded = EmmetParser.expandCss(word);
         if (expanded != null) {
             List<CompletionItem> res = new ArrayList<>();
@@ -426,9 +485,33 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         return fuzzyFilter(all, word);
     }
 
+    /**
+     * Suggestions for nested selector context (inside a rule block with CSS nesting support).
+     * Shows selectors (HTML tags, & prefix, class/id), properties, and Emmet at once —
+     * matching how VS Code behaves inside nested CSS.
+     */
+    private List<CompletionItem> getNestedSuggestions(String word, String trimmed, String fullText, int cursorPos) {
+        // Emmet CSS shorthand takes priority
+        String emmetAbbr = getEmmetAbbreviationBeforeCursor(fullText, cursorPos);
+        String expanded = EmmetParser.expandCss(emmetAbbr);
+        if (expanded != null) {
+            List<CompletionItem> res = new ArrayList<>();
+            CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet", CompletionItem.Type.SNIPPET, 0);
+            emmetItem.setReplaceLength(emmetAbbr.length());
+            res.add(emmetItem);
+            return res;
+        }
+
+        // Combine properties + selectors (properties listed first for relevance)
+        List<CompletionItem> all = new ArrayList<>(propertyItems);
+        all.addAll(cachedCustomProps);
+        all.addAll(htmlTagItems);
+        return fuzzyFilter(all, word);
+    }
+
     private List<CompletionItem> getSelectorSuggestions(String word, String trimmed) {
         if (word.startsWith(":")) {
-            return fuzzyFilter(PSEUDO_ITEMS, word.substring(1)); // strip ":" since insertTexts don't have it
+            return fuzzyFilter(PSEUDO_ITEMS, word.substring(1));
         }
         return fuzzyFilter(htmlTagItems, word);
     }
@@ -443,31 +526,104 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
                 || p.endsWith("shadow") || p.equals("caret-color") || p.equals("accent-color");
     }
 
-    /**
-     * Returns true if the cursor is inside an unclosed @media ( … ) feature list.
-     * Scans backward up to 300 chars for "@media" then counts unbalanced parentheses.
-     */
-    private boolean isInsideMediaQuery(String text, int cursorPos) {
-        int start = Math.max(0, cursorPos - 300);
-        String snippet = text.substring(start, cursorPos);
-        int mediaIdx = snippet.lastIndexOf("@media");
-        if (mediaIdx < 0) return false;
-        String afterMedia = snippet.substring(mediaIdx);
-        // Check for unclosed ( after @media
+    private List<CompletionItem> getMediaSuggestions(String fullText, int cursorPos, String word) {
+        String line = getLineBeforeCursor(fullText, cursorPos);
+
+        // Determine if inside parentheses of the media condition
         int open = 0, close = 0;
-        for (char c : afterMedia.toCharArray()) {
-            if (c == '(') open++;
-            else if (c == ')') close++;
+        // Find the at-rule start on this line or nearby
+        int searchStart = Math.max(0, cursorPos - 300);
+        String snippet = fullText.substring(searchStart, cursorPos);
+        int atIdx = snippet.lastIndexOf("@media");
+        if (atIdx < 0) atIdx = snippet.lastIndexOf("@supports");
+        if (atIdx < 0) atIdx = snippet.lastIndexOf("@container");
+        if (atIdx >= 0) {
+            String afterAt = snippet.substring(atIdx);
+            for (char c : afterAt.toCharArray()) {
+                if (c == '(') open++;
+                else if (c == ')') close++;
+            }
         }
-        return open > close;
+        boolean inParens = open > close;
+
+        List<CompletionItem> items = new ArrayList<>();
+
+        if (!inParens) {
+            String[] keywords = {"screen", "print", "all", "and", "not", "only"};
+            for (String kw : keywords) {
+                items.add(new CompletionItem(kw, kw + " ", "Media type/keyword", CompletionItem.Type.KEYWORD, 0));
+            }
+        }
+
+        String[][] features = {
+                {"max-width", "max-width: |"},
+                {"min-width", "min-width: |"},
+                {"max-height", "max-height: |"},
+                {"min-height", "min-height: |"},
+                {"width", "width: |"},
+                {"height", "height: |"},
+                {"orientation: portrait", "orientation: portrait"},
+                {"orientation: landscape", "orientation: landscape"},
+                {"prefers-color-scheme: dark", "prefers-color-scheme: dark"},
+                {"prefers-color-scheme: light", "prefers-color-scheme: light"},
+                {"prefers-reduced-motion", "prefers-reduced-motion: reduce"},
+                {"hover: hover", "hover: hover"},
+                {"hover: none", "hover: none"},
+                {"pointer: fine", "pointer: fine"},
+                {"pointer: coarse", "pointer: coarse"},
+                {"display-mode: standalone", "display-mode: standalone"},
+                {"aspect-ratio", "aspect-ratio: |"},
+                {"resolution", "resolution: |"}
+        };
+
+        for (String[] f : features) {
+            String label = f[0];
+            String insertText = f[1];
+
+            if (!inParens) {
+                insertText = "(" + insertText + ")";
+            }
+
+            int offset = 0;
+            if (insertText.contains("|")) {
+                String after = insertText.substring(insertText.indexOf('|') + 1);
+                offset = -after.length();
+                insertText = insertText.replace("|", "");
+            }
+            items.add(new CompletionItem(label, insertText, "Media feature", CompletionItem.Type.CSS_VALUE, offset));
+        }
+
+        return fuzzyFilter(items, word);
+    }
+
+    /**
+     * Determines if the cursor is inside an at-rule CONDITION (before the opening brace).
+     * e.g. "@media screen and (|)" or "@supports (display: grid|)"
+     * Returns false once the { is opened (we're in the body, not the condition).
+     */
+    private boolean isInsideAtRuleCondition(String text, int cursorPos) {
+        int start = Math.max(0, cursorPos - 500);
+        String snippet = text.substring(start, cursorPos);
+
+        // Find the last @media/@supports/@container
+        int mediaIdx = -1;
+        for (String rule : new String[]{"@media", "@supports", "@container"}) {
+            int idx = snippet.lastIndexOf(rule);
+            if (idx > mediaIdx) mediaIdx = idx;
+        }
+        if (mediaIdx < 0) return false;
+
+        String afterRule = snippet.substring(mediaIdx);
+        // If there's an opening brace, we're past the condition and inside the body
+        return afterRule.indexOf('{') < 0;
     }
 
     private boolean isInsideRuleBlock(String text, int pos) {
-        int open = 0, close = 0;
+        int depth = 0;
         for (int i = 0; i < pos && i < text.length(); i++) {
-            if (text.charAt(i) == '{') open++;
-            if (text.charAt(i) == '}') close++;
+            if (text.charAt(i) == '{') depth++;
+            if (text.charAt(i) == '}') depth--;
         }
-        return open > close;
+        return depth > 0;
     }
 }

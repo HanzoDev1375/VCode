@@ -284,9 +284,8 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         String word = getWordBeforeCursor(fullText, cursorPos);
 
         // ── 1. Import / require path completion ──────────────────────────────
-        // Check FIRST — must take priority over all other completions
         List<CompletionItem> importItems = getImportPathSuggestions(fullText, cursorPos);
-        if (importItems != null) return importItems; // null = "not in import context"; empty = no files found
+        if (importItems != null) return importItems;
 
         // ── 1b. Event name string completions (addEventListener/removeEventListener) ──
         String lineBefore = getLineBeforeCursor(fullText, cursorPos);
@@ -305,18 +304,113 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // ── 2. Dot-member completion ─────────────────────────────────────────
-        // With the getWordBeforeCursor fix: after "Math.", word="" and the char before is '.'
         int dotCheckPos = cursorPos - word.length() - 1;
         if (dotCheckPos >= 0 && fullText.charAt(dotCheckPos) == '.') {
             List<CompletionItem> memberItems = getMemberCompletions(fullText, dotCheckPos, word);
             if (!memberItems.isEmpty()) return memberItems;
         }
 
+        // ── 2b. Object literal key completion ────────────────────────────────
+        // If we're inside an object literal (after { or ,) suggest known keys
+        List<CompletionItem> objKeys = getObjectLiteralSuggestions(fullText, cursorPos, word);
+        if (objKeys != null) return objKeys;
+
         // ── 3. General: keywords + user symbols ──────────────────────────────
         ensureDocumentIndexed(fullText);
         List<CompletionItem> all = new ArrayList<>(builtinItems);
         all.addAll(cachedUserSymbols);
         return fuzzyFilter(all, word);
+    }
+
+    // ─── Object literal key suggestions ────────────────────────────────────────
+
+    /**
+     * Detects if cursor is in an object literal key position and suggests known keys.
+     * Returns null if not in object literal context, empty list if in context but no suggestions.
+     *
+     * <p>Detects these patterns:
+     * <ul>
+     *   <li>{@code { | }} — after opening brace</li>
+     *   <li>{@code { key: value, | }} — after comma in object</li>
+     *   <li>Destructuring: {@code const { | } = obj}</li>
+     * </ul>
+     */
+    private List<CompletionItem> getObjectLiteralSuggestions(String fullText, int cursorPos, String word) {
+        // Find the character that precedes the current word (skip whitespace)
+        int i = cursorPos - word.length() - 1;
+        while (i >= 0 && Character.isWhitespace(fullText.charAt(i))) i--;
+        if (i < 0) return null;
+
+        char preceding = fullText.charAt(i);
+        // Object key position indicators: after { or after ,
+        if (preceding != '{' && preceding != ',') return null;
+
+        // Verify we're actually inside an object literal by checking brace balance
+        // and ensuring this isn't a code block (function body, if block, etc.)
+        // Code blocks are preceded by ) (if/for/while), else, or start a function body
+        if (preceding == '{') {
+            // Walk back to see if this { is a code block or an object literal
+            int j = i - 1;
+            while (j >= 0 && Character.isWhitespace(fullText.charAt(j))) j--;
+            if (j >= 0) {
+                char beforeBrace = fullText.charAt(j);
+                // Code block indicators
+                if (beforeBrace == ')' || beforeBrace == '>' ) return null; // arrow function body or if/for
+                // Check for keywords that indicate code blocks
+                String context = fullText.substring(Math.max(0, j - 10), j + 1).trim();
+                if (context.endsWith("else") || context.endsWith("try") || context.endsWith("catch")
+                        || context.endsWith("finally") || context.endsWith("do")) {
+                    return null;
+                }
+            }
+        }
+
+        // We're likely in an object literal — gather keys from same object and similar objects
+        ensureDocumentIndexed(fullText);
+
+        // Collect keys already used in this object (to avoid re-suggesting them)
+        java.util.Set<String> usedKeys = new java.util.HashSet<>();
+        int braceStart = findMatchingBrace(fullText, cursorPos);
+        if (braceStart >= 0) {
+            String objContent = fullText.substring(braceStart + 1, cursorPos);
+            Matcher keyMatcher = Pattern.compile("([a-zA-Z_$][\\w$]*)\\s*[,:]").matcher(objContent);
+            while (keyMatcher.find()) {
+                usedKeys.add(keyMatcher.group(1));
+            }
+        }
+
+        // Collect common object property names from the document
+        List<CompletionItem> items = new ArrayList<>();
+        java.util.Set<String> seen = new java.util.HashSet<>(usedKeys);
+
+        // Extract all object keys in the document
+        Matcher objKeyMatcher = Pattern.compile("([a-zA-Z_$][\\w$]*)\\s*:(?!=)").matcher(fullText);
+        int limit = Math.min(fullText.length(), 100_000);
+        while (objKeyMatcher.find() && objKeyMatcher.start() < limit) {
+            String key = objKeyMatcher.group(1);
+            if (key.length() > 1 && seen.add(key)) {
+                items.add(new CompletionItem(key, key, "Object key", CompletionItem.Type.VALUE, 0));
+            }
+        }
+
+        if (items.isEmpty()) return null; // Not enough context to suggest
+        return fuzzyFilter(items, word);
+    }
+
+    /**
+     * Finds the position of the opening { for the object literal we're currently in.
+     */
+    private int findMatchingBrace(String text, int cursorPos) {
+        int depth = 0;
+        for (int i = cursorPos - 1; i >= 0; i--) {
+            char c = text.charAt(i);
+            if (c == '}') depth++;
+            else if (c == '{') {
+                if (depth == 0) return i;
+                depth--;
+            }
+        }
+        return -1;
     }
 
     // ─── Import / require path completion ─────────────────────────────────────
