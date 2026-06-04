@@ -5,74 +5,263 @@ import android.content.Context;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 /**
- * ECMAScript/JavaScript IntelliSense engine.
- * Computes context using static namespace mapping tables, standard reserved core words,
- * and regular expression syntax tracking for symbols declared on the fly by developers.
+ * ECMAScript/JavaScript IntelliSense engine — mirrors VS Code's JavaScript Language Server behaviour.
+ *
+ * <p>Key behaviours:
+ * <ul>
+ *   <li>Member items use insertText = just the method name (e.g. "floor(|)"), NOT "Math.floor(|)".
+ *       The dot and namespace are already in the document — we only insert after the dot.</li>
+ *   <li>Dot completion triggers when cursor is right after '.' (word = "" thanks to getWordBeforeCursor fix).</li>
+ *   <li>Chained-call completion: "fetch('url')." → Promise methods; "arr.filter(...)." → Array methods.</li>
+ *   <li>Import/require path completion: shows files immediately when cursor is inside quote.</li>
+ *   <li>Document symbol indexing is cached — only re-scans when text changes.</li>
+ * </ul>
  */
 public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
-    // Regex parsing pattern aimed at capturing function definitions, variable assignments, and class structures
-    private static final Pattern PAT_USER_FUNC = Pattern.compile(
-            "(function|const|let|var|class)\\s+([a-zA-Z_$][\\w$]*)");
+    // ─── Regex patterns ────────────────────────────────────────────────────────
+    private static final Pattern PAT_USER_DECL = Pattern.compile(
+            "(?:function\\s+([a-zA-Z_$][\\w$]*)\\s*\\()"           // named function
+            + "|(?:class\\s+([a-zA-Z_$][\\w$]*))"                   // class
+            + "|(?:(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*)\\s*=\\s*(?:async\\s*)?(?:\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>)" // arrow fn
+            + "|(?:(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*))");     // variable
 
-    private static final Pattern PAT_WORD = Pattern.compile("[a-zA-Z_$][\\w$]*");
+    private static final Pattern PAT_WORD = Pattern.compile("[a-zA-Z_$][\\w$]{1,}");
 
-    // Built-in API global namespace method dictionary maps
+    /** Detects cursor inside addEventListener(' or on( string argument for event names */
+    private static final Pattern PAT_EVENT_STRING = Pattern.compile(
+            "(?:addEventListener|removeEventListener|on)\\s*\\(\\s*['\"]([^'\"]*?)$");
+
+    // ─── Static namespace → comma-separated method list ────────────────────────
     private static final String[][] DOT_METHODS = {
-            {"console", "log,warn,error,info,table,time,timeEnd,assert,clear,count"},
-            {"Math", "floor,ceil,round,abs,max,min,random,sqrt,pow,PI,E,log,sin,cos,tan"},
-            {"JSON", "parse,stringify"},
-            {"Array", "from,isArray,of"},
-            {"Object", "keys,values,entries,assign,create,freeze,seal,defineProperty,getOwnPropertyNames"},
-            {"Promise", "all,race,resolve,reject,allSettled,any"},
-            {"document", "getElementById,querySelector,querySelectorAll,createElement,createTextNode," +
-                    "addEventListener,removeEventListener,body,head,title,cookie,write,readyState"},
-            {"window", "location,history,navigator,alert,confirm,prompt,open,close," +
-                    "setTimeout,setInterval,clearTimeout,clearInterval,scrollTo,scrollBy"},
-            {"navigator", "userAgent,language,onLine,geolocation,clipboard,mediaDevices"},
-            {"location", "href,pathname,search,hash,reload,replace,assign,origin"},
-            {"history", "back,forward,go,pushState,replaceState,length"},
-            {"localStorage", "getItem,setItem,removeItem,clear,length,key"},
+            {"console",        "log,warn,error,info,table,time,timeEnd,timeLog,assert,clear,count,countReset,group,groupEnd,groupCollapsed,dir,dirxml,trace,debug,profile,profileEnd"},
+            {"Math",           "floor,ceil,round,abs,max,min,random,sqrt,pow,PI,E,LN2,LN10,LOG2E,SQRT2,log,log2,log10,sign,trunc,sin,cos,tan,asin,acos,atan,atan2,sinh,cosh,tanh,cbrt,hypot,clz32,imul,fround"},
+            {"JSON",           "parse,stringify"},
+            {"Array",          "from,isArray,of"},
+            {"Object",         "keys,values,entries,assign,create,freeze,seal,isFrozen,isSealed,defineProperty,defineProperties,getOwnPropertyNames,getOwnPropertyDescriptors,getPrototypeOf,setPrototypeOf,hasOwn,fromEntries,is,groupBy"},
+            {"Promise",        "all,race,resolve,reject,allSettled,any,withResolvers"},
+            {"Number",         "isFinite,isInteger,isNaN,isSafeInteger,parseInt,parseFloat,MAX_VALUE,MIN_VALUE,MAX_SAFE_INTEGER,MIN_SAFE_INTEGER,EPSILON,POSITIVE_INFINITY,NEGATIVE_INFINITY,NaN"},
+            {"String",         "fromCharCode,fromCodePoint,raw"},
+            {"Date",           "now,parse,UTC"},
+            {"Map",            "groupBy"},
+            {"Set",            ""},
+            {"WeakMap",        ""},
+            {"WeakSet",        ""},
+            {"RegExp",         ""},
+            {"Symbol",         "iterator,asyncIterator,hasInstance,toPrimitive,toStringTag,for,keyFor"},
+            {"Reflect",        "apply,construct,defineProperty,deleteProperty,get,getOwnPropertyDescriptor,getPrototypeOf,has,isExtensible,ownKeys,preventExtensions,set,setPrototypeOf"},
+            {"Proxy",          "revocable"},
+            {"document",       "getElementById,querySelector,querySelectorAll,createElement,createTextNode,createDocumentFragment,createComment,addEventListener,removeEventListener,body,head,title,cookie,write,writeln,readyState,documentElement,activeElement,forms,images,links,scripts,styleSheets,hidden,visibilityState,fullscreenElement,pointerLockElement,designMode,execCommand,getSelection,hasFocus,open,close,importNode,adoptNode,createEvent,createRange,createTreeWalker,elementsFromPoint,elementFromPoint,exitFullscreen,exitPointerLock,scrollingElement"},
+            {"window",         "location,history,navigator,alert,confirm,prompt,open,close,scrollTo,scrollBy,setTimeout,setInterval,clearTimeout,clearInterval,requestAnimationFrame,cancelAnimationFrame,requestIdleCallback,cancelIdleCallback,fetch,addEventListener,removeEventListener,getComputedStyle,matchMedia,innerWidth,innerHeight,outerWidth,outerHeight,devicePixelRatio,performance,screen,crypto,indexedDB,caches,customElements,visualViewport,structuredClone,atob,btoa,queueMicrotask,reportError,postMessage,focus,blur,print,stop,getSelection"},
+            {"navigator",      "userAgent,language,languages,onLine,geolocation,clipboard,mediaDevices,permissions,serviceWorker,hardwareConcurrency,cookieEnabled,platform,maxTouchPoints,connection,storage,locks,credentials,sendBeacon,vibrate,share,canShare,getBattery,getGamepads,requestMIDIAccess,wakeLock"},
+            {"location",       "href,pathname,search,hash,hostname,port,protocol,host,origin,reload,replace,assign,toString"},
+            {"history",        "back,forward,go,pushState,replaceState,length,state,scrollRestoration"},
+            {"localStorage",   "getItem,setItem,removeItem,clear,length,key"},
             {"sessionStorage", "getItem,setItem,removeItem,clear,length,key"},
+            {"performance",    "now,mark,measure,clearMarks,clearMeasures,getEntries,getEntriesByName,getEntriesByType,timeOrigin,navigation,timing"},
+            {"crypto",         "subtle,getRandomValues,randomUUID"},
+            {"screen",         "width,height,availWidth,availHeight,colorDepth,pixelDepth,orientation"},
+            {"URL",            "createObjectURL,revokeObjectURL,canParse"},
+            {"URLSearchParams","append,delete,get,getAll,has,set,sort,toString,entries,keys,values,forEach,size"},
+            {"FormData",       "append,delete,get,getAll,has,set,entries,keys,values,forEach"},
+            {"Headers",        "append,delete,get,has,set,entries,keys,values,forEach"},
+            {"Request",        "clone,arrayBuffer,blob,formData,json,text,url,method,headers,body,mode,credentials,cache,redirect,referrer,integrity,signal"},
+            {"Response",       "clone,arrayBuffer,blob,formData,json,text,ok,status,statusText,headers,url,type,redirected,error,redirect"},
+            {"AbortController","abort,signal"},
+            {"IntersectionObserver","observe,unobserve,disconnect,takeRecords,root,rootMargin,thresholds"},
+            {"ResizeObserver",  "observe,unobserve,disconnect"},
+            {"MutationObserver","observe,disconnect,takeRecords"},
+            {"EventTarget",    "addEventListener,removeEventListener,dispatchEvent"},
+            {"CustomEvent",    "detail"},
+            {"WebSocket",      "send,close,onopen,onclose,onmessage,onerror,readyState,url,protocol,binaryType,bufferedAmount,CONNECTING,OPEN,CLOSING,CLOSED"},
+            {"Worker",         "postMessage,terminate,onmessage,onerror"},
+            {"BroadcastChannel","postMessage,close,onmessage,name"},
+            {"Intl",           "DateTimeFormat,NumberFormat,Collator,PluralRules,RelativeTimeFormat,ListFormat,Segmenter,DisplayNames,Locale"},
+            {"TextEncoder",    "encode,encodeInto,encoding"},
+            {"TextDecoder",    "decode,encoding,fatal,ignoreBOM"},
+            {"DOMParser",      "parseFromString"},
+            {"XMLSerializer",  "serializeToString"},
     };
+
+    // ─── Event names for addEventListener string completion ────────────────────
+    private static final String[] EVENT_NAMES = {
+            "click", "dblclick", "mousedown", "mouseup", "mousemove", "mouseover", "mouseout",
+            "mouseenter", "mouseleave", "contextmenu", "wheel",
+            "keydown", "keyup", "keypress",
+            "focus", "blur", "focusin", "focusout",
+            "input", "change", "submit", "reset", "invalid",
+            "touchstart", "touchmove", "touchend", "touchcancel",
+            "pointerdown", "pointerup", "pointermove", "pointerenter", "pointerleave",
+            "pointerover", "pointerout", "pointercancel", "gotpointercapture", "lostpointercapture",
+            "scroll", "scrollend", "resize",
+            "load", "error", "abort", "unload", "beforeunload",
+            "DOMContentLoaded", "readystatechange",
+            "animationstart", "animationend", "animationiteration", "animationcancel",
+            "transitionstart", "transitionend", "transitionrun", "transitioncancel",
+            "drag", "dragstart", "dragend", "dragover", "dragenter", "dragleave", "drop",
+            "copy", "cut", "paste",
+            "play", "pause", "ended", "timeupdate", "volumechange", "seeking", "seeked",
+            "canplay", "canplaythrough", "loadeddata", "loadedmetadata", "progress", "waiting", "stalled",
+            "fullscreenchange", "fullscreenerror",
+            "visibilitychange", "online", "offline", "storage",
+            "hashchange", "popstate", "pagehide", "pageshow",
+            "message", "messageerror",
+            "open", "close",
+            "toggle", "beforetoggle",
+            "select", "selectstart", "selectionchange",
+            "slotchange",
+            "formdata",
+    };
+
+    /**
+     * Prototype method completions for typed variables — keyed by inferred type.
+     */
+    private static final Map<String, String[]> PROTOTYPE_METHODS = new HashMap<>();
+
+    /**
+     * When a chained call finishes with one of these method names, the NEXT dot
+     * should complete with the returned type's methods.
+     * e.g. "arr.filter(...).map" → filter returns array → show array methods.
+     */
+    private static final Map<String, String> CHAIN_RETURN_TYPES = new HashMap<>();
+
+    /**
+     * Function names that always return a Promise (without needing a declared variable).
+     */
+    private static final Set<String> PROMISE_FUNCTIONS = new HashSet<>();
+
+    static {
+        PROTOTYPE_METHODS.put("array", new String[]{
+                "push","pop","shift","unshift","splice","slice","concat","join","reverse","sort",
+                "indexOf","lastIndexOf","includes","find","findIndex","findLast","findLastIndex",
+                "filter","map","reduce","reduceRight","forEach","some","every","flat","flatMap",
+                "fill","copyWithin","entries","keys","values","at","toReversed","toSorted","toSpliced",
+                "with","toString","toLocaleString","length","group","groupToMap"
+        });
+        PROTOTYPE_METHODS.put("string", new String[]{
+                "charAt","charCodeAt","codePointAt","at","concat","includes","startsWith","endsWith",
+                "indexOf","lastIndexOf","search","match","matchAll","replace","replaceAll","split",
+                "slice","substring","padStart","padEnd","trimStart","trimEnd","trim",
+                "toUpperCase","toLowerCase","toLocaleLowerCase","toLocaleUpperCase","normalize",
+                "repeat","valueOf","toString","length","isWellFormed","toWellFormed","localeCompare"
+        });
+        PROTOTYPE_METHODS.put("number", new String[]{"toFixed","toPrecision","toExponential","toString","valueOf","toLocaleString"});
+        PROTOTYPE_METHODS.put("promise", new String[]{"then","catch","finally"});
+        PROTOTYPE_METHODS.put("map",     new String[]{"set","get","has","delete","clear","forEach","keys","values","entries","size"});
+        PROTOTYPE_METHODS.put("set",     new String[]{"add","has","delete","clear","forEach","values","keys","entries","size","union","intersection","difference","symmetricDifference","isSubsetOf","isSupersetOf"});
+        PROTOTYPE_METHODS.put("date",    new String[]{"getTime","getFullYear","getMonth","getDate","getDay","getHours","getMinutes","getSeconds","getMilliseconds","setTime","setFullYear","setMonth","setDate","setHours","setMinutes","setSeconds","toISOString","toLocaleDateString","toLocaleTimeString","toLocaleString","toJSON","toString","valueOf","getTimezoneOffset"});
+        PROTOTYPE_METHODS.put("regexp",  new String[]{"test","exec","toString","source","flags","global","ignoreCase","multiline","sticky","unicode","lastIndex"});
+        PROTOTYPE_METHODS.put("element", new String[]{
+                "addEventListener","removeEventListener","setAttribute","getAttribute","removeAttribute",
+                "hasAttribute","toggleAttribute","closest","matches","querySelector","querySelectorAll",
+                "classList","style","dataset","innerHTML","textContent","innerText","outerHTML","outerText",
+                "appendChild","removeChild","insertBefore","replaceChild","replaceChildren","cloneNode",
+                "contains","remove","before","after","prepend","append","insertAdjacentHTML",
+                "insertAdjacentElement","insertAdjacentText","getBoundingClientRect","getClientRects",
+                "scrollIntoView","scroll","scrollTo","scrollBy","focus","blur","click",
+                "animate","getAnimations","requestFullscreen","attachShadow",
+                "id","className","tagName","localName","parentElement","parentNode",
+                "children","childNodes","childElementCount","firstChild","lastChild",
+                "firstElementChild","lastElementChild","nextSibling","previousSibling",
+                "nextElementSibling","previousElementSibling",
+                "offsetWidth","offsetHeight","offsetTop","offsetLeft","offsetParent",
+                "clientWidth","clientHeight","clientTop","clientLeft",
+                "scrollWidth","scrollHeight","scrollTop","scrollLeft",
+                "hidden","isConnected","slot","assignedSlot"
+        });
+        PROTOTYPE_METHODS.put("nodelist", new String[]{"forEach","entries","keys","values","item","length"});
+        PROTOTYPE_METHODS.put("response", new String[]{"json","text","blob","arrayBuffer","formData","clone","ok","status","statusText","headers","url","type","redirected"});
+        PROTOTYPE_METHODS.put("event", new String[]{"preventDefault","stopPropagation","stopImmediatePropagation","target","currentTarget","type","bubbles","cancelable","composed","timeStamp","isTrusted","defaultPrevented","eventPhase"});
+        PROTOTYPE_METHODS.put("classlist", new String[]{"add","remove","toggle","contains","replace","item","length","value","entries","keys","values","forEach","supports"});
+        PROTOTYPE_METHODS.put("style", new String[]{"getPropertyValue","setProperty","removeProperty","cssText","length","item"});
+
+        // Array methods that return arrays (chained calls)
+        for (String m : new String[]{"filter","map","slice","concat","flat","flatMap","sort","reverse","toReversed","toSorted","splice","copyWithin","fill","from","of","keys","values","entries"}) {
+            CHAIN_RETURN_TYPES.put(m, "array");
+        }
+        // String methods that return strings
+        for (String m : new String[]{"trim","trimStart","trimEnd","toLowerCase","toUpperCase","replace","replaceAll","slice","substring","padStart","padEnd","repeat","normalize","concat","charAt","at","toLocaleLowerCase","toLocaleUpperCase"}) {
+            CHAIN_RETURN_TYPES.put(m, "string");
+        }
+        // Promise-returning methods
+        for (String m : new String[]{"then","catch","finally","all","race","allSettled","any","resolve","reject"}) {
+            CHAIN_RETURN_TYPES.put(m, "promise");
+        }
+        // DOM query methods return elements
+        for (String m : new String[]{"querySelector","getElementById","createElement","closest","parentElement","firstElementChild","lastElementChild","nextElementSibling","previousElementSibling","cloneNode"}) {
+            CHAIN_RETURN_TYPES.put(m, "element");
+        }
+        // DOM query methods returning NodeList
+        for (String m : new String[]{"querySelectorAll","getElementsByClassName","getElementsByTagName","childNodes","children"}) {
+            CHAIN_RETURN_TYPES.put(m, "nodelist");
+        }
+        // Methods returning responses
+        for (String m : new String[]{"clone"}) {
+            // clone can return various; skip if already mapped
+        }
+        // classList returns ClassList
+        CHAIN_RETURN_TYPES.put("classList", "classlist");
+        // style returns CSSStyleDeclaration
+        CHAIN_RETURN_TYPES.put("style", "style");
+        // json() returns promise
+        CHAIN_RETURN_TYPES.put("json", "promise");
+        CHAIN_RETURN_TYPES.put("text", "promise");
+        CHAIN_RETURN_TYPES.put("blob", "promise");
+        CHAIN_RETURN_TYPES.put("arrayBuffer", "promise");
+        CHAIN_RETURN_TYPES.put("formData", "promise");
+
+        // Functions that always return promises
+        for (String f : new String[]{"fetch","axios","axios.get","axios.post","axios.put","axios.delete"}) {
+            PROMISE_FUNCTIONS.add(f);
+        }
+    }
+
+    // ─── Instance state ─────────────────────────────────────────────────────────
     private final List<CompletionItem> builtinItems = new ArrayList<>();
+    private int lastTextHash = 0;
+    private final List<CompletionItem> cachedUserSymbols = new ArrayList<>();
+    private final Map<String, String> varTypeMap = new HashMap<>();
+    private File currentFile;
 
     public JsAutoCompleteEngine(Context context) {
         super(context);
         loadKeywords();
     }
 
-    /**
-     * Loads system keywords, syntax constructs, and framework labels out of source configuration file.
-     */
+    public void setCurrentFile(File file) {
+        this.currentFile = file;
+    }
+
+    // ─── Keyword loading ───────────────────────────────────────────────────────
+
     private void loadKeywords() {
         try {
             String json = loadAssetJson("completions/js_keywords.json");
             JSONArray arr = new JSONArray(json);
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
-                String label = obj.optString("label");
+                String label   = obj.optString("label");
                 String typeStr = obj.optString("type", "KEYWORD");
-                String snippet = obj.optString("snippet", label);
-                String detail = obj.optString("detail", "");
+                String snippet = obj.optString("snippet", obj.optString("insertText", label));
+                String detail  = obj.optString("detail", "");
 
                 CompletionItem.Type type;
-                try {
-                    type = CompletionItem.Type.valueOf(typeStr);
-                } catch (Exception e) {
-                    type = CompletionItem.Type.KEYWORD;
-                }
+                try { type = CompletionItem.Type.valueOf(typeStr); }
+                catch (Exception e) { type = CompletionItem.Type.KEYWORD; }
 
                 int offset = 0;
-                // Evaluate explicit placement indices using the internal pipe code token '|'
                 if (snippet.contains("|")) {
                     String after = snippet.substring(snippet.indexOf('|') + 1);
                     offset = -after.length();
@@ -85,6 +274,8 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         }
     }
 
+    // ─── Main entry point ──────────────────────────────────────────────────────
+
     @Override
     public List<CompletionItem> getSuggestions(String fullText, int cursorPos) {
         if (fullText == null || cursorPos < 0 || cursorPos > fullText.length())
@@ -92,62 +283,332 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
         String word = getWordBeforeCursor(fullText, cursorPos);
 
-        // Member fields requested via Dot notation '.' -> Extract parent name and match methods
-        int potentialDotIdx = cursorPos - word.length() - 1;
-        if (potentialDotIdx >= 0 && fullText.charAt(potentialDotIdx) == '.') {
-            String beforeDot = getNonWhitespaceBeforeCursor(fullText, potentialDotIdx).trim();
+        // ── 1. Import / require path completion ──────────────────────────────
+        // Check FIRST — must take priority over all other completions
+        List<CompletionItem> importItems = getImportPathSuggestions(fullText, cursorPos);
+        if (importItems != null) return importItems; // null = "not in import context"; empty = no files found
 
-            for (String[] pair : DOT_METHODS) {
-                // If context prefix aligns with an object namespace definition, process member properties
-                if (beforeDot.equals(pair[0]) || beforeDot.endsWith(pair[0]) || beforeDot.endsWith("." + pair[0])) {
-                    String[] methods = pair[1].split(",");
-                    List<CompletionItem> items = new ArrayList<>();
-                    for (String m : methods) {
-                        items.add(new CompletionItem(m, m, pair[0] + " method",
-                                CompletionItem.Type.BUILTIN, 0));
-                    }
-                    return fuzzyFilter(items, word);
-                }
+        // ── 1b. Event name string completions (addEventListener/removeEventListener) ──
+        String lineBefore = getLineBeforeCursor(fullText, cursorPos);
+        Matcher eventMatcher = PAT_EVENT_STRING.matcher(lineBefore);
+        if (eventMatcher.find()) {
+            String typedEvent = eventMatcher.group(1);
+            List<CompletionItem> eventItems = new ArrayList<>();
+            for (String ev : EVENT_NAMES) {
+                eventItems.add(new CompletionItem(ev, ev, "DOM Event", CompletionItem.Type.VALUE, 0));
             }
+            return fuzzyFilter(eventItems, typedEvent);
         }
 
-        // General fallback execution -> Gather keywords and scan local user-declared tokens
+        if (isInsideStringLiteral(fullText, cursorPos)) {
+            return new ArrayList<>();
+        }
+
+        // ── 2. Dot-member completion ─────────────────────────────────────────
+        // With the getWordBeforeCursor fix: after "Math.", word="" and the char before is '.'
+        int dotCheckPos = cursorPos - word.length() - 1;
+        if (dotCheckPos >= 0 && fullText.charAt(dotCheckPos) == '.') {
+            List<CompletionItem> memberItems = getMemberCompletions(fullText, dotCheckPos, word);
+            if (!memberItems.isEmpty()) return memberItems;
+        }
+
+        // ── 3. General: keywords + user symbols ──────────────────────────────
+        ensureDocumentIndexed(fullText);
         List<CompletionItem> all = new ArrayList<>(builtinItems);
+        all.addAll(cachedUserSymbols);
+        return fuzzyFilter(all, word);
+    }
 
-        // Perform text matching sweep to dynamically index active workspace variables or functions
-        Set<String> seen = new HashSet<>();
-        for (CompletionItem item : all) {
-            seen.add(item.getLabel());
+    // ─── Import / require path completion ─────────────────────────────────────
+
+    /**
+     * Returns file completions when cursor is inside an import/require path string.
+     *
+     * @return list of file completions, empty list if inside import but no matches,
+     *         or {@code null} if NOT inside an import context at all.
+     */
+    private List<CompletionItem> getImportPathSuggestions(String fullText, int cursorPos) {
+        if (currentFile == null) return null;
+
+        String lineBefore = getLineBeforeCursor(fullText, cursorPos);
+
+        // Match: import ... from '...' or require('...')
+        // The group captures everything typed after the opening quote (may be empty)
+        Matcher m = Pattern.compile(
+                "(?:from\\s+['\"]|require\\s*\\(\\s*['\"])([^'\"]*)?$"
+        ).matcher(lineBefore);
+
+        if (!m.find()) return null; // Not inside an import path
+
+        String typedPath = m.group(1) != null ? m.group(1) : "";
+        return buildFileCompletions(typedPath);
+    }
+
+    private List<CompletionItem> buildFileCompletions(String typedPath) {
+        File baseDir = currentFile.getParentFile();
+        if (baseDir == null) return new ArrayList<>();
+
+        int lastSlash = typedPath.lastIndexOf('/');
+        File searchDir;
+        String filterPrefix;
+
+        if (lastSlash != -1) {
+            String dirPart = typedPath.substring(0, lastSlash);
+            filterPrefix = typedPath.substring(lastSlash + 1).toLowerCase();
+            searchDir = dirPart.isEmpty() ? baseDir : new File(baseDir, dirPart);
+        } else {
+            filterPrefix = typedPath.toLowerCase();
+            // For relative paths (start with . or /) search base dir; for bare names also show from base dir
+            searchDir = baseDir;
         }
 
-        Matcher m = PAT_USER_FUNC.matcher(fullText);
-        int scanLimit = Math.min(fullText.length(), 50000); // Caps lookups to preserve memory on huge files
-        while (m.find() && m.start() < scanLimit) {
-            String keyword = m.group(1);
-            String name = m.group(2);
-            if (name != null && !name.isEmpty() && seen.add(name)) {
-                CompletionItem.Type type = CompletionItem.Type.VALUE;
-                String detail = "Variable";
-                if ("function".equals(keyword)) {
-                    type = CompletionItem.Type.FUNCTION;
-                    detail = "Function";
-                } else if ("class".equals(keyword)) {
-                    type = CompletionItem.Type.KEYWORD;
-                    detail = "Class";
+        if (!searchDir.exists() || !searchDir.isDirectory()) return new ArrayList<>();
+
+        List<CompletionItem> items = new ArrayList<>();
+        File[] files = searchDir.listFiles();
+        if (files != null) {
+            for (File f : files) {
+                String name = f.getName();
+                if (name.startsWith(".")) continue;
+                if (!filterPrefix.isEmpty() && !name.toLowerCase().startsWith(filterPrefix)) continue;
+
+                if (f.isDirectory()) {
+                    items.add(new CompletionItem(name + "/", name + "/",
+                            "Directory", CompletionItem.Type.FOLDER, 0));
+                } else if (isJsLike(name) || typedPath.isEmpty()) {
+                    items.add(new CompletionItem(name, name, "File", CompletionItem.Type.FILE, 0));
                 }
-                all.add(new CompletionItem(name, name, detail, type, 0));
             }
         }
 
-        // Add all other words in the document as generic suggestions
-        Matcher wordMatcher = PAT_WORD.matcher(fullText);
+        java.util.Collections.sort(items, (a, b) -> {
+            int fa = a.getType() == CompletionItem.Type.FOLDER ? 0 : 1;
+            int fb = b.getType() == CompletionItem.Type.FOLDER ? 0 : 1;
+            if (fa != fb) return fa - fb;
+            return a.getLabel().compareToIgnoreCase(b.getLabel());
+        });
+        return items.size() > MAX_SUGGESTIONS ? items.subList(0, MAX_SUGGESTIONS) : items;
+    }
+
+    private boolean isJsLike(String name) {
+        String lower = name.toLowerCase();
+        return lower.endsWith(".js") || lower.endsWith(".ts") || lower.endsWith(".jsx")
+                || lower.endsWith(".tsx") || lower.endsWith(".json") || lower.endsWith(".mjs");
+    }
+
+    // ─── Dot-member completion ─────────────────────────────────────────────────
+
+    /**
+     * Computes member completions for the object/expression before the dot.
+     *
+     * <p>Insert text is ONLY the method name (e.g. "floor(|)"), never "Math.floor(|)".
+     * The namespace is already in the document — we insert only AFTER the dot.
+     */
+    private List<CompletionItem> getMemberCompletions(String text, int dotPos, String word) {
+        String objectToken = extractObjectBeforeDot(text, dotPos);
+        if (objectToken == null || objectToken.isEmpty()) return new ArrayList<>();
+
+        // ── a. Check known static namespaces ─────────────────────────────────
+        for (String[] pair : DOT_METHODS) {
+            if (pair[0].equalsIgnoreCase(objectToken) || objectToken.endsWith(pair[0])) {
+                return buildMemberList(pair[0], pair[1].split(","), word, CompletionItem.Type.BUILTIN);
+            }
+        }
+
+        // ── b. Functions that always return Promise (e.g. fetch) ──────────────
+        if (PROMISE_FUNCTIONS.contains(objectToken)) {
+            return buildMemberList("Promise", PROTOTYPE_METHODS.get("promise"), word, CompletionItem.Type.FUNCTION);
+        }
+
+        // ── c. Chain return type — e.g. "arr.filter(...)" → array methods ────
+        String chainType = CHAIN_RETURN_TYPES.get(objectToken);
+        if (chainType != null) {
+            String[] methods = PROTOTYPE_METHODS.get(chainType);
+            if (methods != null) {
+                return buildMemberList(chainType, methods, word, CompletionItem.Type.FUNCTION);
+            }
+        }
+
+        // ── d. User-variable type inference ───────────────────────────────────
+        String inferredType = varTypeMap.get(objectToken);
+        if (inferredType != null) {
+            // First check prototype methods (array, string, etc.)
+            String[] methods = PROTOTYPE_METHODS.get(inferredType);
+            if (methods != null) {
+                return buildMemberList(inferredType, methods, word, CompletionItem.Type.FUNCTION);
+            }
+            // Then check DOT_METHODS (for types like IntersectionObserver, WebSocket etc.)
+            for (String[] pair : DOT_METHODS) {
+                if (pair[0].equals(inferredType)) {
+                    return buildMemberList(pair[0], pair[1].split(","), word, CompletionItem.Type.BUILTIN);
+                }
+            }
+        }
+
+        // ── e. Heuristic name-based guess ─────────────────────────────────────
+        String lower = objectToken.toLowerCase();
+        for (Map.Entry<String, String[]> entry : PROTOTYPE_METHODS.entrySet()) {
+            String key = entry.getKey();
+            if (lower.contains(key) || (key.equals("array") && (lower.contains("arr") || lower.contains("list") || lower.contains("items") || lower.endsWith("s")))
+                    || (key.equals("element") && (lower.startsWith("el") || lower.contains("elem") || lower.contains("node") || lower.contains("btn") || lower.contains("div")))) {
+                return buildMemberList(key, entry.getValue(), word, CompletionItem.Type.FUNCTION);
+            }
+        }
+
+        return new ArrayList<>();
+    }
+
+    /**
+     * Builds a member completion list.
+     * InsertText is ONLY the member name (never "namespace.member") so the cursor-already-past-dot
+     * insertion in {@code CodeEditText.insertCompletion} puts the right text after the dot.
+     */
+    private List<CompletionItem> buildMemberList(String ns, String[] methods, String word, CompletionItem.Type type) {
+        if (methods == null) return new ArrayList<>();
+        List<CompletionItem> items = new ArrayList<>();
+        for (String m : methods) {
+            m = m.trim();
+            if (m.isEmpty()) continue;
+            // Constants (all-caps or known names) don't get parentheses
+            boolean isConstant = m.equals(m.toUpperCase()) || m.equals("length") || m.equals("size")
+                    || Character.isUpperCase(m.charAt(0));
+            // insertText is just the method name — the dot and namespace are already in the doc
+            String insert = isConstant ? m : m + "(|)";
+            items.add(new CompletionItem(m, insert, ns + " member", type, 0));
+        }
+        return fuzzyFilter(items, word);
+    }
+
+    /**
+     * Walks backward from {@code dotPos - 1} to extract the identifier or expression
+     * immediately before the dot, handling: simple identifiers, function calls {@code ()},
+     * and array accesses {@code []}.
+     */
+    private String extractObjectBeforeDot(String text, int dotPos) {
+        if (dotPos <= 0) return "";
+        int i = dotPos - 1;
+
+        // Skip spaces before dot
+        while (i >= 0 && text.charAt(i) == ' ') i--;
+        if (i < 0) return "";
+
+        // Handle closing ) — walk past the entire argument list
+        if (text.charAt(i) == ')') {
+            int depth = 0;
+            while (i >= 0) {
+                char c = text.charAt(i);
+                if (c == ')') depth++;
+                else if (c == '(') { depth--; if (depth == 0) { i--; break; } }
+                i--;
+            }
+            while (i >= 0 && text.charAt(i) == ' ') i--;
+            if (i < 0) return "";
+        }
+
+        // Handle closing ] — walk past array access
+        if (i >= 0 && text.charAt(i) == ']') {
+            int depth = 0;
+            while (i >= 0) {
+                char c = text.charAt(i);
+                if (c == ']') depth++;
+                else if (c == '[') { depth--; if (depth == 0) { i--; break; } }
+                i--;
+            }
+            while (i >= 0 && text.charAt(i) == ' ') i--;
+            if (i < 0) return "";
+        }
+
+        // Collect the identifier
+        if (i < 0 || !isWordChar(text.charAt(i))) return "";
+        int end = i + 1;
+        while (i > 0 && isWordChar(text.charAt(i - 1))) i--;
+        return text.substring(i, end);
+    }
+
+    // ─── Document symbol indexing ──────────────────────────────────────────────
+
+    private void ensureDocumentIndexed(String text) {
+        int hash = text.hashCode();
+        if (hash == lastTextHash) return;
+        lastTextHash = hash;
+        cachedUserSymbols.clear();
+        varTypeMap.clear();
+
+        Set<String> seen = new HashSet<>();
+        for (CompletionItem item : builtinItems) seen.add(item.getLabel());
+
+        int scanLimit = Math.min(text.length(), 100_000);
+
+        Matcher m = PAT_USER_DECL.matcher(text);
+        while (m.find() && m.start() < scanLimit) {
+            String name = firstNonNull(m.group(1), m.group(2), m.group(3), m.group(4));
+            if (name == null || name.isEmpty() || !seen.add(name)) continue;
+
+            boolean isFunction = m.group(1) != null || m.group(3) != null;
+            boolean isClass    = m.group(2) != null;
+
+            CompletionItem.Type type;
+            String detail;
+            if (isClass) { type = CompletionItem.Type.KEYWORD; detail = "Class"; }
+            else if (isFunction) { type = CompletionItem.Type.FUNCTION; detail = "Function"; }
+            else { type = CompletionItem.Type.VALUE; detail = "Variable";
+                inferVariableType(text, m.end(), name, scanLimit); }
+
+            cachedUserSymbols.add(new CompletionItem(name, name, detail, type, 0));
+        }
+
+        Matcher wordMatcher = PAT_WORD.matcher(text);
         while (wordMatcher.find() && wordMatcher.start() < scanLimit) {
             String w = wordMatcher.group();
-            if (w.length() >= 2 && seen.add(w)) {
-                all.add(new CompletionItem(w, w, "Document Word", CompletionItem.Type.VALUE, 0));
+            if (w.length() >= 3 && seen.add(w)) {
+                cachedUserSymbols.add(new CompletionItem(w, w, "Word", CompletionItem.Type.VALUE, 0));
             }
         }
+    }
 
-        return fuzzyFilter(all, word);
+    private void inferVariableType(String text, int afterDeclEnd, String varName, int scanLimit) {
+        if (afterDeclEnd >= scanLimit) return;
+        int end = Math.min(afterDeclEnd + 120, scanLimit);
+        String snippet = text.substring(afterDeclEnd, end);
+
+        int stop = snippet.indexOf(';'); if (stop != -1) snippet = snippet.substring(0, stop);
+        stop = snippet.indexOf('\n'); if (stop != -1) snippet = snippet.substring(0, stop);
+        snippet = snippet.trim();
+
+        if (snippet.startsWith("=")) {
+            snippet = snippet.substring(1).trim();
+            if (snippet.startsWith("[") || snippet.startsWith("Array.from"))   varTypeMap.put(varName, "array");
+            else if (snippet.startsWith("\"") || snippet.startsWith("'") || snippet.startsWith("`")) varTypeMap.put(varName, "string");
+            else if (snippet.startsWith("new Promise"))           varTypeMap.put(varName, "promise");
+            else if (snippet.startsWith("fetch(") || snippet.startsWith("axios")) varTypeMap.put(varName, "promise");
+            else if (snippet.startsWith("new Map"))               varTypeMap.put(varName, "map");
+            else if (snippet.startsWith("new Set"))               varTypeMap.put(varName, "set");
+            else if (snippet.startsWith("new Date"))              varTypeMap.put(varName, "date");
+            else if (snippet.startsWith("new RegExp") || snippet.startsWith("/"))  varTypeMap.put(varName, "regexp");
+            else if (snippet.startsWith("new IntersectionObserver")) varTypeMap.put(varName, "IntersectionObserver");
+            else if (snippet.startsWith("new ResizeObserver"))    varTypeMap.put(varName, "ResizeObserver");
+            else if (snippet.startsWith("new MutationObserver"))  varTypeMap.put(varName, "MutationObserver");
+            else if (snippet.startsWith("new WebSocket"))         varTypeMap.put(varName, "WebSocket");
+            else if (snippet.startsWith("new Worker"))            varTypeMap.put(varName, "Worker");
+            else if (snippet.startsWith("new BroadcastChannel")) varTypeMap.put(varName, "BroadcastChannel");
+            else if (snippet.startsWith("new AbortController"))  varTypeMap.put(varName, "AbortController");
+            else if (snippet.startsWith("new URL("))             varTypeMap.put(varName, "URL");
+            else if (snippet.startsWith("new URLSearchParams"))  varTypeMap.put(varName, "URLSearchParams");
+            else if (snippet.startsWith("new FormData"))         varTypeMap.put(varName, "FormData");
+            else if (snippet.startsWith("new Headers"))          varTypeMap.put(varName, "Headers");
+            else if (snippet.startsWith("document.querySelector") || snippet.startsWith("document.getElementById") || snippet.startsWith("document.createElement")) varTypeMap.put(varName, "element");
+            else if (snippet.startsWith("document.querySelectorAll") || snippet.startsWith("document.getElementsBy")) varTypeMap.put(varName, "nodelist");
+            else if (snippet.contains(".filter(") || snippet.contains(".map(") || snippet.contains(".slice(") || snippet.contains(".concat(") || snippet.contains(".flat(") || snippet.contains("Array.from")) varTypeMap.put(varName, "array");
+            else if (snippet.contains(".then("))                  varTypeMap.put(varName, "promise");
+            else if (snippet.contains(".split("))                 varTypeMap.put(varName, "array");
+            else if (snippet.contains(".toString(") || snippet.contains(".trim(") || snippet.contains(".replace(")) varTypeMap.put(varName, "string");
+            else if (snippet.matches("^\\d.*"))                   varTypeMap.put(varName, "number");
+        }
+    }
+
+    @SafeVarargs
+    private static <T> T firstNonNull(T... values) {
+        for (T v : values) if (v != null) return v;
+        return null;
     }
 }

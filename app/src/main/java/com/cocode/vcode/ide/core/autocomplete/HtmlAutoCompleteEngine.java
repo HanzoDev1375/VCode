@@ -7,39 +7,295 @@ import com.cocode.vcode.ide.core.parser.HtmlTagParser;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
- * Intelligent completion coordinator for HTML source code structures.
- * Leverages tag parsers to seamlessly offer elements, closing parameters, or legal inline attributes.
+ * Intelligent completion coordinator for HTML source code — mirrors VS Code's HTML language server.
+ *
+ * <p>Feature highlights:
+ * <ul>
+ *   <li>VS Code-style fuzzy scoring via {@link AutoCompleteEngine#fuzzyFilter}</li>
+ *   <li>Tag completions with self-closing awareness (void elements get {@code />})</li>
+ *   <li>Attribute completions per tag (loaded from JSON) + global HTML attributes</li>
+ *   <li>Attribute-value enumerations (e.g., {@code type="…"} → text, email, checkbox…)</li>
+ *   <li>Inline {@code style="…"} delegates to {@link CssAutoCompleteEngine}</li>
+ *   <li>Inline {@code on*="…"} event-handler attributes delegate to {@link JsAutoCompleteEngine}</li>
+ *   <li>Embedded {@code <style>} / {@code <script>} block delegation</li>
+ *   <li>Smart file-path completions for {@code src}, {@code href}, {@code action}, {@code data} attributes</li>
+ *   <li>Full Emmet expansion (unchanged — keeps pipe-based cursor positioning)</li>
+ *   <li>Closing-tag auto-suggestion on {@code </}</li>
+ * </ul>
  */
 public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
-    private final List<CompletionItem> tagItems = new ArrayList<>();
-    private final HtmlTagParser tagParser = new HtmlTagParser();
+    // ─── Patterns ───────────────────────────────────────────────────────────────
+    /** Detects cursor inside a file-path attribute value. */
+    private static final Pattern PAT_PATH_ATTR = Pattern.compile(
+            "(?s).*\\b(src|href|action|poster|data|srcset)\\s*=\\s*[\"']([^\"']*)$");
+    /** Detects cursor inside an inline style attribute. */
+    private static final Pattern PAT_STYLE_ATTR = Pattern.compile(
+            "(?s).*\\bstyle\\s*=\\s*[\"'][^\"']*$");
+    /** Detects cursor inside an on* event handler attribute. */
+    private static final Pattern PAT_EVENT_ATTR = Pattern.compile(
+            "(?s).*\\bon[a-z]+\\s*=\\s*[\"'][^\"']*$");
+    /** Detects cursor inside an attribute whose value is a known enumeration. */
+    private static final Pattern PAT_ENUM_ATTR = Pattern.compile(
+            "(?s).*\\b([a-zA-Z-]+)\\s*=\\s*[\"']([^\"']*)$");
 
-    // Maps a base tag identifier (e.g. "img") directly to its applicable attribute options array
-    private final java.util.Map<String, List<CompletionItem>> attrMap = new java.util.HashMap<>();
+    // ─── Global attributes present on every HTML element ───────────────────────
+    private static final List<CompletionItem> GLOBAL_ATTRS = new ArrayList<>();
+
+    // ─── Event handler attributes ──────────────────────────────────────────────
+    private static final List<CompletionItem> EVENT_ATTRS = new ArrayList<>();
+
+    // ─── DOCTYPE / entity completions ──────────────────────────────────────────
+    private static final List<CompletionItem> DOCTYPE_ITEMS = new ArrayList<>();
+    private static final List<CompletionItem> ENTITY_ITEMS = new ArrayList<>();
+
+    static {
+        String[][] globals = {
+                {"class",           "class=\"|\"",          "CSS class names"},
+                {"id",              "id=\"|\"",             "Unique element ID"},
+                {"style",           "style=\"|\"",          "Inline CSS styles"},
+                {"title",           "title=\"|\"",          "Tooltip text"},
+                {"lang",            "lang=\"|\"",           "Language code"},
+                {"dir",             "dir=\"|\"",            "Text direction"},
+                {"tabindex",        "tabindex=\"|\"",       "Tab order"},
+                {"hidden",          "hidden",               "Hide element"},
+                {"aria-label",      "aria-label=\"|\"",     "Accessible label"},
+                {"aria-hidden",     "aria-hidden=\"true\"", "Hide from assistive tech"},
+                {"aria-describedby","aria-describedby=\"|\"","Accessible description"},
+                {"aria-labelledby", "aria-labelledby=\"|\"","Accessible label (element)"},
+                {"aria-live",       "aria-live=\"|\"",      "Live region"},
+                {"aria-expanded",   "aria-expanded=\"|\"",  "Expanded state"},
+                {"aria-controls",   "aria-controls=\"|\"",  "Controls element"},
+                {"aria-current",    "aria-current=\"|\"",   "Current item indicator"},
+                {"aria-disabled",   "aria-disabled=\"|\"",  "Disabled state"},
+                {"aria-required",   "aria-required=\"|\"",  "Required field"},
+                {"aria-invalid",    "aria-invalid=\"|\"",   "Validation state"},
+                {"aria-haspopup",   "aria-haspopup=\"|\"",  "Has popup"},
+                {"aria-selected",   "aria-selected=\"|\"",  "Selected state"},
+                {"aria-checked",    "aria-checked=\"|\"",   "Checked state"},
+                {"aria-valuemin",   "aria-valuemin=\"|\"",  "Minimum value"},
+                {"aria-valuemax",   "aria-valuemax=\"|\"",  "Maximum value"},
+                {"aria-valuenow",   "aria-valuenow=\"|\"",  "Current value"},
+                {"role",            "role=\"|\"",           "ARIA role"},
+                {"data-",           "data-|=\"\"",          "Custom data attribute"},
+                {"draggable",       "draggable=\"|\"",      "Enable dragging"},
+                {"contenteditable", "contenteditable=\"|\"","Editable content"},
+                {"spellcheck",      "spellcheck=\"|\"",     "Spell check"},
+                {"translate",       "translate=\"|\"",      "Translation hint"},
+                {"accesskey",       "accesskey=\"|\"",      "Keyboard shortcut"},
+                {"autocapitalize",  "autocapitalize=\"|\"", "Auto-capitalise"},
+                {"enterkeyhint",    "enterkeyhint=\"|\"",   "Enter key label"},
+                {"inputmode",       "inputmode=\"|\"",      "Virtual keyboard type"},
+                {"is",              "is=\"|\"",             "Custom element name"},
+                {"part",            "part=\"|\"",           "CSS shadow part"},
+                {"slot",            "slot=\"|\"",           "Named slot target"},
+                {"popover",         "popover",              "Popover element"},
+                {"autofocus",       "autofocus",            "Auto focus on load"},
+                {"inert",           "inert",                "Non-interactive subtree"},
+                {"nonce",           "nonce=\"|\"",          "CSP nonce"},
+        };
+        for (String[] g : globals) {
+            GLOBAL_ATTRS.add(new CompletionItem(g[0], g[1], g[2], CompletionItem.Type.ATTRIBUTE, 0));
+        }
+
+        // Event handler attributes — complete list matching MDN
+        String[][] events = {
+                {"onclick",       "onclick=\"|\"",       "Mouse click"},
+                {"ondblclick",    "ondblclick=\"|\"",    "Double click"},
+                {"onmousedown",   "onmousedown=\"|\"",   "Mouse button pressed"},
+                {"onmouseup",     "onmouseup=\"|\"",     "Mouse button released"},
+                {"onmouseover",   "onmouseover=\"|\"",   "Mouse enters element"},
+                {"onmouseout",    "onmouseout=\"|\"",    "Mouse leaves element"},
+                {"onmousemove",   "onmousemove=\"|\"",   "Mouse moves over element"},
+                {"onmouseenter",  "onmouseenter=\"|\"",  "Mouse enters (no bubble)"},
+                {"onmouseleave",  "onmouseleave=\"|\"",  "Mouse leaves (no bubble)"},
+                {"onkeydown",     "onkeydown=\"|\"",     "Key pressed"},
+                {"onkeyup",       "onkeyup=\"|\"",       "Key released"},
+                {"onkeypress",    "onkeypress=\"|\"",    "Key press (deprecated)"},
+                {"onfocus",       "onfocus=\"|\"",       "Element gains focus"},
+                {"onblur",        "onblur=\"|\"",        "Element loses focus"},
+                {"onfocusin",     "onfocusin=\"|\"",     "Focus (bubbles)"},
+                {"onfocusout",    "onfocusout=\"|\"",    "Blur (bubbles)"},
+                {"onchange",      "onchange=\"|\"",      "Value changed"},
+                {"oninput",       "oninput=\"|\"",       "Input value changes"},
+                {"onsubmit",      "onsubmit=\"|\"",      "Form submitted"},
+                {"onreset",       "onreset=\"|\"",       "Form reset"},
+                {"oninvalid",     "oninvalid=\"|\"",     "Input validation fails"},
+                {"onselect",      "onselect=\"|\"",      "Text selected"},
+                {"onload",        "onload=\"|\"",        "Resource loaded"},
+                {"onerror",       "onerror=\"|\"",       "Error occurred"},
+                {"onresize",      "onresize=\"|\"",      "Element resized"},
+                {"onscroll",      "onscroll=\"|\"",      "Element scrolled"},
+                {"onwheel",       "onwheel=\"|\"",       "Wheel rotated"},
+                {"oncontextmenu", "oncontextmenu=\"|\"", "Context menu opened"},
+                {"ondrag",        "ondrag=\"|\"",        "Dragging"},
+                {"ondragstart",   "ondragstart=\"|\"",   "Drag started"},
+                {"ondragend",     "ondragend=\"|\"",     "Drag ended"},
+                {"ondragover",    "ondragover=\"|\"",    "Dragged over target"},
+                {"ondragenter",   "ondragenter=\"|\"",   "Enters drop target"},
+                {"ondragleave",   "ondragleave=\"|\"",   "Leaves drop target"},
+                {"ondrop",        "ondrop=\"|\"",        "Dropped on target"},
+                {"ontouchstart",  "ontouchstart=\"|\"",  "Touch started"},
+                {"ontouchmove",   "ontouchmove=\"|\"",   "Touch moved"},
+                {"ontouchend",    "ontouchend=\"|\"",    "Touch ended"},
+                {"ontouchcancel", "ontouchcancel=\"|\"", "Touch cancelled"},
+                {"onpointerdown", "onpointerdown=\"|\"", "Pointer pressed"},
+                {"onpointerup",   "onpointerup=\"|\"",   "Pointer released"},
+                {"onpointermove", "onpointermove=\"|\"", "Pointer moved"},
+                {"onpointerenter","onpointerenter=\"|\"","Pointer enters"},
+                {"onpointerleave","onpointerleave=\"|\"","Pointer leaves"},
+                {"onpointerover", "onpointerover=\"|\"", "Pointer over"},
+                {"onpointerout",  "onpointerout=\"|\"",  "Pointer out"},
+                {"onpointercancel","onpointercancel=\"|\"","Pointer cancelled"},
+                {"onanimationstart","onanimationstart=\"|\"","CSS animation starts"},
+                {"onanimationend", "onanimationend=\"|\"","CSS animation ends"},
+                {"onanimationiteration","onanimationiteration=\"|\"","CSS animation repeats"},
+                {"ontransitionend","ontransitionend=\"|\"","CSS transition ends"},
+                {"oncopy",        "oncopy=\"|\"",        "Content copied"},
+                {"oncut",         "oncut=\"|\"",         "Content cut"},
+                {"onpaste",       "onpaste=\"|\"",       "Content pasted"},
+                {"onplay",        "onplay=\"|\"",        "Media playback starts"},
+                {"onpause",       "onpause=\"|\"",       "Media playback paused"},
+                {"onended",       "onended=\"|\"",       "Media playback ended"},
+                {"ontimeupdate",  "ontimeupdate=\"|\"",  "Media time changed"},
+                {"onvolumechange","onvolumechange=\"|\"","Media volume changed"},
+                {"oncanplay",     "oncanplay=\"|\"",     "Media can start"},
+                {"ontoggle",      "ontoggle=\"|\"",      "Details toggled"},
+        };
+        for (String[] ev : events) {
+            EVENT_ATTRS.add(new CompletionItem(ev[0], ev[1], ev[2], CompletionItem.Type.ATTRIBUTE, 0));
+        }
+        GLOBAL_ATTRS.addAll(EVENT_ATTRS);
+
+        // DOCTYPE completions
+        DOCTYPE_ITEMS.add(new CompletionItem("<!DOCTYPE html>", "<!DOCTYPE html>\n", "HTML5 DOCTYPE", CompletionItem.Type.SNIPPET, 0));
+        DOCTYPE_ITEMS.add(new CompletionItem("<!-- -->", "<!-- | -->", "Comment", CompletionItem.Type.SNIPPET, 0));
+
+        // HTML entity completions
+        String[][] entities = {
+                {"&amp;",    "&amp;",    "& ampersand"},
+                {"&lt;",     "&lt;",     "< less-than"},
+                {"&gt;",     "&gt;",     "> greater-than"},
+                {"&quot;",   "&quot;",   "\" quotation mark"},
+                {"&apos;",   "&apos;",   "' apostrophe"},
+                {"&nbsp;",   "&nbsp;",   "Non-breaking space"},
+                {"&copy;",   "&copy;",   "\u00A9 copyright"},
+                {"&reg;",    "&reg;",    "\u00AE registered"},
+                {"&trade;",  "&trade;",  "\u2122 trademark"},
+                {"&mdash;",  "&mdash;",  "\u2014 em dash"},
+                {"&ndash;",  "&ndash;",  "\u2013 en dash"},
+                {"&laquo;",  "&laquo;",  "\u00AB left guillemet"},
+                {"&raquo;",  "&raquo;",  "\u00BB right guillemet"},
+                {"&bull;",   "&bull;",   "\u2022 bullet"},
+                {"&hellip;", "&hellip;", "\u2026 horizontal ellipsis"},
+                {"&larr;",   "&larr;",   "\u2190 left arrow"},
+                {"&rarr;",   "&rarr;",   "\u2192 right arrow"},
+                {"&uarr;",   "&uarr;",   "\u2191 up arrow"},
+                {"&darr;",   "&darr;",   "\u2193 down arrow"},
+                {"&times;",  "&times;",  "\u00D7 multiplication"},
+                {"&divide;", "&divide;", "\u00F7 division"},
+                {"&plusmn;", "&plusmn;", "\u00B1 plus-minus"},
+                {"&deg;",    "&deg;",    "\u00B0 degree"},
+                {"&infin;",  "&infin;",  "\u221E infinity"},
+                {"&lsquo;",  "&lsquo;",  "\u2018 left single quote"},
+                {"&rsquo;",  "&rsquo;",  "\u2019 right single quote"},
+                {"&ldquo;",  "&ldquo;",  "\u201C left double quote"},
+                {"&rdquo;",  "&rdquo;",  "\u201D right double quote"},
+                {"&euro;",   "&euro;",   "\u20AC euro sign"},
+                {"&pound;",  "&pound;",  "\u00A3 pound sign"},
+                {"&yen;",    "&yen;",    "\u00A5 yen sign"},
+                {"&cent;",   "&cent;",   "\u00A2 cent sign"},
+                {"&check;",  "&check;",  "\u2713 check mark"},
+                {"&hearts;", "&hearts;", "\u2665 heart"},
+                {"&star;",   "&star;",   "\u2606 star"},
+        };
+        for (String[] e : entities) {
+            ENTITY_ITEMS.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.VALUE, 0));
+        }
+    }
+
+    // ─── Attribute value enumerations ────────────────────────────────────────────
+    /** Maps attribute name → allowed values shown in VS Code dropdowns. */
+    private static final Map<String, String[]> ATTR_VALUES = new HashMap<>();
+
+    static {
+        ATTR_VALUES.put("type", new String[]{
+                "text","password","email","number","tel","url","search","date","time","datetime-local",
+                "month","week","color","range","checkbox","radio","file","hidden","submit","reset","button","image"
+        });
+        ATTR_VALUES.put("method",     new String[]{"get", "post", "dialog"});
+        ATTR_VALUES.put("enctype",    new String[]{"application/x-www-form-urlencoded", "multipart/form-data", "text/plain"});
+        ATTR_VALUES.put("target",     new String[]{"_blank", "_self", "_parent", "_top"});
+        ATTR_VALUES.put("rel",        new String[]{"noopener", "noreferrer", "nofollow", "stylesheet", "icon", "preload", "prefetch", "canonical", "alternate", "author", "license", "manifest", "dns-prefetch", "preconnect", "modulepreload", "prev", "next", "help", "search"});
+        ATTR_VALUES.put("loading",    new String[]{"lazy", "eager"});
+        ATTR_VALUES.put("decoding",   new String[]{"async", "sync", "auto"});
+        ATTR_VALUES.put("fetchpriority", new String[]{"high", "low", "auto"});
+        ATTR_VALUES.put("crossorigin",new String[]{"anonymous", "use-credentials"});
+        ATTR_VALUES.put("referrerpolicy", new String[]{"no-referrer","no-referrer-when-downgrade","origin","origin-when-cross-origin","same-origin","strict-origin","strict-origin-when-cross-origin","unsafe-url"});
+        ATTR_VALUES.put("autocomplete", new String[]{"on","off","name","email","username","current-password","new-password","one-time-code","postal-code","country","tel","address-line1","address-line2","city","state","zip"});
+        ATTR_VALUES.put("dir",        new String[]{"ltr", "rtl", "auto"});
+        ATTR_VALUES.put("draggable",  new String[]{"true", "false"});
+        ATTR_VALUES.put("contenteditable", new String[]{"true", "false", "plaintext-only"});
+        ATTR_VALUES.put("spellcheck", new String[]{"true", "false"});
+        ATTR_VALUES.put("translate",  new String[]{"yes", "no"});
+        ATTR_VALUES.put("scope",      new String[]{"col", "row", "colgroup", "rowgroup"});
+        ATTR_VALUES.put("wrap",       new String[]{"soft", "hard"});
+        ATTR_VALUES.put("preload",    new String[]{"none", "metadata", "auto"});
+        ATTR_VALUES.put("kind",       new String[]{"subtitles", "captions", "descriptions", "chapters", "metadata"});
+        ATTR_VALUES.put("inputmode",  new String[]{"none","text","decimal","numeric","tel","search","email","url"});
+        ATTR_VALUES.put("enterkeyhint", new String[]{"enter","done","go","next","previous","search","send"});
+        ATTR_VALUES.put("autocapitalize", new String[]{"off","none","on","sentences","words","characters"});
+        ATTR_VALUES.put("sandbox",    new String[]{"allow-forms","allow-modals","allow-popups","allow-same-origin","allow-scripts","allow-top-navigation"});
+        ATTR_VALUES.put("aria-live",  new String[]{"off", "polite", "assertive"});
+        ATTR_VALUES.put("aria-expanded", new String[]{"true", "false"});
+        ATTR_VALUES.put("aria-haspopup", new String[]{"true","false","menu","listbox","tree","grid","dialog"});
+        ATTR_VALUES.put("aria-current", new String[]{"page","step","location","date","time","true","false"});
+        ATTR_VALUES.put("aria-invalid", new String[]{"false","true","grammar","spelling"});
+        ATTR_VALUES.put("popover",    new String[]{"auto", "manual"});
+        ATTR_VALUES.put("shape",      new String[]{"rect", "circle", "poly", "default"});
+        ATTR_VALUES.put("http-equiv", new String[]{"content-type","default-style","refresh","x-ua-compatible","content-security-policy"});
+        ATTR_VALUES.put("name",       new String[]{"viewport","description","keywords","author","robots","theme-color","color-scheme","generator","application-name"});
+        ATTR_VALUES.put("property",   new String[]{"og:title","og:description","og:image","og:url","og:type","og:site_name","og:locale"});
+        ATTR_VALUES.put("role",       new String[]{"alert","alertdialog","application","article","banner","button","cell","checkbox","columnheader","combobox","complementary","contentinfo","definition","dialog","directory","document","feed","figure","form","grid","gridcell","group","heading","img","link","list","listbox","listitem","log","main","marquee","math","menu","menubar","menuitem","menuitemcheckbox","menuitemradio","navigation","none","note","option","presentation","progressbar","radio","radiogroup","region","row","rowgroup","rowheader","scrollbar","search","searchbox","separator","slider","spinbutton","status","switch","tab","table","tablist","tabpanel","term","textbox","timer","toolbar","tooltip","tree","treegrid","treeitem"});
+    }
+
+    // ─── Instance state ──────────────────────────────────────────────────────────
+    private final List<CompletionItem> tagItems = new ArrayList<>();
+    private final HtmlTagParser tagParser       = new HtmlTagParser();
+    private final Map<String, List<CompletionItem>> attrMap = new HashMap<>();
 
     private final CssAutoCompleteEngine cssEngine;
-    private final JsAutoCompleteEngine jsEngine;
-    private java.io.File currentFile;
+    private final JsAutoCompleteEngine  jsEngine;
+    private File currentFile;
     private String htmlBoilerplate;
 
     public HtmlAutoCompleteEngine(Context context) {
         super(context);
         loadTags();
         this.cssEngine = new CssAutoCompleteEngine(context);
-        this.jsEngine = new JsAutoCompleteEngine(context);
+        this.jsEngine  = new JsAutoCompleteEngine(context);
     }
 
-    public void setCurrentFile(java.io.File file) {
+    public void setCurrentFile(File file) {
         this.currentFile = file;
+        jsEngine.setCurrentFile(file);
     }
+
+    // ─── Tag loading ────────────────────────────────────────────────────────────
 
     /**
-     * Initializes global HTML tag structural rules and metadata specifications from storage.
+     * Initialises HTML tag completions and per-tag attribute lists from the JSON asset.
      */
     private void loadTags() {
         try {
@@ -47,34 +303,31 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             JSONArray arr = new JSONArray(json);
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
-                String tag = obj.optString("tag");
-                // Get the snippet with the pipe | perfectly intact
+                String tag     = obj.optString("tag");
                 String snippet = obj.optString("snippet", "<" + tag + ">|</" + tag + ">");
-                String detail = obj.optString("detail", "");
+                String detail  = obj.optString("detail", "");
 
-                // We completely removed the manual '|' stripping logic here!
-                // We just pass the raw snippet with the '|' directly to CodeEditText,
-                // and it will perfectly calculate the cursor position.
                 CompletionItem item = new CompletionItem(tag, snippet, detail,
                         CompletionItem.Type.TAG, 0);
                 tagItems.add(item);
 
+                // Build per-tag attribute list (tag-specific + global HTML attributes)
                 JSONArray attrs = obj.optJSONArray("attributes");
+                List<CompletionItem> attrList = new ArrayList<>(GLOBAL_ATTRS);
                 if (attrs != null) {
-                    List<CompletionItem> attrList = new ArrayList<>();
                     for (int j = 0; j < attrs.length(); j++) {
                         String attr = attrs.optString(j);
-                        // Also let CodeEditText handle the pipe for attributes!
-                        attrList.add(new CompletionItem(attr, attr + "=\"|\"",
-                                "", CompletionItem.Type.ATTRIBUTE, 0));
+                        attrList.add(0, new CompletionItem(attr, attr + "=\"|\"",
+                                detail.isEmpty() ? tag : detail, CompletionItem.Type.ATTRIBUTE, 0));
                     }
-                    attrMap.put(tag, attrList);
                 }
+                attrMap.put(tag, attrList);
             }
         } catch (Exception e) {
             // Completion data not critical — proceed with empty list
         }
 
+        // Load the ! boilerplate (Emmet)
         try {
             String template = loadAssetText("templates/template_blank.html");
             if (template != null && !template.trim().isEmpty()) {
@@ -89,6 +342,8 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
     }
 
+    // ─── Main entry point ───────────────────────────────────────────────────────
+
     @Override
     public List<CompletionItem> getSuggestions(String fullText, int cursorPos) {
         if (fullText == null || cursorPos < 0 || cursorPos > fullText.length()) {
@@ -96,10 +351,30 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         String lineBefore = getLineBeforeCursor(fullText, cursorPos);
-        String trimmed = lineBefore.trim();
-        String word = getWordBeforeCursor(fullText, cursorPos);
+        String trimmed    = lineBefore.trim();
+        String word       = getWordBeforeCursor(fullText, cursorPos);
 
-        // End tags requested via '</' -> Locate open elements and suggest automatic closure
+        // ── 1. DOCTYPE / comment completions (when typing "<!" or "<!D") ─────────
+        if (trimmed.equals("<!") || trimmed.startsWith("<!D") || trimmed.startsWith("<!d")) {
+            String filter = trimmed.startsWith("<!") ? trimmed.substring(2) : "";
+            return fuzzyFilter(DOCTYPE_ITEMS, filter);
+        }
+
+        // ── 1b. Entity completions (when typing "&" followed by letters) ──────
+        if (lineBefore.length() > 0) {
+            int ampIdx = lineBefore.lastIndexOf('&');
+            if (ampIdx >= 0) {
+                String afterAmp = lineBefore.substring(ampIdx + 1);
+                // Only trigger if no semicolon yet and chars are entity-like
+                if (!afterAmp.contains(";") && !afterAmp.contains(" ") && afterAmp.length() <= 10) {
+                    String entityFilter = "&" + afterAmp;
+                    List<CompletionItem> entityResults = fuzzyFilter(ENTITY_ITEMS, entityFilter);
+                    if (!entityResults.isEmpty()) return entityResults;
+                }
+            }
+        }
+
+        // ── 3. Closing-tag suggestion on "</" ─────────────────────────────────
         if (trimmed.endsWith("</") || lineBefore.endsWith("</")) {
             String unclosed = tagParser.getUnclosedTagAt(fullText, cursorPos);
             if (unclosed != null && !unclosed.isEmpty()) {
@@ -113,7 +388,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             }
         }
 
-        // Check if inside embedded <style> or <script> tags
+        // ── 4. Embedded <style> / <script> block delegation ───────────────────
         String unclosedBlock = tagParser.getUnclosedTagAt(fullText, cursorPos);
         if ("style".equals(unclosedBlock)) {
             return cssEngine.getSuggestions(fullText, cursorPos);
@@ -121,56 +396,82 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             return jsEngine.getSuggestions(fullText, cursorPos);
         }
 
-        // Caret sits inside active tag scope bounds -> Fetch valid local attribute properties
+        // ── 5. Inside an open tag — attribute / attribute-value completions ───
         String currentTag = tagParser.getCurrentOpenTagName(fullText, cursorPos);
         if (currentTag != null && !currentTag.isEmpty()) {
-            // Check if we are specifically inside an inline 'style="..."' attribute
-            String before = fullText.substring(0, cursorPos);
-            int lastOpen = before.lastIndexOf('<');
+            String before    = fullText.substring(0, cursorPos);
+            int    lastOpen  = before.lastIndexOf('<');
             if (lastOpen != -1) {
                 String tagText = before.substring(lastOpen);
-                if (tagText.matches("(?s).*\\bstyle\\s*=\\s*\"[^\"]*$") ||
-                        tagText.matches("(?s).*\\bstyle\\s*=\\s*'[^']*$")) {
+
+                // 5a. Inside style="…" → CSS
+                Matcher styleMatcher = PAT_STYLE_ATTR.matcher(tagText);
+                if (styleMatcher.matches()) {
                     return cssEngine.getSuggestions(fullText, cursorPos, true);
                 }
 
-                // File path attribute check for src, href, action, poster, data
-                java.util.regex.Matcher pathMatcher = java.util.regex.Pattern.compile("(?s).*\\b(src|href|action|poster|data)\\s*=\\s*[\"']([^\"']*)$").matcher(tagText);
+                // 5b. Inside on*="…" → JS
+                Matcher eventMatcher = PAT_EVENT_ATTR.matcher(tagText);
+                if (eventMatcher.matches()) {
+                    return jsEngine.getSuggestions(fullText, cursorPos);
+                }
+
+                // 5c. Inside file-path attribute → file suggestions
+                Matcher pathMatcher = PAT_PATH_ATTR.matcher(tagText);
                 if (pathMatcher.matches()) {
                     String typedPath = pathMatcher.group(2);
                     return getFileSuggestions(typedPath);
                 }
+
+                // 5d. Inside a generic attribute value (e.g. class="…", id="…", dir="…")
+                Matcher valueMatcher = PAT_ENUM_ATTR.matcher(tagText);
+                if (valueMatcher.matches()) {
+                    String attrName   = valueMatcher.group(1);
+                    String typedValue = valueMatcher.group(2);
+                    String[] values   = ATTR_VALUES.get(attrName);
+                    if (values != null) {
+                        List<CompletionItem> valItems = new ArrayList<>();
+                        for (String v : values) {
+                            valItems.add(new CompletionItem(v, v, attrName + " value",
+                                    CompletionItem.Type.VALUE, 0));
+                        }
+                        return fuzzyFilter(valItems, typedValue);
+                    }
+                    // We are inside quotes for an attribute, but we don't have specific completions.
+                    // Return empty list so we don't fall through and suggest attribute names.
+                    return new ArrayList<>();
+                }
             }
 
+            // 5e. Attribute name completions for the current tag
             List<CompletionItem> attrs = attrMap.get(currentTag);
-            if (attrs != null) {
-                return fuzzyFilter(attrs, word);
-            }
-            return new ArrayList<>(); // Stop searching tags if we are definitely inside attributes
+            if (attrs == null) attrs = new ArrayList<>(GLOBAL_ATTRS);
+            return fuzzyFilter(attrs, word);
         }
 
-        // Emmet support
+        // ── 6. Emmet expansion ────────────────────────────────────────────────
         String emmetAbbr = getEmmetAbbreviationBeforeCursor(fullText, cursorPos);
         List<CompletionItem> emmetResults = new ArrayList<>();
         if (emmetAbbr != null && !emmetAbbr.isEmpty() && !emmetAbbr.contains("<")) {
             String expanded = EmmetParser.expandHtml(emmetAbbr, htmlBoilerplate);
             if (expanded != null) {
-                if (emmetAbbr.contains(".") || emmetAbbr.contains("#") || emmetAbbr.contains(">") || emmetAbbr.contains("*") || emmetAbbr.contains("+") || emmetAbbr.equals("!")) {
+                boolean isComplex = emmetAbbr.contains(".") || emmetAbbr.contains("#")
+                        || emmetAbbr.contains(">") || emmetAbbr.contains("*")
+                        || emmetAbbr.contains("+") || emmetAbbr.equals("!");
+                CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded,
+                        "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
+                emmetItem.setReplaceLength(emmetAbbr.length());
+                if (isComplex) {
+                    // Complex Emmet abbreviation → only show this one item
                     List<CompletionItem> res = new ArrayList<>();
-                    CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
-                    emmetItem.setReplaceLength(emmetAbbr.length());
                     res.add(emmetItem);
                     return res;
-                } else {
-                    CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
-                    emmetItem.setReplaceLength(emmetAbbr.length());
-                    emmetResults.add(emmetItem);
                 }
+                emmetResults.add(emmetItem);
             }
         }
 
-        // Emmet-style plain words (e.g. "div") OR typing "<div"
-        // If they type a word, or just typed a '<', immediately suggest matching tags!
+        // ── 7. Tag name completions (when typing "div", "<div", etc.) ─────────
         if ((word != null && !word.isEmpty()) || trimmed.endsWith("<")) {
             List<CompletionItem> finalResults = new ArrayList<>(emmetResults);
             finalResults.addAll(fuzzyFilter(tagItems, word));
@@ -180,31 +481,104 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
     }
 
-    private java.io.File getProjectRoot(java.io.File file) {
-        if (file == null) return null;
-        java.io.File dir = file.isDirectory() ? file : file.getParentFile();
-        while (dir != null) {
-            if (new java.io.File(dir, "project_meta.json").exists()) {
-                return dir;
+    // ─── File / folder path suggestions ────────────────────────────────────────
+
+    /**
+     * Provides VS Code-style file/folder path completions for path-bearing attributes
+     * (src, href, action…). Shows the immediate directory contents when a slash is
+     * present; otherwise does a recursive fuzzy-prefix search from the project root.
+     */
+    private List<CompletionItem> getFileSuggestions(String typedPath) {
+        if (currentFile == null) return new ArrayList<>();
+        File currentDir = currentFile.getParentFile();
+        if (currentDir == null) return new ArrayList<>();
+
+        List<CompletionItem> items = new ArrayList<>();
+        int lastSlash = typedPath.lastIndexOf('/');
+
+        if (lastSlash != -1) {
+            // User typed a path with a directory component — list that directory
+            String dirPart      = typedPath.substring(0, lastSlash);
+            String filterPrefix = typedPath.substring(lastSlash + 1).toLowerCase();
+            File   searchDir    = dirPart.isEmpty() ? currentDir : new File(currentDir, dirPart);
+
+            if (searchDir.exists() && searchDir.isDirectory()) {
+                File[] files = searchDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        if (f.getName().startsWith(".")) continue;
+                        String name = f.getName();
+                        if (!filterPrefix.isEmpty() && !name.toLowerCase().startsWith(filterPrefix)) continue;
+                        String completion = name + (f.isDirectory() ? "/" : "");
+                        items.add(new CompletionItem(completion, completion,
+                                f.isDirectory() ? "Directory" : getFileSizeHint(f),
+                                f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
+                    }
+                }
             }
+            sortFileItems(items);
+            return items.size() > MAX_SUGGESTIONS ? items.subList(0, MAX_SUGGESTIONS) : items;
+        }
+
+        // No slash — search recursively from the project root
+        File projectRoot = getProjectRoot(currentFile);
+        if (projectRoot == null) projectRoot = currentDir;
+
+        List<File> allMatching = new ArrayList<>();
+        findFilesRecursively(projectRoot, typedPath.toLowerCase(), allMatching, 50);
+
+        for (File f : allMatching) {
+            String relPath = getRelativeHtmlPath(currentDir, f);
+            String label   = f.getName() + (f.isDirectory() ? "/" : "");
+            items.add(new CompletionItem(label, relPath,
+                    f.isDirectory() ? "Directory" : relPath,
+                    f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
+        }
+        sortFileItems(items);
+        return items;
+    }
+
+    private void sortFileItems(List<CompletionItem> items) {
+        // Folders first, then files alphabetically
+        Collections.sort(items, (a, b) -> {
+            int fa = a.getType() == CompletionItem.Type.FOLDER ? 0 : 1;
+            int fb = b.getType() == CompletionItem.Type.FOLDER ? 0 : 1;
+            if (fa != fb) return fa - fb;
+            return a.getLabel().compareToIgnoreCase(b.getLabel());
+        });
+    }
+
+    private String getFileSizeHint(File f) {
+        long size = f.length();
+        if (size < 1024) return size + " B";
+        if (size < 1024 * 1024) return (size / 1024) + " KB";
+        return (size / (1024 * 1024)) + " MB";
+    }
+
+    // ─── Path helpers ───────────────────────────────────────────────────────────
+
+    private File getProjectRoot(File file) {
+        if (file == null) return null;
+        File dir = file.isDirectory() ? file : file.getParentFile();
+        while (dir != null) {
+            if (new File(dir, "project_meta.json").exists()) return dir;
             dir = dir.getParentFile();
         }
         return null;
     }
 
-    private String getRelativeHtmlPath(java.io.File baseDir, java.io.File target) {
-        String[] basePath = baseDir.getAbsolutePath().split("/");
+    private String getRelativeHtmlPath(File baseDir, File target) {
+        String[] basePath   = baseDir.getAbsolutePath().split("/");
         String[] targetPath = target.getAbsolutePath().split("/");
 
         int common = 0;
-        while (common < basePath.length && common < targetPath.length && basePath[common].equals(targetPath[common])) {
+        while (common < basePath.length && common < targetPath.length
+                && basePath[common].equals(targetPath[common])) {
             common++;
         }
 
         StringBuilder rel = new StringBuilder();
-        for (int i = common; i < basePath.length; i++) {
-            rel.append("../");
-        }
+        for (int i = common; i < basePath.length; i++) rel.append("../");
         for (int i = common; i < targetPath.length; i++) {
             rel.append(targetPath[i]);
             if (i < targetPath.length - 1) rel.append("/");
@@ -212,74 +586,20 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         if (target.isDirectory() && rel.length() > 0 && rel.charAt(rel.length() - 1) != '/') {
             rel.append("/");
         }
-        if (rel.length() == 0) return "./";
-        return rel.toString();
+        return rel.length() == 0 ? "./" : rel.toString();
     }
 
-    private void findFilesRecursively(java.io.File dir, String query, List<java.io.File> results, int limit) {
+    private void findFilesRecursively(File dir, String query, List<File> results, int limit) {
         if (results.size() >= limit) return;
-        java.io.File[] files = dir.listFiles();
+        File[] files = dir.listFiles();
         if (files == null) return;
-        for (java.io.File f : files) {
-            if (f.getName().startsWith(".")) continue; // Skip hidden files/folders
-
+        for (File f : files) {
+            if (f.getName().startsWith(".")) continue;
             if (f.getName().toLowerCase().startsWith(query)) {
                 results.add(f);
                 if (results.size() >= limit) return;
             }
-            if (f.isDirectory()) {
-                findFilesRecursively(f, query, results, limit);
-            }
-        }
-    }
-
-    private List<CompletionItem> getFileSuggestions(String typedPath) {
-        if (currentFile == null) return new ArrayList<>();
-        java.io.File currentDir = currentFile.getParentFile();
-        if (currentDir == null) return new ArrayList<>();
-
-        List<CompletionItem> items = new ArrayList<>();
-        int lastSlash = typedPath.lastIndexOf('/');
-
-        if (lastSlash != -1) {
-            String dirPart = typedPath.substring(0, lastSlash);
-            String filterPrefix = typedPath.substring(lastSlash + 1);
-            java.io.File searchDir = currentDir;
-            if (!dirPart.isEmpty()) {
-                searchDir = new java.io.File(currentDir, dirPart);
-            }
-            if (searchDir.exists() && searchDir.isDirectory()) {
-                java.io.File[] files = searchDir.listFiles();
-                if (files != null) {
-                    for (java.io.File f : files) {
-                        String name = f.getName();
-                        if (name.toLowerCase().startsWith(filterPrefix.toLowerCase()) || filterPrefix.isEmpty()) {
-                            String completion = name + (f.isDirectory() ? "/" : "");
-                            items.add(new CompletionItem(completion, completion,
-                                    f.isDirectory() ? "Directory" : "File",
-                                    f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
-                        }
-                    }
-                }
-            }
-            return fuzzyFilter(items, filterPrefix);
-        } else {
-            java.io.File projectRoot = getProjectRoot(currentFile);
-            if (projectRoot == null) projectRoot = currentDir;
-
-            List<java.io.File> allMatching = new ArrayList<>();
-            findFilesRecursively(projectRoot, typedPath.toLowerCase(), allMatching, 50);
-
-            for (java.io.File f : allMatching) {
-                String relPath = getRelativeHtmlPath(currentDir, f);
-                String label = f.getName() + (f.isDirectory() ? "/" : "");
-
-                items.add(new CompletionItem(label, relPath,
-                        relPath,
-                        f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
-            }
-
-            return items; // No fuzzy filtering needed, already prefix filtered
+            if (f.isDirectory()) findFilesRecursively(f, query, results, limit);
         }
     }
 }

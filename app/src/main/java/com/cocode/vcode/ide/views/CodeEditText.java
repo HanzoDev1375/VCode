@@ -58,8 +58,10 @@ import java.util.Objects;
 public class CodeEditText extends AppCompatEditText {
 
     private static final long HIGHLIGHT_DELAY_MS = 150;
-    private static final long AUTOCOMPLETE_DELAY_MS = 100;
-    private static final long UNDO_RECORD_DELAY_MS = 400;
+    private static final long AUTOCOMPLETE_DELAY_MS = 80;  // Fast enough to feel instant, VS Code uses ~75ms
+
+    /** Characters that trigger a new autocomplete session in VS Code — never dismiss on these. */
+    private static final String TRIGGER_CHARS = ".<>/:'\"@#";
 
     private final HtmlTagParser htmlTagParser = new HtmlTagParser();
     private final BracketMatcher bracketMatcher = new BracketMatcher();
@@ -69,11 +71,11 @@ public class CodeEditText extends AppCompatEditText {
     private final UndoRedoManager undoRedoManager = new UndoRedoManager();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
-    private final Runnable undoRecordRunnable = () -> {
-        if (getText() != null) {
-            undoRedoManager.record(getText().toString(), getSelectionStart());
-        }
-    };
+    // Edit tracking for intelligent undo grouping
+    private String undoOldText;
+    private int undoEditStart;
+    private int undoDeletedCount;
+    private int undoInsertedCount;
 
     private final boolean autoCloseHtmlTags = true;
     private final boolean isFormatting = false;
@@ -171,6 +173,13 @@ public class CodeEditText extends AppCompatEditText {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
                 isTypingText = true;
+                // Capture state before edit for intelligent undo grouping
+                if (!isApplyingHighlight && !isUndoRedoActive && !isSettingText && !isAutoClosing) {
+                    undoOldText = s.toString();
+                    undoEditStart = start;
+                    undoDeletedCount = count;
+                    undoInsertedCount = after;
+                }
             }
 
             @Override
@@ -201,7 +210,12 @@ public class CodeEditText extends AppCompatEditText {
                     return;
                 scheduleHighlight();
                 scheduleAutoComplete();
-                scheduleUndoRecord();
+                // Intelligent undo recording with edit metadata
+                if (undoOldText != null) {
+                    undoRedoManager.onEdit(s.toString(), getSelectionStart(),
+                            undoEditStart, undoDeletedCount, undoInsertedCount, undoOldText);
+                    undoOldText = null;
+                }
                 updateBracketMatch(s.toString(), getSelectionStart());
             }
         });
@@ -457,12 +471,16 @@ public class CodeEditText extends AppCompatEditText {
 
     /**
      * Evaluates cursor location bounds to prompt contextual vocabulary proposals.
+     * Mirrors VS Code's trigger logic:
+     * — Always trigger on identifier characters (letters, digits, _, $, -).
+     * — Also trigger on designated trigger characters (., <, /, :, @, #, quotes).
+     * — Dismiss only on whitespace that is NOT a trigger character.
      */
     private void triggerAutoComplete() {
         if (autoCompleteEngine == null || getText() == null) return;
 
-        String text = getText().toString();
-        int cursor = getSelectionStart();
+        String text   = getText().toString();
+        int    cursor = getSelectionStart();
 
         if (cursor <= 0 || cursor > text.length()) {
             mainHandler.post(autoCompletePopup::dismiss);
@@ -471,7 +489,10 @@ public class CodeEditText extends AppCompatEditText {
 
         char lastChar = text.charAt(cursor - 1);
 
-        if (Character.isWhitespace(lastChar)) {
+        // Dismiss on plain whitespace, but NOT if it is a trigger character
+        // (a space inside an attribute value or after a keyword may still be relevant,
+        //  but we keep it simple: only trigger on non-whitespace or explicit trigger chars).
+        if (Character.isWhitespace(lastChar) && TRIGGER_CHARS.indexOf(lastChar) < 0) {
             mainHandler.post(autoCompletePopup::dismiss);
             return;
         }
@@ -644,16 +665,16 @@ public class CodeEditText extends AppCompatEditText {
         }
     }
 
-    private void scheduleUndoRecord() {
-        mainHandler.removeCallbacks(undoRecordRunnable);
-        mainHandler.postDelayed(undoRecordRunnable, UNDO_RECORD_DELAY_MS);
-    }
+    // ─── Undo/Redo ─────────────────────────────────────────────────────────────
 
     /**
      * Pops previous document states off history stacks to roll modifications backwards safely.
      */
     public void undo() {
-        mainHandler.removeCallbacks(undoRecordRunnable);
+        // Commit any pending grouped edits first
+        if (getText() != null) {
+            undoRedoManager.commitPendingFromCurrent(getText().toString(), getSelectionStart());
+        }
         EditorState state = undoRedoManager.undo();
         if (state == null) return;
 
@@ -671,7 +692,6 @@ public class CodeEditText extends AppCompatEditText {
      * Advances document history tracking forward to re-apply rolled-back entries.
      */
     public void redo() {
-        mainHandler.removeCallbacks(undoRecordRunnable);
         EditorState state = undoRedoManager.redo();
         if (state == null) return;
 
@@ -727,11 +747,15 @@ public class CodeEditText extends AppCompatEditText {
                     break;
                 case JAVASCRIPT:
                     this.syntaxHighlighter = new JsSyntaxHighlighter(ctx);
-                    this.autoCompleteEngine = new JsAutoCompleteEngine(ctx);
+                    JsAutoCompleteEngine jsEngine = new JsAutoCompleteEngine(ctx);
+                    if (currentFile != null) jsEngine.setCurrentFile(currentFile);
+                    this.autoCompleteEngine = jsEngine;
                     break;
                 case JSON:
                     this.syntaxHighlighter = new JsonSyntaxHighlighter(ctx);
-                    this.autoCompleteEngine = new JsonAutoCompleteEngine(ctx);
+                    JsonAutoCompleteEngine jsonEngine = new JsonAutoCompleteEngine(ctx);
+                    if (currentFile != null) jsonEngine.setCurrentFile(currentFile);
+                    this.autoCompleteEngine = jsonEngine;
                     break;
                 case MARKDOWN:
                     this.syntaxHighlighter = new MarkdownSyntaxHighlighter(ctx);
@@ -754,6 +778,12 @@ public class CodeEditText extends AppCompatEditText {
         this.currentFile = file;
         if (autoCompleteEngine instanceof HtmlAutoCompleteEngine) {
             ((HtmlAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
+        }
+        if (autoCompleteEngine instanceof JsAutoCompleteEngine) {
+            ((JsAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
+        }
+        if (autoCompleteEngine instanceof JsonAutoCompleteEngine) {
+            ((JsonAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
         }
     }
 
@@ -826,19 +856,171 @@ public class CodeEditText extends AppCompatEditText {
     }
 
     /**
-     * Managed history track stack implementation bounded to 50 operations entries max.
+     * Intelligent undo/redo manager that groups edits like professional IDEs (VS Code, IntelliJ).
+     *
+     * <p>Grouping rules:
+     * <ul>
+     *   <li>Consecutive single-char insertions are grouped until a word boundary (space/punctuation/newline)</li>
+     *   <li>Consecutive single-char deletions are grouped while direction remains the same (backspace vs delete)</li>
+     *   <li>Multi-char operations (paste/cut/autocomplete) are committed immediately as a single undo unit</li>
+     *   <li>A time gap &gt; 1 second between edits forces a new undo group</li>
+     *   <li>Direction changes (insert→delete or backspace→forward-delete) force a commit</li>
+     *   <li>Newline insertion always commits the preceding group first</li>
+     * </ul>
      */
     private static class UndoRedoManager {
-        private static final int MAX = 50;
+        private static final int MAX = 100;
+        private static final long TIME_GAP_MS = 1000;
+
         private final List<EditorState> history = new ArrayList<>();
         private int index = -1;
 
+        // Pending group tracking
+        private String pendingBaseText;    // Text before the current group started
+        private int pendingBaseCursor;     // Cursor before the current group started
+        private int pendingLastCursor;     // Cursor after the last edit in current group
+        private long lastEditTime;         // Timestamp of last edit in current group
+        private int lastEditType;          // 0=none, 1=insert, 2=backspace, 3=forward-delete
+
+        void reset(String text) {
+            history.clear();
+            index = -1;
+            pendingBaseText = null;
+            lastEditType = 0;
+            record(text, 0);
+        }
+
+        /**
+         * Records a full snapshot unconditionally (used for initial state).
+         */
         void record(String text, int cursor) {
             if (index >= 0 && history.get(index).text.equals(text)) return;
+            commitPending();
+            pushState(text, cursor);
+        }
+
+        /**
+         * Called on every text change with edit metadata for intelligent grouping.
+         *
+         * @param newText    Full document text after the edit
+         * @param cursor     Cursor position after the edit
+         * @param start      Start position of the edit
+         * @param deletedCount Number of characters deleted (0 for pure inserts)
+         * @param insertedCount Number of characters inserted (0 for pure deletes)
+         * @param oldText    Full document text before the edit
+         */
+        void onEdit(String newText, int cursor, int start, int deletedCount, int insertedCount, String oldText) {
+            long now = System.currentTimeMillis();
+
+            // Determine edit type
+            int editType;
+            if (insertedCount > 0 && deletedCount == 0) {
+                editType = 1; // insert
+            } else if (deletedCount > 0 && insertedCount == 0) {
+                // backspace = cursor was after deleted chars; forward-delete = cursor was at start
+                editType = (cursor == start) ? 2 : 3; // 2=backspace, 3=forward-delete
+            } else {
+                // Replace operation (e.g. autocomplete, find-replace) — commit immediately
+                commitPendingWithText(oldText);
+                pushState(newText, cursor);
+                lastEditType = 0;
+                lastEditTime = now;
+                return;
+            }
+
+            // Check if we should break the group
+            boolean shouldBreak = false;
+
+            // Time gap — force new group
+            if (lastEditType != 0 && (now - lastEditTime) > TIME_GAP_MS) {
+                shouldBreak = true;
+            }
+
+            // Direction change (insert→delete or backspace↔forward-delete)
+            if (lastEditType != 0 && editType != lastEditType) {
+                shouldBreak = true;
+            }
+
+            // Multi-char paste/cut — always separate unit
+            if (insertedCount > 1 || deletedCount > 1) {
+                shouldBreak = true;
+            }
+
+            // Word boundary on single-char insert
+            if (editType == 1 && insertedCount == 1) {
+                char inserted = newText.charAt(start);
+                if (isWordBoundary(inserted)) {
+                    shouldBreak = true;
+                }
+            }
+
+            if (shouldBreak) {
+                commitPendingWithText(oldText);
+            }
+
+            // Start new group if none pending
+            if (pendingBaseText == null) {
+                // Use the state before this edit as the base
+                if (index >= 0) {
+                    pendingBaseText = history.get(index).text;
+                    pendingBaseCursor = history.get(index).cursor;
+                } else {
+                    pendingBaseText = oldText;
+                    pendingBaseCursor = start;
+                }
+            }
+
+            // Always track the latest cursor in the group
+            pendingLastCursor = cursor;
+
+            // For multi-char operations, commit immediately
+            if (insertedCount > 1 || deletedCount > 1) {
+                pushState(newText, cursor);
+                pendingBaseText = null;
+                lastEditType = 0;
+            } else {
+                lastEditType = editType;
+            }
+
+            lastEditTime = now;
+        }
+
+        /**
+         * Commits the pending group using the CURRENT text state.
+         * Called before undo/redo or when explicitly flushing.
+         */
+        void commitPendingFromCurrent(String currentText, int currentCursor) {
+            if (pendingBaseText != null) {
+                // Only push if text actually differs from the last recorded state
+                if (index < 0 || !history.get(index).text.equals(currentText)) {
+                    pushState(currentText, currentCursor);
+                }
+                pendingBaseText = null;
+                lastEditType = 0;
+            }
+        }
+
+        private void commitPendingWithText(String textBeforeThisEdit) {
+            if (pendingBaseText != null) {
+                // The pending group's "after" state is whatever text was before the new edit
+                if (index < 0 || !history.get(index).text.equals(textBeforeThisEdit)) {
+                    pushState(textBeforeThisEdit, pendingLastCursor);
+                }
+                pendingBaseText = null;
+                lastEditType = 0;
+            }
+        }
+
+        private void commitPending() {
+            // Simple commit — only clears pending state (used in record/reset)
+            pendingBaseText = null;
+            lastEditType = 0;
+        }
+
+        private void pushState(String text, int cursor) {
+            // Truncate redo history
             while (index < history.size() - 1) history.remove(history.size() - 1);
-
             history.add(new EditorState(text, cursor));
-
             if (history.size() > MAX) {
                 history.remove(0);
             } else {
@@ -846,14 +1028,8 @@ public class CodeEditText extends AppCompatEditText {
             }
         }
 
-        void reset(String text) {
-            history.clear();
-            index = -1;
-            record(text, 0);
-        }
-
         boolean canUndo() {
-            return index > 0;
+            return index > 0 || pendingBaseText != null;
         }
 
         boolean canRedo() {
@@ -862,12 +1038,25 @@ public class CodeEditText extends AppCompatEditText {
 
         EditorState undo() {
             if (!canUndo()) return null;
-            return history.get(--index);
+            if (index > 0) {
+                return history.get(--index);
+            }
+            return null;
         }
 
         EditorState redo() {
             if (!canRedo()) return null;
             return history.get(++index);
+        }
+
+        private static boolean isWordBoundary(char c) {
+            return c == ' ' || c == '\n' || c == '\t' || c == '\r'
+                    || c == '.' || c == ',' || c == ';' || c == ':'
+                    || c == '(' || c == ')' || c == '{' || c == '}'
+                    || c == '[' || c == ']' || c == '<' || c == '>'
+                    || c == '"' || c == '\'' || c == '`'
+                    || c == '=' || c == '+' || c == '-' || c == '/'
+                    || c == '!' || c == '?' || c == '&' || c == '|';
         }
     }
 

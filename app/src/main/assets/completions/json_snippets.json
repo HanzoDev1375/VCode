@@ -1,32 +1,98 @@
 [
   {
     "label": "{}",
-    "insertText": "{\n  |\n}",
-    "detail": "Object",
+    "snippet": "{\n  |\n}",
+    "detail": "Empty Object",
     "type": "SNIPPET"
   },
   {
     "label": "[]",
-    "insertText": "[\n  |\n]",
-    "detail": "Array",
+    "snippet": "[\n  |\n]",
+    "detail": "Empty Array",
     "type": "SNIPPET"
   },
   {
     "label": "key: value",
-    "insertText": "\"|\": \"\"",
+    "snippet": "\"|\": \"\"",
     "detail": "Key-Value Pair",
     "type": "SNIPPET"
   },
   {
-    "label": "package.json",
-    "insertText": "{\n  \"name\": \"my-project\",\n  \"version\": \"1.0.0\",\n  \"description\": \"\",\n  \"main\": \"index.js\",\n  \"scripts\": {\n    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\"\n  },\n  \"keywords\": [],\n  \"author\": \"\",\n  \"license\": \"ISC\"\n}",
-    "detail": "Node Manifest",
+    "label": "key: object",
+    "snippet": "\"|\": {\n  \n}",
+    "detail": "Key-Object Pair",
     "type": "SNIPPET"
   },
   {
-    "label": "config template",
-    "insertText": "{\n  \"port\": 8080,\n  \"environment\": \"development\",\n  \"debug\": true,\n  \"apiKeys\": {\n    \"default\": \"|\"\n  }\n}",
-    "detail": "Configuration",
+    "label": "key: array",
+    "snippet": "\"|\": [\n  \n]",
+    "detail": "Key-Array Pair",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "key: number",
+    "snippet": "\"|\": 0",
+    "detail": "Key-Number Pair",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "key: boolean",
+    "snippet": "\"|\": true",
+    "detail": "Key-Boolean Pair",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "package.json",
+    "snippet": "{\n  \"name\": \"|\",\n  \"version\": \"1.0.0\",\n  \"description\": \"\",\n  \"main\": \"index.js\",\n  \"scripts\": {\n    \"start\": \"node index.js\",\n    \"dev\": \"nodemon index.js\",\n    \"test\": \"echo \\\"Error: no test specified\\\" && exit 1\"\n  },\n  \"keywords\": [],\n  \"author\": \"\",\n  \"license\": \"MIT\",\n  \"dependencies\": {},\n  \"devDependencies\": {}\n}",
+    "detail": "Node.js Manifest",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "tsconfig.json",
+    "snippet": "{\n  \"compilerOptions\": {\n    \"target\": \"ES2020\",\n    \"module\": \"ESNext\",\n    \"moduleResolution\": \"bundler\",\n    \"strict\": true,\n    \"esModuleInterop\": true,\n    \"skipLibCheck\": true,\n    \"outDir\": \"./dist\",\n    \"rootDir\": \"./src\",\n    \"declaration\": true,\n    \"sourceMap\": true\n  },\n  \"include\": [\"src\"],\n  \"exclude\": [\"node_modules\", \"dist\"]\n}",
+    "detail": "TypeScript Config",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "eslintrc.json",
+    "snippet": "{\n  \"env\": {\n    \"browser\": true,\n    \"es2021\": true,\n    \"node\": true\n  },\n  \"extends\": [\"eslint:recommended\"],\n  \"parserOptions\": {\n    \"ecmaVersion\": \"latest\",\n    \"sourceType\": \"module\"\n  },\n  \"rules\": {\n    \"no-unused-vars\": \"warn\",\n    \"no-console\": \"off\"\n  }\n}",
+    "detail": "ESLint Config",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "prettierrc.json",
+    "snippet": "{\n  \"semi\": |true,\n  \"singleQuote\": true,\n  \"tabWidth\": 2,\n  \"trailingComma\": \"es5\",\n  \"printWidth\": 80,\n  \"arrowParens\": \"always\",\n  \"bracketSpacing\": true,\n  \"endOfLine\": \"lf\"\n}",
+    "detail": "Prettier Config",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "manifest.json",
+    "snippet": "{\n  \"name\": \"|\",\n  \"short_name\": \"\",\n  \"description\": \"\",\n  \"start_url\": \"/\",\n  \"display\": \"standalone\",\n  \"background_color\": \"#ffffff\",\n  \"theme_color\": \"#000000\",\n  \"icons\": [\n    {\n      \"src\": \"/icon-192.png\",\n      \"sizes\": \"192x192\",\n      \"type\": \"image/png\"\n    },\n    {\n      \"src\": \"/icon-512.png\",\n      \"sizes\": \"512x512\",\n      \"type\": \"image/png\"\n    }\n  ]\n}",
+    "detail": "PWA Manifest",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "launch.json",
+    "snippet": "{\n  \"version\": \"0.2.0\",\n  \"configurations\": [\n    {\n      \"type\": \"node\",\n      \"request\": \"launch\",\n      \"name\": \"|\",\n      \"program\": \"${workspaceFolder}/index.js\"\n    }\n  ]\n}",
+    "detail": "VS Code Launch Config",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "settings.json",
+    "snippet": "{\n  \"editor.fontSize\": 14,\n  \"editor.tabSize\": 2,\n  \"editor.formatOnSave\": true,\n  \"editor.defaultFormatter\": \"|\"\n}",
+    "detail": "VS Code Settings",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "api response",
+    "snippet": "{\n  \"status\": \"success\",\n  \"data\": |null,\n  \"message\": \"\",\n  \"timestamp\": \"\"\n}",
+    "detail": "REST API Response",
+    "type": "SNIPPET"
+  },
+  {
+    "label": "api error",
+    "snippet": "{\n  \"status\": \"error\",\n  \"error\": {\n    \"code\": |400,\n    \"message\": \"\"\n  }\n}",
+    "detail": "REST API Error",
     "type": "SNIPPET"
   }
 ]
