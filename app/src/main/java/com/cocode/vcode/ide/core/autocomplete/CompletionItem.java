@@ -78,11 +78,12 @@ public class CompletionItem {
     /**
      * Returns the base priority rank for this item's Type.
      * Mirrors VS Code's CompletionItemKind sort priority: snippets > functions > keywords > values.
+     * Emmet/snippets get the highest priority to always appear first.
      */
     public int getTypePriority() {
         if (type == null) return 0;
         switch (type) {
-            case SNIPPET:    return 7;
+            case SNIPPET:    return 10;
             case FUNCTION:   return 6;
             case BUILTIN:    return 5;
             case KEYWORD:    return 4;

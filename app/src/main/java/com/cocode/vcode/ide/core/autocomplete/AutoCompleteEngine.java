@@ -67,15 +67,41 @@ public abstract class AutoCompleteEngine {
 
     /**
      * Extracts an Emmet abbreviation — alphanumeric characters plus Emmet operator symbols.
+     * Handles nested braces/brackets by tracking depth so that text content like {Click me}
+     * is properly included.
      */
     protected String getEmmetAbbreviationBeforeCursor(String text, int pos) {
         if (text == null || pos <= 0 || pos > text.length()) return "";
         int start = pos - 1;
+        int braceDepth = 0;  // {} depth
+        int bracketDepth = 0; // [] depth
+        int parenDepth = 0;  // () depth
+
+        // Walk backward, tracking brace/bracket/paren depth
         while (start >= 0) {
             char c = text.charAt(start);
+
+            // Inside braces/brackets/parens, allow any character
+            if (braceDepth > 0 || bracketDepth > 0 || parenDepth > 0) {
+                if (c == '}') braceDepth++;
+                else if (c == '{') { braceDepth--; if (braceDepth < 0) break; }
+                else if (c == ']') bracketDepth++;
+                else if (c == '[') { bracketDepth--; if (bracketDepth < 0) break; }
+                else if (c == ')') parenDepth++;
+                else if (c == '(') { parenDepth--; if (parenDepth < 0) break; }
+                start--;
+                continue;
+            }
+
+            // Opening delimiters (walking backward, these are "closing" from our perspective)
+            if (c == '}') { braceDepth++; start--; continue; }
+            if (c == ']') { bracketDepth++; start--; continue; }
+            if (c == ')') { parenDepth++; start--; continue; }
+
+            // Standard Emmet characters
             if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$'
                     || c == '#' || c == '.' || c == '*' || c == '>' || c == '+'
-                    || c == '!' || c == ':') {
+                    || c == '^' || c == '!' || c == ':') {
                 start--;
             } else {
                 break;

@@ -471,7 +471,9 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             if (expanded != null) {
                 boolean isComplex = emmetAbbr.contains(".") || emmetAbbr.contains("#")
                         || emmetAbbr.contains(">") || emmetAbbr.contains("*")
-                        || emmetAbbr.contains("+") || emmetAbbr.equals("!");
+                        || emmetAbbr.contains("+") || emmetAbbr.contains("^")
+                        || emmetAbbr.contains("(") || emmetAbbr.contains("{")
+                        || emmetAbbr.equals("!");
                 CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded,
                         "Emmet Abbreviation", CompletionItem.Type.SNIPPET, 0);
                 emmetItem.setReplaceLength(emmetAbbr.length());
@@ -486,13 +488,34 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // ── 7. Tag name completions (when typing "div", "<div", etc.) ─────────
+        // Suppress tag suggestions when cursor is inside Emmet text braces {}
         if ((word != null && !word.isEmpty()) || trimmed.endsWith("<")) {
+            if (isInsideEmmetBraces(lineBefore)) {
+                return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
+            }
             List<CompletionItem> finalResults = new ArrayList<>(emmetResults);
             finalResults.addAll(fuzzyFilter(tagItems, word));
             return finalResults;
         }
 
         return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
+    }
+
+    // ─── Emmet brace detection ─────────────────────────────────────────────────
+
+    /**
+     * Returns true if the cursor is inside unmatched curly braces on the current line.
+     * This indicates the user is typing Emmet text content like {@code a{Click me|}}
+     * and we should NOT show HTML tag suggestions for the words inside.
+     */
+    private boolean isInsideEmmetBraces(String lineBefore) {
+        int depth = 0;
+        for (int i = 0; i < lineBefore.length(); i++) {
+            char c = lineBefore.charAt(i);
+            if (c == '{') depth++;
+            else if (c == '}') depth--;
+        }
+        return depth > 0;
     }
 
     // ─── Embedded block content extraction ─────────────────────────────────────

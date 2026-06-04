@@ -61,7 +61,7 @@ public class CodeEditText extends AppCompatEditText {
     private static final long AUTOCOMPLETE_DELAY_MS = 100;
 
     /** Characters that trigger a new autocomplete session — never dismiss on these. */
-    private static final String TRIGGER_CHARS = ".<>/:'\"@#";
+    private static final String TRIGGER_CHARS = ".<>/:'\"@#!^({[})]";
 
     private final HtmlTagParser htmlTagParser = new HtmlTagParser();
     private final BracketMatcher bracketMatcher = new BracketMatcher();
@@ -914,9 +914,15 @@ public class CodeEditText extends AppCompatEditText {
         if (!isTypingText && !isSettingText && !isAutoClosing && !isUndoRedoActive
                 && !isApplyingHighlight && !isInsertingCompletion) {
             if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
-                // If the selection is a range (dragging), dismiss immediately.
-                // If it's a cursor move (single position), dismiss immediately.
                 autoCompletePopup.dismiss();
+            }
+            // When cursor lands right after a closing delimiter, trigger autocomplete
+            // so Emmet abbreviations like a{text} expand after navigating past }
+            if (selStart == selEnd && selStart > 0 && getText() != null && selStart <= getText().length()) {
+                char charBefore = getText().charAt(selStart - 1);
+                if (charBefore == '}' || charBefore == ')' || charBefore == ']') {
+                    scheduleAutoComplete();
+                }
             }
         }
     }
