@@ -55,6 +55,10 @@ public class GitRepository {
      *
      * @param projectDir The root folder tracking active project files.
      */
+    // Default exclusion patterns written to .gitignore on fresh repository initialization
+    private static final String DEFAULT_GITIGNORE =
+            "node_modules/\n.DS_Store\n*.log\ndist/\nbuild/\n.env\n.env.local\n*.class\n*.jar\nsession.json\nproject_meta.json";
+
     public void openRepository(File projectDir) throws Exception {
         this.repoDir = projectDir;
         File gitDir = new File(projectDir, ".git");
@@ -65,6 +69,12 @@ public class GitRepository {
                     .setDirectory(projectDir)
                     .setInitialBranch(configuredDefaultBranch)
                     .call();
+            File gitignore = new File(projectDir, ".gitignore");
+            if (!gitignore.exists()) {
+                try (java.io.FileWriter fw = new java.io.FileWriter(gitignore)) {
+                    fw.write(DEFAULT_GITIGNORE);
+                }
+            }
         }
         ensureInternalFilesIgnored(gitDir);
     }
@@ -149,7 +159,7 @@ public class GitRepository {
     private void addFiles(List<GitFileItem> list, Set<String> paths, String status, boolean staged) {
         for (String path : paths) {
             String fileName = new File(path).getName();
-            if (fileName.equals("session.json") || fileName.equals("project_meta.json") || fileName.equals(".gitignore")) {
+            if (fileName.equals("session.json") || fileName.equals("project_meta.json")) {
                 continue;
             }
             list.add(new GitFileItem(path, fileName, status, staged));
