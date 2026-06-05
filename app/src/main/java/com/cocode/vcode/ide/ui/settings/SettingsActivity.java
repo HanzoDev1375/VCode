@@ -49,15 +49,6 @@ public class SettingsActivity extends BaseActivity {
         setupListeners();
         designUI();
         setupObserver();
-
-        // Mutate the shared drawable on the font size buttons so that press/focus
-        // state changes on one button do not bleed color onto the other.
-        if (binding.btnFontIncrease.getBackground() != null) {
-            binding.btnFontIncrease.setBackground(binding.btnFontIncrease.getBackground().mutate());
-        }
-        if (binding.btnFontDecrease.getBackground() != null) {
-            binding.btnFontDecrease.setBackground(binding.btnFontDecrease.getBackground().mutate());
-        }
     }
 
     /**

@@ -32,6 +32,7 @@
             android:layout_marginStart="8dp"
             android:layout_weight="1"
             android:background="@drawable/vcode_bg_symbol_key"
+            android:defaultFocusHighlightEnabled="false"
             android:gravity="center_vertical"
             android:orientation="horizontal"
             android:paddingHorizontal="12dp">

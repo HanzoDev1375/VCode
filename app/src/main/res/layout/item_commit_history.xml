@@ -73,7 +73,7 @@
                 android:visibility="gone"
                 app:backgroundTint="@color/vcode_secondary_container"
                 tools:ignore="SmallSp"
-                tools:text="HEAD"
+                android:text="@string/vcode_head_badge"
                 tools:visibility="visible" />
 
             <TextView

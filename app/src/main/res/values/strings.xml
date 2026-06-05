@@ -199,6 +199,7 @@
     <string name="vcode_no_commits_yet">No Commits Yet</string>
     <string name="vcode_commits_you_make_appear_here">Commits you make inside this repository will appear right here.</string>
     <string name="vcode_search_commits">Search commits</string>
+    <string name="vcode_head_badge">HEAD</string>
 
     <!--    Fragment: Git Changes-->
     <string name="vcode_staged_changes_label">Staged Changes</string>
