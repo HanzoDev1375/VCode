@@ -104,12 +104,14 @@ public class LineNumberView extends View {
     }
 
     public void setLineCount() {
-        invalidate();
+        // invalidate is driven by syncComplete()
     }
 
     public void setCurrentLine(int currentLine) {
-        this.currentLine = currentLine;
-        invalidate();
+        if (this.currentLine != currentLine) {
+            this.currentLine = currentLine;
+            invalidate();
+        }
     }
 
     public void setScrollY(int scrollY) {
@@ -117,7 +119,7 @@ public class LineNumberView extends View {
     }
 
     public void setLineHeight() {
-        invalidate();
+        // invalidate is driven by syncComplete()
     }
 
     /**

@@ -57,7 +57,10 @@ import java.util.Objects;
  */
 public class CodeEditText extends AppCompatEditText {
 
-    private static final long HIGHLIGHT_DELAY_MS = 150;
+    private static final long HIGHLIGHT_DELAY_MS_SMALL = 150;
+    private static final long HIGHLIGHT_DELAY_MS_LARGE = 300;
+    private static final int LARGE_FILE_THRESHOLD = 5000; // chars
+    private static final int VIEWPORT_BUFFER_LINES = 30; // extra lines above/below visible area
     private static final long AUTOCOMPLETE_DELAY_MS = 100;
 
     /** Characters that trigger a new autocomplete session — never dismiss on these. */
@@ -89,12 +92,16 @@ public class CodeEditText extends AppCompatEditText {
     private boolean isApplyingHighlight = false;
     private final Runnable highlightRunnable = this::triggerHighlight;
     private final Runnable autoCompleteRunnable = this::triggerAutoComplete;
+    private final Runnable scrollHighlightRunnable = this::triggerHighlight;
     private boolean isUndoRedoActive = false;
     private boolean isSettingText = false;
     private boolean isTypingText = false;
     private boolean isInsertingCompletion = false;
     private File currentFile;
     private OnScrollChangeListener scrollChangeListener;
+    private int lastHighlightStart = -1;
+    private int lastHighlightEnd = -1;
+    private long highlightVersion = 0;
 
     public CodeEditText(Context context) {
         super(context);
@@ -443,45 +450,101 @@ public class CodeEditText extends AppCompatEditText {
     private void scheduleHighlight() {
         if (mainHandler == null) return;
         mainHandler.removeCallbacks(highlightRunnable);
-        mainHandler.postDelayed(highlightRunnable, HIGHLIGHT_DELAY_MS);
+        long delay = (getText() != null && getText().length() > LARGE_FILE_THRESHOLD)
+                ? HIGHLIGHT_DELAY_MS_LARGE : HIGHLIGHT_DELAY_MS_SMALL;
+        mainHandler.postDelayed(highlightRunnable, delay);
     }
 
     /**
-     * Triggers the computation of vocabulary text colorizations on background CPU pools,
-     * shielding user interaction streams from frame execution lag.
+     * Computes the visible character range in the EditText including a buffer zone.
+     * Returns int[2] = {start, end} or null if layout not ready.
+     */
+    private int[] getVisibleCharRange() {
+        if (getLayout() == null || getText() == null) return null;
+        int scrollY = getScrollY();
+        int viewHeight = getHeight();
+        if (viewHeight <= 0) return null;
+
+        android.text.Layout layout = getLayout();
+        int firstLine = layout.getLineForVertical(scrollY);
+        int lastLine = layout.getLineForVertical(scrollY + viewHeight);
+
+        // Add buffer lines
+        firstLine = Math.max(0, firstLine - VIEWPORT_BUFFER_LINES);
+        lastLine = Math.min(layout.getLineCount() - 1, lastLine + VIEWPORT_BUFFER_LINES);
+
+        int start = layout.getLineStart(firstLine);
+        int end = layout.getLineEnd(lastLine);
+        return new int[]{start, end};
+    }
+
+    /**
+     * Triggers viewport-aware syntax highlighting on a background thread.
+     * For small files, highlights the entire document. For large files, highlights
+     * only the visible range plus a buffer zone.
      */
     private void triggerHighlight() {
         if (syntaxHighlighter == null || getText() == null) return;
 
         final String code = getText().toString();
-        ExecutorProvider.getInstance().runOnCpu(() -> {
-            SpannableStringBuilder ssb = syntaxHighlighter.highlight(code);
-            mainHandler.post(() -> applyHighlightSpans(ssb));
-        });
+        final long version = ++highlightVersion;
+
+        if (code.length() <= LARGE_FILE_THRESHOLD) {
+            // Small file — highlight everything
+            ExecutorProvider.getInstance().runOnCpu(() -> {
+                SpannableStringBuilder ssb = syntaxHighlighter.highlight(code);
+                mainHandler.post(() -> {
+                    if (version != highlightVersion) return;
+                    applyHighlightSpans(ssb, 0, code.length());
+                });
+            });
+        } else {
+            // Large file — viewport-only highlighting
+            int[] range = getVisibleCharRange();
+            if (range == null) return;
+            final int rangeStart = range[0];
+            final int rangeEnd = range[1];
+
+            ExecutorProvider.getInstance().runOnCpu(() -> {
+                SpannableStringBuilder ssb = syntaxHighlighter.highlightRange(code, rangeStart, rangeEnd);
+                mainHandler.post(() -> {
+                    if (version != highlightVersion) return;
+                    applyHighlightSpans(ssb, rangeStart, rangeEnd);
+                });
+            });
+        }
     }
 
     /**
-     * Wipes historical color spans within text scopes to apply newly rendered configuration metrics.
+     * Applies highlight spans only within the specified range, avoiding full-document span operations.
      */
-    private void applyHighlightSpans(SpannableStringBuilder ssb) {
-        if (getText() == null || ssb == null || ssb.length() != getText().length()) return;
+    private void applyHighlightSpans(SpannableStringBuilder ssb, int rangeStart, int rangeEnd) {
+        if (getText() == null || ssb == null) return;
+        int textLen = getText().length();
+        int safeEnd = Math.min(rangeEnd, textLen);
+        if (rangeStart >= safeEnd) return;
 
         isApplyingHighlight = true;
         int savedStart = getSelectionStart();
         int savedEnd = getSelectionEnd();
 
-        SyntaxHighlightSpan[] old = getText().getSpans(0, getText().length(), SyntaxHighlightSpan.class);
+        // Remove spans only in the affected range
+        SyntaxHighlightSpan[] old = getText().getSpans(rangeStart, safeEnd, SyntaxHighlightSpan.class);
         for (SyntaxHighlightSpan s : old) getText().removeSpan(s);
 
+        // Apply new spans offset by rangeStart
         SyntaxHighlightSpan[] newSpans = ssb.getSpans(0, ssb.length(), SyntaxHighlightSpan.class);
         for (SyntaxHighlightSpan span : newSpans) {
-            int start = ssb.getSpanStart(span);
-            int end = ssb.getSpanEnd(span);
-            if (start >= 0 && end <= getText().length() && start < end) {
+            int start = ssb.getSpanStart(span) + rangeStart;
+            int end = ssb.getSpanEnd(span) + rangeStart;
+            if (start >= 0 && end <= textLen && start < end) {
                 getText().setSpan(new SyntaxHighlightSpan(span.getForegroundColor()),
                         start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
+
+        lastHighlightStart = rangeStart;
+        lastHighlightEnd = safeEnd;
 
         int len = getText().length();
         setSelection(Math.min(savedStart, len), Math.min(savedEnd, len));
@@ -722,11 +785,15 @@ public class CodeEditText extends AppCompatEditText {
 
     /**
      * Queries the bracket matching system to highlight paired enclosure delimiters beneath the caret.
+     * Skipped for very large documents to avoid frame drops.
      */
     private void updateBracketMatch(String text, int cursor) {
         if (getText() == null) return;
         BracketMatchSpan[] old = getText().getSpans(0, getText().length(), BracketMatchSpan.class);
         for (BracketMatchSpan s : old) getText().removeSpan(s);
+
+        // Skip bracket matching for large files to avoid lag
+        if (text.length() > LARGE_FILE_THRESHOLD * 4) return;
 
         BracketMatcher.MatchResult match = bracketMatcher.findMatch(text, cursor);
         if (match != null && match.found) {
@@ -877,6 +944,11 @@ public class CodeEditText extends AppCompatEditText {
         if (scrollChangeListener != null) {
             scrollChangeListener.onScrollChanged(horiz, vert);
         }
+        // Re-highlight on scroll for large files (viewport changed)
+        if (getText() != null && getText().length() > LARGE_FILE_THRESHOLD) {
+            mainHandler.removeCallbacks(scrollHighlightRunnable);
+            mainHandler.postDelayed(scrollHighlightRunnable, 100);
+        }
     }
 
     public int getLineCount() {
@@ -932,6 +1004,7 @@ public class CodeEditText extends AppCompatEditText {
         super.onDetachedFromWindow();
         mainHandler.removeCallbacks(highlightRunnable);
         mainHandler.removeCallbacks(autoCompleteRunnable);
+        mainHandler.removeCallbacks(scrollHighlightRunnable);
         mainHandler.removeCallbacksAndMessages(null);
         autoCompletePopup.dismiss();
     }
@@ -964,7 +1037,9 @@ public class CodeEditText extends AppCompatEditText {
      * </ul>
      */
     private static class UndoRedoManager {
-        private static final int MAX = 100;
+        private static final int MAX_SMALL = 100;
+        private static final int MAX_LARGE = 30; // Fewer snapshots for large files
+        private static final int LARGE_TEXT_THRESHOLD = 10000;
         private static final long TIME_GAP_MS = 1000;
 
         private final List<EditorState> history = new ArrayList<>();
@@ -1116,7 +1191,8 @@ public class CodeEditText extends AppCompatEditText {
             // Truncate redo history
             while (index < history.size() - 1) history.remove(history.size() - 1);
             history.add(new EditorState(text, cursor));
-            if (history.size() > MAX) {
+            int max = (text.length() > LARGE_TEXT_THRESHOLD) ? MAX_LARGE : MAX_SMALL;
+            if (history.size() > max) {
                 history.remove(0);
             } else {
                 index++;

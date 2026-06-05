@@ -84,6 +84,10 @@ public class ProjectState {
         return val != null ? val : true;
     }
 
+    public boolean hasExplicitPreviewState(String relativePath) {
+        return relativePath != null && previewStates.containsKey(relativePath);
+    }
+
     public String getProjectId() {
         return projectId;
     }

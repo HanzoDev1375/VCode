@@ -1,6 +1,8 @@
 package com.cocode.vcode.ide.views;
 
 import android.content.Context;
+import android.os.Handler;
+import android.os.Looper;
 import android.text.Editable;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
@@ -14,8 +16,11 @@ import android.widget.LinearLayout;
  */
 public class CodeEditorLayout extends LinearLayout {
 
+    private static final long SYNC_DEBOUNCE_MS = 50;
     private LineNumberView lineNumberView;
     private CodeEditText codeEditText;
+    private final Handler handler = new Handler(Looper.getMainLooper());
+    private final Runnable syncRunnable = this::syncLineNumberView;
 
     public CodeEditorLayout(Context context) {
         super(context);
@@ -65,7 +70,7 @@ public class CodeEditorLayout extends LinearLayout {
 
         codeEditText.setOnClickListener(v -> syncLineNumberView());
 
-        // Update gutter measurements in response to typing additions
+        // Update gutter measurements in response to typing additions (debounced)
         codeEditText.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -77,9 +82,14 @@ public class CodeEditorLayout extends LinearLayout {
 
             @Override
             public void afterTextChanged(Editable s) {
-                syncLineNumberView();
+                scheduleSyncLineNumberView();
             }
         });
+    }
+
+    private void scheduleSyncLineNumberView() {
+        handler.removeCallbacks(syncRunnable);
+        handler.postDelayed(syncRunnable, SYNC_DEBOUNCE_MS);
     }
 
     /**

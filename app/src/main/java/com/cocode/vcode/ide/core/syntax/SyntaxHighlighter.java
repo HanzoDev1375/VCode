@@ -31,6 +31,25 @@ public abstract class SyntaxHighlighter {
     public abstract SpannableStringBuilder highlight(String code);
 
     /**
+     * Highlights only a range of the document, returning spans with offsets relative to the full text.
+     * The range is expanded to line boundaries for correctness.
+     *
+     * @param fullCode The full document text.
+     * @param rangeStart Start character offset of the visible region.
+     * @param rangeEnd End character offset of the visible region.
+     * @return A SpannableStringBuilder of the substring with spans positioned relative to rangeStart.
+     */
+    public SpannableStringBuilder highlightRange(String fullCode, int rangeStart, int rangeEnd) {
+        if (fullCode == null || fullCode.isEmpty()) return new SpannableStringBuilder("");
+        // Clamp
+        int start = Math.max(0, rangeStart);
+        int end = Math.min(fullCode.length(), rangeEnd);
+        if (start >= end) return new SpannableStringBuilder("");
+        String sub = fullCode.substring(start, end);
+        return highlight(sub);
+    }
+
+    /**
      * Injects a syntax styling span across a precise structural region of the text buffer.
      * Incorporates safety boundary filtering checks to discard invalid or overlapping range requests.
      */

@@ -849,4 +849,11 @@ public class EditorViewModel extends ViewModel {
         }
         return true;
     }
+
+    public boolean hasExplicitPreviewState(String relativePath) {
+        if (currentState != null) {
+            return currentState.hasExplicitPreviewState(relativePath);
+        }
+        return false;
+    }
 }

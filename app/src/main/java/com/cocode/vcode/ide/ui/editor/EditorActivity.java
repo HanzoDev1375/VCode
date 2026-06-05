@@ -397,6 +397,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
 
                 boolean isPreview = viewModel.getPreviewState(relPath);
+                // Don't default to preview mode for empty files (freshly created)
+                if (isPreview && !viewModel.hasExplicitPreviewState(relPath)) {
+                    String content = activeFile.getContent();
+                    if (content == null || content.trim().isEmpty()) {
+                        isPreview = false;
+                    }
+                }
                 updateActiveViewer(activeFile, isPreview);
             }
             updateToolbarVisibility();
