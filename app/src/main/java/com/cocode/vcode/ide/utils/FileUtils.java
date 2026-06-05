@@ -227,7 +227,7 @@ public class FileUtils {
             context.startActivity(android.content.Intent.createChooser(intent, "Open " + file.getName() + " with..."));
 
         } catch (Exception e) {
-            android.widget.Toast.makeText(context, "Cannot open this file type.", android.widget.Toast.LENGTH_SHORT).show();
+            android.widget.Toast.makeText(context, "No app found to open this file.", android.widget.Toast.LENGTH_SHORT).show();
         }
     }
 

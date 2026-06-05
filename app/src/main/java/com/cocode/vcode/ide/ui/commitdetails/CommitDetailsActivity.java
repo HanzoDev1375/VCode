@@ -91,7 +91,6 @@ public class CommitDetailsActivity extends BaseActivity {
         // Close activity upon successful execution of a destructive Git action (e.g., revert)
         viewModel.getActionCompleted().observe(this, completed -> {
             if (Boolean.TRUE.equals(completed)) {
-                Toast.makeText(this, "Action completed successfully.", Toast.LENGTH_SHORT).show();
                 finish();
             }
         });
@@ -137,7 +136,6 @@ public class CommitDetailsActivity extends BaseActivity {
     private void setupOperationalButtons() {
         binding.btnRevertCommit.setOnClickListener(v -> {
             viewModel.revertCommit();
-            Toast.makeText(this, "Revert execution started...", Toast.LENGTH_SHORT).show();
         });
 
         binding.btnResetHere.setOnClickListener(v -> {

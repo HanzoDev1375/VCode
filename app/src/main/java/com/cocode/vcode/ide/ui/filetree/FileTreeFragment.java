@@ -250,7 +250,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
     private void showImportDestinationDialog(Runnable onConfirmed) {
         if (viewModel.getFileTree().getValue() == null || viewModel.getProjectRoot() == null) {
-            Toast.makeText(getContext(), "Project tree not loaded yet", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Project is still loading. Please wait.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -374,11 +374,9 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_pen, "Rename", () -> showRenameDialog(file));
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_copy, "Copy", () -> {
                 adapter.setClipboardState(file, false);
-                Toast.makeText(getContext(), "Copied", Toast.LENGTH_SHORT).show();
             });
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_scissors, "Cut", () -> {
                 adapter.setClipboardState(file, true);
-                Toast.makeText(getContext(), "Cut", Toast.LENGTH_SHORT).show();
             });
         }
 
@@ -471,7 +469,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         ClipData clip = ClipData.newPlainText(label, text);
         if (clipboard != null) {
             clipboard.setPrimaryClip(clip);
-            Toast.makeText(getContext(), "Copied path", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Path copied to clipboard.", Toast.LENGTH_SHORT).show();
         }
     }
 

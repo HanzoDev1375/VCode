@@ -144,11 +144,11 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
         String projectName = etProjectName.getText().toString().trim();
 
         if (repoUrl.isEmpty()) {
-            Toast.makeText(getContext(), "Repository URL cannot be empty.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Repository URL is required.", Toast.LENGTH_SHORT).show();
             return;
         }
         if (projectName.isEmpty()) {
-            Toast.makeText(getContext(), "Please specify a project name.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), "Project name is required.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -204,7 +204,6 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
             public void onSuccess() {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (isAdded()) {
-                        Toast.makeText(context, "Cloned successfully!", Toast.LENGTH_SHORT).show();
                         projectsViewModel.loadProjects();
                         dismiss();
                     }
@@ -235,7 +234,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
                 setCancelable(true);
                 layoutProgress.setVisibility(View.GONE);
                 layoutForm.setVisibility(View.VISIBLE);
-                Toast.makeText(getContext(), "Clone Failed: " + traceMessage, Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), "Clone failed: " + traceMessage, Toast.LENGTH_LONG).show();
             }
         });
     }

@@ -6,7 +6,6 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -77,8 +76,14 @@ public class CreateSnippetBottomSheet extends BottomSheetDialogFragment {
             String code = binding.etSnippetCode.getText() != null ? binding.etSnippetCode.getText().toString() : "";
 
             // Basic validation for snippet metadata
-            if (title.isEmpty() || code.isEmpty()) {
-                Toast.makeText(requireContext(), "Title and Code cannot be empty", Toast.LENGTH_SHORT).show();
+            if (title.isEmpty()) {
+                binding.etSnippetTitle.setError("Title is required");
+                binding.etSnippetTitle.requestFocus();
+                return;
+            }
+            if (code.isEmpty()) {
+                binding.etSnippetCode.setError("Code is required");
+                binding.etSnippetCode.requestFocus();
                 return;
             }
 

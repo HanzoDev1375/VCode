@@ -128,7 +128,7 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (getContext() != null) {
-                        Toast.makeText(getContext(), "Cannot load diff: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                        Toast.makeText(getContext(), "Failed to load diff.", Toast.LENGTH_SHORT).show();
                     }
                     dismiss();
                 });

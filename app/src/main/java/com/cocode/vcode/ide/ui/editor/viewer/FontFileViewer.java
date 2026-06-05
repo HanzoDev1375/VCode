@@ -98,12 +98,11 @@ public class FontFileViewer implements IFileViewer {
                 Typeface tf = Typeface.createFromFile(f);
                 etFontPreview.setTypeface(tf);
             } catch (Exception e) {
-                Toast.makeText(context, "Could not load font", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, "Unable to preview this font.", Toast.LENGTH_SHORT).show();
+                etFontPreview.setVisibility(View.GONE);
+                webviewFontPreview.setVisibility(View.VISIBLE);
+                loadWebFontPreview(f, ext);
             }
-        } else if (ext.equals("woff") || ext.equals("woff2") || ext.equals("eot")) {
-            etFontPreview.setVisibility(View.GONE);
-            webviewFontPreview.setVisibility(View.VISIBLE);
-            loadWebFontPreview(f, ext);
         }
     }
 
@@ -141,7 +140,7 @@ public class FontFileViewer implements IFileViewer {
                 Handler mainHandler = ExecutorProvider.getInstance().getMainHandler();
                 mainHandler.post(() -> {
                     if (context != null)
-                        Toast.makeText(context, "Could not load font", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, "Unable to preview this font.", Toast.LENGTH_SHORT).show();
                 });
             }
         });

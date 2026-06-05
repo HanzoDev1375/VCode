@@ -266,7 +266,7 @@ public class PreviewActivity extends BaseActivity {
                 startActivity(browserIntent);
             } catch (Exception e) {
                 // Inform the user if the browser handover fails
-                Toast.makeText(this, "Error: " + e.getMessage(), Toast.LENGTH_LONG).show();
+                Toast.makeText(this, "Could not open in browser.", Toast.LENGTH_SHORT).show();
             }
         });
     }
@@ -364,6 +364,5 @@ public class PreviewActivity extends BaseActivity {
         settings.setDisplayZoomControls(false);
 
         binding.webView.reload();
-        Toast.makeText(this, isDesktopMode ? "Desktop Mode" : "Mobile Mode", Toast.LENGTH_SHORT).show();
     }
 }

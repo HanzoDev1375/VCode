@@ -16,6 +16,7 @@ import com.cocode.vcode.ide.databinding.ItemGitFileBinding;
 import com.cocode.vcode.ide.git.model.GitFileItem;
 import com.cocode.vcode.ide.utils.FileIconHelper;
 import com.cocode.vcode.ide.utils.FontManager;
+import com.cocode.vcode.ide.utils.UiUtils;
 
 /**
  * Work-tree modifications change tracking file listing controller.
@@ -113,7 +114,7 @@ public class GitFilesAdapter extends ListAdapter<GitFileItem, GitFilesAdapter.Vi
             }
 
             GradientDrawable badge = new GradientDrawable();
-            badge.setCornerRadius(4 * context.getResources().getDisplayMetrics().density);
+            badge.setCornerRadius(UiUtils.dpToPx(context, 4));
             badge.setColor(ContextCompat.getColor(context, statusColor));
             binding.tvStatusBadge.setBackground(badge);
 

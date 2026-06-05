@@ -194,10 +194,10 @@ public class GitRemoteFragment extends Fragment {
             if (credentialStore.hasCredentials(requireContext())) {
                 try {
                     credentialStore.clearCredentials(requireContext());
-                    Toast.makeText(requireContext(), "Logged out of GitHub", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Disconnected from GitHub.", Toast.LENGTH_SHORT).show();
                     refreshAccountUIState();
                 } catch (Exception e) {
-                    Toast.makeText(requireContext(), "An unknown error occurred", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), "Failed to disconnect. Please try again.", Toast.LENGTH_SHORT).show();
                 }
             } else {
                 openGitHubLoginSheet();
@@ -232,7 +232,7 @@ public class GitRemoteFragment extends Fragment {
                     }
                     if (isAdded()) {
                         refreshAccountUIState();
-                        Toast.makeText(requireContext(), "Logged into GitHub as " + username, Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), "Signed in as @" + username, Toast.LENGTH_SHORT).show();
                     }
                 });
             } catch (Exception e) {
@@ -255,7 +255,7 @@ public class GitRemoteFragment extends Fragment {
 
         // Ensure authentication is present before attempting a push
         if (!credentialStore.hasCredentials(context)) {
-            Toast.makeText(context, "Authentication needed. Please connect your GitHub account.", Toast.LENGTH_LONG).show();
+            Toast.makeText(context, "Connect your GitHub account to push.", Toast.LENGTH_SHORT).show();
             openGitHubLoginSheet();
             return;
         }

@@ -105,7 +105,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/settings/tokens/new?scopes=repo,workflow"));
                 startActivity(intent);
             } catch (Exception e) {
-                Toast.makeText(requireContext(), "Could not open browser", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "No browser app found to open this URL.", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -150,11 +150,10 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             GitCredentialStore store = new GitCredentialStore();
             try {
                 store.clearCredentials(requireContext());
+                Toast.makeText(requireContext(), "Disconnected from GitHub.", Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
-                Toast.makeText(requireContext(), "An Unknown error occurred", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Failed to disconnect. Please try again.", Toast.LENGTH_SHORT).show();
             }
-
-            Toast.makeText(requireContext(), "Logged out of GitHub", Toast.LENGTH_SHORT).show();
 
             // Revert back to the login form UI
             refreshUIState();

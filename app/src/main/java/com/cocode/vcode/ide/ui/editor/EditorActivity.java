@@ -10,6 +10,7 @@ import android.text.Layout;
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
 import android.widget.Toast;
@@ -193,7 +194,6 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             Integer activeIndex = viewModel.getActiveTabIndex().getValue();
             if (activeIndex != null && activeIndex >= 0) {
                 viewModel.saveActiveFile();
-                Toast.makeText(this, "File saved", Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -231,7 +231,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
 
         if (files == null || activeIndex < 0 || activeIndex >= files.size()) {
-            Toast.makeText(this, "No file open to preview", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Open a file first to run the preview.", Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -313,7 +313,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(serverUrl));
                 startActivity(browserIntent);
             } catch (Exception e) {
-                Toast.makeText(this, "Could not open external browser.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "No browser app found to open this URL.", Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -374,6 +374,16 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 binding.tabBar.setVisibility(View.GONE);
                 binding.breadcrumb.setVisibility(View.GONE);
                 hideJsonStatus();
+
+                // Hide keyboard
+                InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
+                imm.hideSoftInputFromWindow(getWindow().getDecorView().getWindowToken(), 0);
+
+                // Hide all toolbar buttons except ivViewPreview (keep visible if server is running)
+                binding.ivTogglePreview.setVisibility(View.GONE);
+                boolean isServerRunning = localWebServer != null && localWebServer.isRunning();
+                binding.ivViewPreview.setVisibility(isServerRunning ? View.VISIBLE : View.GONE);
+                updateToolbarVisibility();
             }
         });
 
@@ -666,7 +676,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         String rawCode = java.util.Objects.requireNonNull(codeEditText.getText()).toString();
         FileType lang = activeFile.getFileType();
-        int originalScrollY = codeEditText.getScrollY();
+        int originalCursor = codeEditText.getSelectionStart();
 
         Toast.makeText(this, "Formatting...", Toast.LENGTH_SHORT).show();
         ExecutorProvider.getInstance().runOnIo(() -> {
@@ -674,7 +684,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             ExecutorProvider.getInstance().runOnMain(() -> {
                 if (!rawCode.equals(formattedCode)) {
                     codeEditText.setText(formattedCode);
-                    codeEditText.post(() -> codeEditText.scrollTo(codeEditText.getScrollX(), Math.min(originalScrollY, codeEditText.getLayout() != null ? codeEditText.getLayout().getHeight() - codeEditText.getHeight() : originalScrollY)));
+                    // Restore cursor to its pre-format position so Android's cursor-visibility
+                    // logic scrolls back to the right place instead of jumping to the top.
+                    int safeCursor = Math.min(originalCursor, formattedCode.length());
+                    codeEditText.setSelection(safeCursor);
                     Toast.makeText(this, "Formatted successfully", Toast.LENGTH_SHORT).show();
                 } else {
                     Toast.makeText(this, "Code is already formatted", Toast.LENGTH_SHORT).show();

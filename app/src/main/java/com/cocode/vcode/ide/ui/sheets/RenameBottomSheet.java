@@ -5,7 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -154,7 +153,7 @@ public class RenameBottomSheet extends BottomSheetDialogFragment {
             String newName = binding.etProjectName.getText() != null ? binding.etProjectName.getText().toString().trim() : "";
 
             if (newName.isEmpty()) {
-                Toast.makeText(requireContext(), "Name cannot be empty", Toast.LENGTH_SHORT).show();
+                binding.etProjectName.setError("Name is required");
                 binding.etProjectName.requestFocus();
                 return;
             }

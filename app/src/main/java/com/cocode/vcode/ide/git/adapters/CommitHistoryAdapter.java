@@ -16,6 +16,7 @@ import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.databinding.ItemCommitHistoryBinding;
 import com.cocode.vcode.ide.git.model.CommitItem;
 import com.cocode.vcode.ide.utils.FontManager;
+import com.cocode.vcode.ide.utils.UiUtils;
 
 /**
  * Version control revision tree adapter.
@@ -97,7 +98,7 @@ public class CommitHistoryAdapter extends ListAdapter<CommitItem, CommitHistoryA
                 binding.viewNode.setBackground(nodeDrawable);
             } else {
                 // Style older chronological nodes with clear bordered stroke indicators
-                nodeDrawable.setStroke((int) (2 * context.getResources().getDisplayMetrics().density), accent);
+                nodeDrawable.setStroke(UiUtils.dpToPx(context, 2), accent);
                 nodeDrawable.setColor(ContextCompat.getColor(context, android.R.color.transparent));
                 binding.viewNode.setBackground(nodeDrawable);
             }

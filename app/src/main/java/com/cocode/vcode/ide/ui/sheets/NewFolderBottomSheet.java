@@ -120,7 +120,7 @@ public class NewFolderBottomSheet extends BottomSheetDialogFragment {
             String folderName = binding.etFolderName.getText() != null ? binding.etFolderName.getText().toString().trim() : "";
 
             if (folderName.isEmpty()) {
-                Toast.makeText(requireContext(), "Folder name cannot be empty", Toast.LENGTH_SHORT).show();
+                binding.etFolderName.setError("Folder name is required");
                 binding.etFolderName.requestFocus();
                 return;
             }
@@ -130,7 +130,7 @@ public class NewFolderBottomSheet extends BottomSheetDialogFragment {
                 viewModel.createDirectory(parentDir, folderName);
                 dismiss();
             } else {
-                Toast.makeText(requireContext(), "Failed to create folder: parent workspace path is missing", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), "Unable to create folder. Please try again.", Toast.LENGTH_SHORT).show();
             }
         });
     }

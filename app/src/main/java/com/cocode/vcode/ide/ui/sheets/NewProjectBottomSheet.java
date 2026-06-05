@@ -6,7 +6,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -180,7 +179,7 @@ public class NewProjectBottomSheet extends BottomSheetDialogFragment {
             String name = binding.etProjectName.getText() != null ? binding.etProjectName.getText().toString().trim() : "";
 
             if (name.isEmpty()) {
-                Toast.makeText(requireContext(), "Project name cannot be empty", Toast.LENGTH_SHORT).show();
+                binding.etProjectName.setError("Project name is required");
                 binding.etProjectName.requestFocus();
                 return;
             }

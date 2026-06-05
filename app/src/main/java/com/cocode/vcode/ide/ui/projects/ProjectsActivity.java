@@ -93,7 +93,6 @@ public class ProjectsActivity extends BaseActivity {
         ProjectsViewModel.onCloneCompleteListener = () -> {
             binding.getRoot().post(() -> {
                 if (!isFinishing() && !isDestroyed()) {
-                    Toast.makeText(this, "Cloned successfully!", Toast.LENGTH_SHORT).show();
                     viewModel.loadProjects();
                 }
             });
@@ -278,7 +277,7 @@ public class ProjectsActivity extends BaseActivity {
             if (hasStoragePermission()) {
                 GitCloneBottomSheet.show(getSupportFragmentManager(), viewModel);
             } else {
-                Toast.makeText(this, "Storage access permissions are required to perform cloning actions.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
                 requestStoragePermission();
             }
         });
@@ -301,7 +300,7 @@ public class ProjectsActivity extends BaseActivity {
                                         updater.onResult(true, null);
                                     } catch (Exception ignored) {
                                     }
-                                    Toast.makeText(ProjectsActivity.this, "Logged into GitHub as " + username, Toast.LENGTH_SHORT).show();
+                                    Toast.makeText(ProjectsActivity.this, "Signed in as @" + username, Toast.LENGTH_SHORT).show();
                                 });
                             } catch (Exception e) {
                                 // Notify the UI of authentication failure
@@ -335,7 +334,7 @@ public class ProjectsActivity extends BaseActivity {
                 binding.tvTotalProjectsCount.setText(String.valueOf(allProjects.size()));
                 calculateCommitsToday(allProjects);
             } else {
-                Toast.makeText(this, "Failed to load projects: " + result.getError(), Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Failed to load projects.", Toast.LENGTH_SHORT).show();
                 updateEmptyStateVisibility(true);
             }
         });
@@ -467,7 +466,6 @@ public class ProjectsActivity extends BaseActivity {
     private void showNewProjectSheet() {
         NewProjectBottomSheet.show(getSupportFragmentManager(), (name, mainFile, template, initGit) -> {
             viewModel.createProject(name, mainFile, template, initGit);
-            Toast.makeText(ProjectsActivity.this, "Created " + name, Toast.LENGTH_SHORT).show();
         });
     }
 

@@ -50,7 +50,7 @@ public class DebugActivity extends AppCompatActivity {
             ClipData clip = ClipData.newPlainText("Crash Log", finalCrashLog);
             if (clipboard != null) {
                 clipboard.setPrimaryClip(clip);
-                Toast.makeText(this, "Copied to clipboard", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, "Crash log copied.", Toast.LENGTH_SHORT).show();
             }
         });
 

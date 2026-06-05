@@ -156,7 +156,7 @@ public class GitHistoryFragment extends Fragment implements CommitHistoryAdapter
                     ClipboardManager cb = (ClipboardManager) requireContext().getSystemService(Context.CLIPBOARD_SERVICE);
                     if (cb != null) {
                         cb.setPrimaryClip(ClipData.newPlainText("SHA", item.getSha()));
-                        Toast.makeText(getContext(), "SHA copied", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), "Commit SHA copied.", Toast.LENGTH_SHORT).show();
                     }
                 })
                 .show(getChildFragmentManager(), "CommitOptionsSheet");

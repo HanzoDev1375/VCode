@@ -19,8 +19,8 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
-import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.databinding.ItemAutocompleteSuggestionBinding;
+import com.cocode.vcode.ide.utils.FileIconHelper;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 
@@ -254,13 +254,7 @@ public class AutoCompletePopup {
                     holder.binding.ivTypeIcon.setImageResource(R.drawable.ic_folder);
                     holder.binding.ivTypeIcon.setColorFilter(colorPrimary, PorterDuff.Mode.SRC_IN);
                 } else {
-                    String label = item.getLabel();
-                    String ext = "";
-                    int lastDot = label.lastIndexOf('.');
-                    if (lastDot != -1) ext = label.substring(lastDot + 1);
-                    FileType fType = FileType.fromExtension(ext);
-                    holder.binding.ivTypeIcon.setImageResource(fType.getIconResId());
-                    holder.binding.ivTypeIcon.setColorFilter(ContextCompat.getColor(context, fType.getColorResId()), PorterDuff.Mode.SRC_IN);
+                    FileIconHelper.setFileIconAndColor(holder.binding.ivTypeIcon, item.getLabel());
                 }
             } else {
                 holder.binding.ivTypeIcon.setVisibility(View.GONE);
