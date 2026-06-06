@@ -2,9 +2,13 @@ package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 
 import com.cocode.vcode.ide.R;
+import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -18,9 +22,9 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
     // Regular Expression patterns isolating explicit markup syntax boundaries
     private static final Pattern PAT_COMMENT = Pattern.compile("<!--[\\s\\S]*?-->", Pattern.DOTALL);
     private static final Pattern PAT_DOCTYPE = Pattern.compile("<!DOCTYPE[^>]*>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PAT_TAG_NAME = Pattern.compile("(?<=</?)[\\w-]+"); // Positive lookbehind isolates target tag keyword
+    private static final Pattern PAT_TAG_NAME = Pattern.compile("(?<=</?)[\\w-]+");
     private static final Pattern PAT_BRACKET = Pattern.compile("</?|/?>|>");
-    private static final Pattern PAT_ATTR_NAME = Pattern.compile("\\s([\\w:-]+)(?=\\s*=)"); // Positive lookahead catches key names
+    private static final Pattern PAT_ATTR_NAME = Pattern.compile("\\s([\\w:-]+)(?=\\s*=)");
     private static final Pattern PAT_ATTR_VAL = Pattern.compile("=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')");
     private static final Pattern PAT_ENTITY = Pattern.compile("&[#\\w]+;");
 
@@ -42,7 +46,6 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
 
     public HtmlSyntaxHighlighter(Context context) {
         super(context);
-        // Instantiate specialized engine blocks to handle interior script/style text regions
         jsHighlighter = new JsSyntaxHighlighter(context);
         cssHighlighter = new CssSyntaxHighlighter(context);
 
@@ -60,82 +63,212 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
             return new SpannableStringBuilder(code != null ? code : "");
         SpannableStringBuilder ssb = new SpannableStringBuilder(code);
 
-        // Pass 1: Delegate internal <script> content blocks to the specialized JavaScript highlighter
+        // Collect embedded block ranges so HTML patterns can skip them
+        List<int[]> embeddedRanges = new ArrayList<>();
+
+        // Pass 1: Delegate internal <script> content blocks to JavaScript highlighter
         Matcher scriptMatcher = PAT_SCRIPT.matcher(code);
         while (scriptMatcher.find()) {
-            int groupStart = scriptMatcher.start(1); // Identify text entry index inside the tags
+            int groupStart = scriptMatcher.start(1);
+            int groupEnd = scriptMatcher.end(1);
             String inner = scriptMatcher.group(1);
             if (inner != null && !inner.isEmpty()) {
+                embeddedRanges.add(new int[]{groupStart, groupEnd});
                 SpannableStringBuilder innerSsb = jsHighlighter.highlight(inner);
-                mergeSpans(ssb, innerSsb, groupStart); // Map sub-tokens back into primary buffer coordinates
+                mergeSpans(ssb, innerSsb, groupStart);
             }
         }
 
-        // Pass 2: Delegate internal <style> design blocks to the specialized CSS highlighter
+        // Pass 2: Delegate internal <style> design blocks to CSS highlighter
         Matcher styleMatcher = PAT_STYLE.matcher(code);
         while (styleMatcher.find()) {
-            int groupStart = styleMatcher.start(1); // Identify text entry index inside the tags
+            int groupStart = styleMatcher.start(1);
+            int groupEnd = styleMatcher.end(1);
             String inner = styleMatcher.group(1);
             if (inner != null && !inner.isEmpty()) {
+                embeddedRanges.add(new int[]{groupStart, groupEnd});
                 SpannableStringBuilder innerSsb = cssHighlighter.highlight(inner);
-                mergeSpans(ssb, innerSsb, groupStart); // Map sub-tokens back into primary buffer coordinates
+                mergeSpans(ssb, innerSsb, groupStart);
             }
         }
 
-        // Pass 3: Comments (highest priority — intentionally overwrites any underlying nested tags or tokens)
-        apply(ssb, PAT_COMMENT, code, colorComment);
+        // Pass 3: Comments (highest priority)
+        applySkippingRanges(ssb, PAT_COMMENT, code, colorComment, embeddedRanges);
 
-        // Pass 4: Global Document Directives
-        apply(ssb, PAT_DOCTYPE, code, colorTag);
+        // Pass 4: DOCTYPE
+        applySkippingRanges(ssb, PAT_DOCTYPE, code, colorTag, embeddedRanges);
 
-        // Pass 5: Element block keys
-        apply(ssb, PAT_TAG_NAME, code, colorTag);
+        // Pass 5: Tag names
+        applySkippingRanges(ssb, PAT_TAG_NAME, code, colorTag, embeddedRanges);
 
-        // Pass 6: Markup brackets
-        apply(ssb, PAT_BRACKET, code, colorBracket);
+        // Pass 6: Brackets
+        applySkippingRanges(ssb, PAT_BRACKET, code, colorBracket, embeddedRanges);
 
-        // Pass 7: Element attributes
+        // Pass 7: Attribute names
         Matcher attrMatcher = PAT_ATTR_NAME.matcher(code);
         while (attrMatcher.find()) {
-            int s = attrMatcher.start(1); // Focus strictly on capturing group 1 index bounds
+            int s = attrMatcher.start(1);
             int e = attrMatcher.end(1);
-            applySpan(ssb, s, e, colorAttrName);
+            if (!isInsideEmbeddedRange(s, e, embeddedRanges)) {
+                applySpan(ssb, s, e, colorAttrName);
+            }
         }
 
-        // Pass 8: Inline attribute field values
+        // Pass 8: Attribute values
         Matcher valMatcher = PAT_ATTR_VAL.matcher(code);
         while (valMatcher.find()) {
             if (valMatcher.group(1) != null) {
-                applySpan(ssb, valMatcher.start(1), valMatcher.end(1), colorAttrVal);
+                int s = valMatcher.start(1);
+                int e = valMatcher.end(1);
+                if (!isInsideEmbeddedRange(s, e, embeddedRanges)) {
+                    applySpan(ssb, s, e, colorAttrVal);
+                }
             }
         }
 
-        // Pass 9: Character reference entities
-        apply(ssb, PAT_ENTITY, code, colorEntity);
+        // Pass 9: Entities
+        applySkippingRanges(ssb, PAT_ENTITY, code, colorEntity, embeddedRanges);
 
         return ssb;
     }
 
     /**
-     * Loops through matching regular expression structures to lay down specific color highlights.
+     * Highlights a visible range while still correctly detecting embedded style/script blocks
+     * in the full document.
      */
-    private void apply(SpannableStringBuilder ssb, Pattern pattern, String code, int color) {
+    @Override
+    public SpannableStringBuilder highlightRange(String fullCode, int rangeStart, int rangeEnd) {
+        if (fullCode == null || fullCode.isEmpty()) return new SpannableStringBuilder("");
+        int start = Math.max(0, rangeStart);
+        int end = Math.min(fullCode.length(), rangeEnd);
+        if (start >= end) return new SpannableStringBuilder("");
+
+        String sub = fullCode.substring(start, end);
+        SpannableStringBuilder ssb = new SpannableStringBuilder(sub);
+
+        // Collect embedded block ranges from the FULL document
+        List<int[]> embeddedRanges = new ArrayList<>();
+
+        // Find all <script> blocks in full code and highlight those overlapping visible range
+        Matcher scriptMatcher = PAT_SCRIPT.matcher(fullCode);
+        while (scriptMatcher.find()) {
+            int groupStart = scriptMatcher.start(1);
+            int groupEnd = scriptMatcher.end(1);
+            String inner = scriptMatcher.group(1);
+            if (inner == null || inner.isEmpty()) continue;
+            embeddedRanges.add(new int[]{groupStart, groupEnd});
+            if (groupEnd > start && groupStart < end) {
+                int hlStart = Math.max(groupStart, start) - groupStart;
+                int hlEnd = Math.min(groupEnd, end) - groupStart;
+                if (hlStart < hlEnd) {
+                    String visibleInner = inner.substring(hlStart, hlEnd);
+                    SpannableStringBuilder innerSsb = jsHighlighter.highlight(visibleInner);
+                    int offset = Math.max(groupStart, start) - start;
+                    mergeSpans(ssb, innerSsb, offset);
+                }
+            }
+        }
+
+        // Find all <style> blocks in full code and highlight those overlapping visible range
+        Matcher styleMatcher = PAT_STYLE.matcher(fullCode);
+        while (styleMatcher.find()) {
+            int groupStart = styleMatcher.start(1);
+            int groupEnd = styleMatcher.end(1);
+            String inner = styleMatcher.group(1);
+            if (inner == null || inner.isEmpty()) continue;
+            embeddedRanges.add(new int[]{groupStart, groupEnd});
+            if (groupEnd > start && groupStart < end) {
+                int hlStart = Math.max(groupStart, start) - groupStart;
+                int hlEnd = Math.min(groupEnd, end) - groupStart;
+                if (hlStart < hlEnd) {
+                    String visibleInner = inner.substring(hlStart, hlEnd);
+                    SpannableStringBuilder innerSsb = cssHighlighter.highlight(visibleInner);
+                    int offset = Math.max(groupStart, start) - start;
+                    mergeSpans(ssb, innerSsb, offset);
+                }
+            }
+        }
+
+        // Apply HTML patterns only outside embedded ranges (adjusted to substring coordinates)
+        applySkippingRangesForRange(ssb, PAT_COMMENT, sub, colorComment, embeddedRanges, start);
+        applySkippingRangesForRange(ssb, PAT_DOCTYPE, sub, colorTag, embeddedRanges, start);
+        applySkippingRangesForRange(ssb, PAT_TAG_NAME, sub, colorTag, embeddedRanges, start);
+        applySkippingRangesForRange(ssb, PAT_BRACKET, sub, colorBracket, embeddedRanges, start);
+
+        Matcher attrMatcher = PAT_ATTR_NAME.matcher(sub);
+        while (attrMatcher.find()) {
+            int s = attrMatcher.start(1);
+            int e = attrMatcher.end(1);
+            if (!isInsideEmbeddedRange(s + start, e + start, embeddedRanges)) {
+                applySpan(ssb, s, e, colorAttrName);
+            }
+        }
+
+        Matcher valMatcher = PAT_ATTR_VAL.matcher(sub);
+        while (valMatcher.find()) {
+            if (valMatcher.group(1) != null) {
+                int s = valMatcher.start(1);
+                int e = valMatcher.end(1);
+                if (!isInsideEmbeddedRange(s + start, e + start, embeddedRanges)) {
+                    applySpan(ssb, s, e, colorAttrVal);
+                }
+            }
+        }
+
+        applySkippingRangesForRange(ssb, PAT_ENTITY, sub, colorEntity, embeddedRanges, start);
+
+        return ssb;
+    }
+
+    /**
+     * Applies pattern matches but skips any match that falls inside an embedded range.
+     */
+    private void applySkippingRanges(SpannableStringBuilder ssb, Pattern pattern,
+                                     String code, int color, List<int[]> embeddedRanges) {
         Matcher m = pattern.matcher(code);
         while (m.find()) {
-            applySpan(ssb, m.start(), m.end(), color);
+            if (!isInsideEmbeddedRange(m.start(), m.end(), embeddedRanges)) {
+                applySpan(ssb, m.start(), m.end(), color);
+            }
         }
     }
 
     /**
-     * Helper to offset and inject syntax styling elements parsed from external nested
-     * sub-language engines into the main structural document stream.
+     * Applies pattern matches on a substring, skipping matches inside embedded ranges.
+     * The embeddedRanges are in full-document coordinates; rangeOffset converts.
+     */
+    private void applySkippingRangesForRange(SpannableStringBuilder ssb, Pattern pattern,
+                                             String sub, int color, List<int[]> embeddedRanges,
+                                             int rangeOffset) {
+        Matcher m = pattern.matcher(sub);
+        while (m.find()) {
+            int absStart = m.start() + rangeOffset;
+            int absEnd = m.end() + rangeOffset;
+            if (!isInsideEmbeddedRange(absStart, absEnd, embeddedRanges)) {
+                applySpan(ssb, m.start(), m.end(), color);
+            }
+        }
+    }
+
+    /**
+     * Checks if a match region overlaps with any embedded script/style content range.
+     */
+    private boolean isInsideEmbeddedRange(int start, int end, List<int[]> ranges) {
+        for (int[] range : ranges) {
+            if (start >= range[0] && end <= range[1]) return true;
+        }
+        return false;
+    }
+
+    /**
+     * Merges syntax spans from a sub-highlighter into the target buffer at the given offset.
      */
     private void mergeSpans(SpannableStringBuilder target,
                             SpannableStringBuilder source, int offset) {
         if (source == null || offset < 0) return;
-        com.cocode.vcode.ide.views.SyntaxHighlightSpan[] spans =
-                source.getSpans(0, source.length(), com.cocode.vcode.ide.views.SyntaxHighlightSpan.class);
-        for (com.cocode.vcode.ide.views.SyntaxHighlightSpan span : spans) {
+        SyntaxHighlightSpan[] spans =
+                source.getSpans(0, source.length(), SyntaxHighlightSpan.class);
+        for (SyntaxHighlightSpan span : spans) {
             int s = source.getSpanStart(span) + offset;
             int e = source.getSpanEnd(span) + offset;
             applySpan(target, s, e, span.getForegroundColor());
