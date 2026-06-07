@@ -65,7 +65,7 @@ public class FileOperationManager {
         progressLiveData.postValue(new ProgressState(true, 0, 100));
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.vcode_logo_notification)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle(title)
                 .setContentText("Calculating...")
                 .setProgress(0, 0, true)
@@ -87,7 +87,7 @@ public class FileOperationManager {
         lastNotificationTime = now;
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.vcode_logo_notification)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle(title)
                 .setContentText(text)
                 .setProgress(max, progress, false)
@@ -108,7 +108,7 @@ public class FileOperationManager {
         }
 
         NotificationCompat.Builder builder = new NotificationCompat.Builder(context, CHANNEL_ID)
-                .setSmallIcon(R.drawable.vcode_logo_notification)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentTitle(title)
                 .setContentText(resultText)
                 .setProgress(0, 0, false)

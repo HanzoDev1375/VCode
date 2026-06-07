@@ -136,7 +136,7 @@ public class GitCloneService extends Service {
         notificationBuilder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle("Cloning Repository")
                 .setContentText("Initializing...")
-                .setSmallIcon(R.drawable.vcode_logo_notification)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setContentIntent(pendingIntent)
                 .setOnlyAlertOnce(true)
                 .setOngoing(true)
@@ -162,7 +162,7 @@ public class GitCloneService extends Service {
         NotificationCompat.Builder builder = new NotificationCompat.Builder(this, CHANNEL_ID)
                 .setContentTitle(success ? "Clone Successful" : "Clone Failed")
                 .setContentText(message)
-                .setSmallIcon(R.drawable.vcode_logo_notification)
+                .setSmallIcon(R.mipmap.ic_launcher_monochrome)
                 .setAutoCancel(true)
                 .setOngoing(false)
                 .setProgress(0, 0, false);
