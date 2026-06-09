@@ -28,6 +28,7 @@ public class HtmlTagParser {
 
     public static class HtmlContext {
         public boolean isInsideOpenTag = false;
+        public boolean isTypingTagName = false;
         public String currentTagName = null;
         public String currentAttributeName = null;
         public boolean isInsideAttributeValue = false;
@@ -252,6 +253,10 @@ public class HtmlTagParser {
             
             ctx.isInsideOpenTag = true;
             ctx.currentTagName = currentTag.toString().toLowerCase();
+            
+            if (state == State.TAG_OPEN || state == State.TAG_NAME) {
+                ctx.isTypingTagName = true;
+            }
 
             if (state == State.ATTRIBUTE_VALUE_DOUBLE_QUOTES || state == State.ATTRIBUTE_VALUE_SINGLE_QUOTES || state == State.ATTRIBUTE_VALUE_UNQUOTED) {
                 ctx.isInsideAttributeValue = true;

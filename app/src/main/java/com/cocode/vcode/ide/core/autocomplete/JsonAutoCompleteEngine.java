@@ -271,6 +271,15 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         String trimmed = line.trim();
         String word    = getWordBeforeCursor(fullText, cursorPos);
 
+        // Prevent showing all suggestions immediately after typing { or }
+        // We only want to show suggestions when the user hits Enter (trimmed will be empty)
+        // or actually starts typing a word.
+        if (word.isEmpty()) {
+            if (trimmed.endsWith("{") || trimmed.endsWith("}")) {
+                return new ArrayList<>();
+            }
+        }
+
         // ── After ':' — value completions ────────────────────────────────────
         if (trimmed.endsWith(":") || trimmed.endsWith(": ")) {
             List<CompletionItem> items = new ArrayList<>(VALUE_ITEMS);

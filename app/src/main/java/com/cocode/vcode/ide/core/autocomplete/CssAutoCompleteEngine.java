@@ -239,6 +239,15 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         String trimmed = line.trim();
         String word    = getWordBeforeCursor(fullText, cursorPos);
 
+        // Prevent showing all suggestions immediately after typing { or }
+        // We only want to show suggestions when the user hits Enter (trimmed will be empty)
+        // or actually starts typing a word.
+        if (word.isEmpty()) {
+            if (trimmed.endsWith("{") || trimmed.endsWith("}")) {
+                return new ArrayList<>();
+            }
+        }
+
         // ── 1. @media/@supports/@container CONDITION completions ───────────────
         // Only triggers when writing the condition BEFORE the opening brace.
         if (isInsideAtRuleCondition(fullText, cursorPos)) {

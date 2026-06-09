@@ -403,19 +403,19 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // ── 5. Inside an open tag — attribute / attribute-value completions ───
-        if (ctx.isInsideOpenTag && ctx.currentTagName != null) {
+        if (ctx.isInsideOpenTag && !ctx.isTypingTagName && ctx.currentTagName != null) {
             if (ctx.isInsideAttributeValue && ctx.currentAttributeName != null) {
                 String attrName = ctx.currentAttributeName;
                 String typedValue = ctx.currentAttributeValue != null ? ctx.currentAttributeValue : "";
 
                 // 5a. Inside style="…" → CSS
                 if ("style".equals(attrName)) {
-                    return cssEngine.getSuggestions(fullText, cursorPos, true);
+                    return cssEngine.getSuggestions(typedValue, typedValue.length(), true);
                 }
 
                 // 5b. Inside on*="…" → JS
                 if (attrName.startsWith("on")) {
-                    return jsEngine.getSuggestions(fullText, cursorPos);
+                    return jsEngine.getSuggestions(typedValue, typedValue.length());
                 }
 
                 // 5c. Inside file-path attribute → file suggestions
