@@ -422,7 +422,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 if (attrName.equals("src") || attrName.equals("href") || attrName.equals("action") || 
                     attrName.equals("formaction") || attrName.equals("poster") || attrName.equals("data") || 
                     attrName.equals("cite") || attrName.equals("manifest") || attrName.equals("srcset")) {
-                    return getFileSuggestions(typedValue);
+                    return getFileSuggestions(typedValue, ctx.currentTagName, attrName);
                 }
 
                 // 5d. Inside a generic attribute value (e.g. class="…", id="…", dir="…")
@@ -558,7 +558,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
      * (src, href, action…). Shows the immediate directory contents when a slash is
      * present; otherwise does a recursive fuzzy-prefix search from the project root.
      */
-    private List<CompletionItem> getFileSuggestions(String typedPath) {
+    private List<CompletionItem> getFileSuggestions(String typedPath, String tagName, String attrName) {
         if (currentFile == null) return new ArrayList<>();
         File currentDir = currentFile.getParentFile();
         if (currentDir == null) return new ArrayList<>();
@@ -577,6 +577,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 if (files != null) {
                     for (File f : files) {
                         if (f.getName().startsWith(".")) continue;
+                        if (!isFileAllowed(f, tagName, attrName)) continue;
                         String name = f.getName();
                         if (!filterPrefix.isEmpty() && !name.toLowerCase().startsWith(filterPrefix)) continue;
                         String completion = name + (f.isDirectory() ? "/" : "");
@@ -595,7 +596,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         if (projectRoot == null) projectRoot = currentDir;
 
         List<File> allMatching = new ArrayList<>();
-        findFilesRecursively(projectRoot, typedPath.toLowerCase(), allMatching, 50);
+        findFilesRecursively(projectRoot, typedPath.toLowerCase(), allMatching, 50, tagName, attrName);
 
         for (File f : allMatching) {
             String relPath = getRelativeHtmlPath(currentDir, f);
@@ -659,17 +660,48 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         return rel.length() == 0 ? "./" : rel.toString();
     }
 
-    private void findFilesRecursively(File dir, String query, List<File> results, int limit) {
+    private void findFilesRecursively(File dir, String query, List<File> results, int limit, String tagName, String attrName) {
         if (results.size() >= limit) return;
         List<File> files = VFSManager.getInstance().listCachedFiles(dir);
         if (files == null) return;
         for (File f : files) {
             if (f.getName().startsWith(".")) continue;
+            if (!isFileAllowed(f, tagName, attrName)) continue;
             if (f.getName().toLowerCase().startsWith(query)) {
                 results.add(f);
                 if (results.size() >= limit) return;
             }
-            if (f.isDirectory()) findFilesRecursively(f, query, results, limit);
+            if (f.isDirectory()) findFilesRecursively(f, query, results, limit, tagName, attrName);
         }
+    }
+
+    private boolean isFileAllowed(File f, String tagName, String attrName) {
+        if (f.isDirectory()) return true; // Always allow traversing directories
+        String name = f.getName().toLowerCase();
+        
+        if ("img".equals(tagName) || "poster".equals(attrName) || "srcset".equals(attrName)) {
+            return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") 
+                || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp") || name.endsWith(".ico");
+        }
+        if ("script".equals(tagName)) {
+            return name.endsWith(".js") || name.endsWith(".ts");
+        }
+        if ("link".equals(tagName) && "href".equals(attrName)) {
+            return name.endsWith(".css") || name.endsWith(".png") || name.endsWith(".ico") || name.endsWith(".svg");
+        }
+        if ("audio".equals(tagName)) {
+            return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg");
+        }
+        if ("video".equals(tagName) && "src".equals(attrName)) {
+            return name.endsWith(".mp4") || name.endsWith(".webm") || name.endsWith(".ogg");
+        }
+        if ("html".equals(tagName) && "manifest".equals(attrName)) {
+            return name.endsWith(".json") || name.endsWith(".webmanifest");
+        }
+        if ("form".equals(tagName) || "action".equals(attrName) || "formaction".equals(attrName)) {
+            return name.endsWith(".php") || name.endsWith(".html") || name.endsWith(".htm") || name.endsWith(".js");
+        }
+        // For other generic tags (like <a>, <iframe>), allow everything
+        return true; 
     }
 }
