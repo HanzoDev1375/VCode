@@ -5,7 +5,7 @@
 
 # Preserve serialization naming strategies within underlying compression layers
 -keepclassmembers class org.eclipse.jgit.lib.CoreConfig { *; }
--keepenum org.eclipse.jgit.** { *; }
+-keep enum org.eclipse.jgit.** { *; }
 
 # Slf4j Logging Bridge Diagnostics Mappings Protections
 -keep class org.slf4j.** { *; }
