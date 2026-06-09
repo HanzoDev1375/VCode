@@ -36,19 +36,7 @@ import java.util.regex.Pattern;
  */
 public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
-    // ─── Patterns ───────────────────────────────────────────────────────────────
-    /** Detects cursor inside a file-path attribute value. */
-    private static final Pattern PAT_PATH_ATTR = Pattern.compile(
-            "(?s).*\\b(src|href|action|poster|data|srcset)\\s*=\\s*[\"']([^\"']*)$");
-    /** Detects cursor inside an inline style attribute. */
-    private static final Pattern PAT_STYLE_ATTR = Pattern.compile(
-            "(?s).*\\bstyle\\s*=\\s*[\"'][^\"']*$");
-    /** Detects cursor inside an on* event handler attribute. */
-    private static final Pattern PAT_EVENT_ATTR = Pattern.compile(
-            "(?s).*\\bon[a-z]+\\s*=\\s*[\"'][^\"']*$");
-    /** Detects cursor inside an attribute whose value is a known enumeration. */
-    private static final Pattern PAT_ENUM_ATTR = Pattern.compile(
-            "(?s).*\\b([a-zA-Z-]+)\\s*=\\s*[\"']([^\"']*)$");
+    // Patterns removed in favor of high-performance State Machine parser
 
     // ─── Global attributes present on every HTML element ───────────────────────
     private static final List<CompletionItem> GLOBAL_ATTRS = new ArrayList<>();
@@ -378,14 +366,15 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             }
         }
 
+        HtmlTagParser.HtmlContext ctx = tagParser.parseContext(fullText, cursorPos);
+
         // ── 3. Closing-tag suggestion on "</" ─────────────────────────────────
         if (trimmed.endsWith("</") || lineBefore.endsWith("</")) {
-            String unclosed = tagParser.getUnclosedTagAt(fullText, cursorPos);
-            if (unclosed != null && !unclosed.isEmpty()) {
+            if (ctx.unclosedTag != null && !ctx.unclosedTag.isEmpty()) {
                 List<CompletionItem> result = new ArrayList<>();
                 result.add(new CompletionItem(
-                        "</" + unclosed + ">",
-                        "</" + unclosed + ">",
+                        "</" + ctx.unclosedTag + ">",
+                        "</" + ctx.unclosedTag + ">",
                         "Close tag",
                         CompletionItem.Type.TAG, 0));
                 return result;
@@ -393,8 +382,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // ── 4. Embedded <style> / <script> block delegation ───────────────────
-        String unclosedBlock = tagParser.getUnclosedTagAt(fullText, cursorPos);
-        if ("style".equals(unclosedBlock)) {
+        if ("style".equals(ctx.unclosedTag)) {
             // Extract only the CSS content between <style> and cursor
             int styleStart = findBlockContentStart(fullText, cursorPos, "style");
             if (styleStart >= 0) {
@@ -403,7 +391,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 return cssEngine.getSuggestions(cssContent, cssCursor);
             }
             return cssEngine.getSuggestions(fullText, cursorPos);
-        } else if ("script".equals(unclosedBlock)) {
+        } else if ("script".equals(ctx.unclosedTag)) {
             // Extract only the JS content between <script> and cursor
             int scriptStart = findBlockContentStart(fullText, cursorPos, "script");
             if (scriptStart >= 0) {
@@ -415,54 +403,45 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // ── 5. Inside an open tag — attribute / attribute-value completions ───
-        String currentTag = tagParser.getCurrentOpenTagName(fullText, cursorPos);
-        if (currentTag != null && !currentTag.isEmpty()) {
-            String before    = fullText.substring(0, cursorPos);
-            int    lastOpen  = before.lastIndexOf('<');
-            if (lastOpen != -1) {
-                String tagText = before.substring(lastOpen);
+        if (ctx.isInsideOpenTag && ctx.currentTagName != null) {
+            if (ctx.isInsideAttributeValue && ctx.currentAttributeName != null) {
+                String attrName = ctx.currentAttributeName;
+                String typedValue = ctx.currentAttributeValue != null ? ctx.currentAttributeValue : "";
 
                 // 5a. Inside style="…" → CSS
-                Matcher styleMatcher = PAT_STYLE_ATTR.matcher(tagText);
-                if (styleMatcher.matches()) {
+                if ("style".equals(attrName)) {
                     return cssEngine.getSuggestions(fullText, cursorPos, true);
                 }
 
                 // 5b. Inside on*="…" → JS
-                Matcher eventMatcher = PAT_EVENT_ATTR.matcher(tagText);
-                if (eventMatcher.matches()) {
+                if (attrName.startsWith("on")) {
                     return jsEngine.getSuggestions(fullText, cursorPos);
                 }
 
                 // 5c. Inside file-path attribute → file suggestions
-                Matcher pathMatcher = PAT_PATH_ATTR.matcher(tagText);
-                if (pathMatcher.matches()) {
-                    String typedPath = pathMatcher.group(2);
-                    return getFileSuggestions(typedPath);
+                if (attrName.equals("src") || attrName.equals("href") || attrName.equals("action") || 
+                    attrName.equals("poster") || attrName.equals("data") || attrName.equals("srcset")) {
+                    return getFileSuggestions(typedValue);
                 }
 
                 // 5d. Inside a generic attribute value (e.g. class="…", id="…", dir="…")
-                Matcher valueMatcher = PAT_ENUM_ATTR.matcher(tagText);
-                if (valueMatcher.matches()) {
-                    String attrName   = valueMatcher.group(1);
-                    String typedValue = valueMatcher.group(2);
-                    String[] values   = ATTR_VALUES.get(attrName);
-                    if (values != null) {
-                        List<CompletionItem> valItems = new ArrayList<>();
-                        for (String v : values) {
-                            valItems.add(new CompletionItem(v, v, attrName + " value",
-                                    CompletionItem.Type.VALUE, 0));
-                        }
-                        return fuzzyFilter(valItems, typedValue);
+                String[] values = ATTR_VALUES.get(attrName);
+                if (values != null) {
+                    List<CompletionItem> valItems = new ArrayList<>();
+                    for (String v : values) {
+                        valItems.add(new CompletionItem(v, v, attrName + " value",
+                                CompletionItem.Type.VALUE, 0));
                     }
-                    // We are inside quotes for an attribute, but we don't have specific completions.
-                    // Return empty list so we don't fall through and suggest attribute names.
-                    return new ArrayList<>();
+                    return fuzzyFilter(valItems, typedValue);
                 }
+                
+                // We are inside quotes for an attribute, but we don't have specific completions.
+                // Return empty list so we don't fall through and suggest attribute names.
+                return new ArrayList<>();
             }
 
             // 5e. Attribute name completions for the current tag
-            List<CompletionItem> attrs = attrMap.get(currentTag);
+            List<CompletionItem> attrs = attrMap.get(ctx.currentTagName);
             if (attrs == null) attrs = new ArrayList<>(GLOBAL_ATTRS);
             return fuzzyFilter(attrs, word);
         }
