@@ -59,6 +59,9 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     // ─── DOCTYPE / entity completions ──────────────────────────────────────────
     private static final List<CompletionItem> DOCTYPE_ITEMS = new ArrayList<>();
     private static final List<CompletionItem> ENTITY_ITEMS = new ArrayList<>();
+    
+    // Fast prefix lookups
+    private static final FastTrie TAG_TRIE = new FastTrie();
 
     static {
         String[][] globals = {
@@ -310,6 +313,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 CompletionItem item = new CompletionItem(tag, snippet, detail,
                         CompletionItem.Type.TAG, 0);
                 tagItems.add(item);
+                TAG_TRIE.insert(item);
 
                 // Build per-tag attribute list (tag-specific + global HTML attributes)
                 JSONArray attrs = obj.optJSONArray("attributes");
@@ -494,7 +498,15 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
             }
             List<CompletionItem> finalResults = new ArrayList<>(emmetResults);
-            finalResults.addAll(fuzzyFilter(tagItems, word));
+            
+            // Get O(L) fast prefix matches via Trie
+            List<CompletionItem> prefixMatches = TAG_TRIE.getCompletions(word, MAX_SUGGESTIONS);
+            if (!prefixMatches.isEmpty()) {
+                finalResults.addAll(prefixMatches);
+            } else {
+                // Fallback to fuzzy filtering if no strict prefix matched
+                finalResults.addAll(fuzzyFilter(tagItems, word));
+            }
             return finalResults;
         }
 
@@ -581,7 +593,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             File   searchDir    = dirPart.isEmpty() ? currentDir : new File(currentDir, dirPart);
 
             if (searchDir.exists() && searchDir.isDirectory()) {
-                File[] files = searchDir.listFiles();
+                List<File> files = VFSManager.getInstance().listCachedFiles(searchDir);
                 if (files != null) {
                     for (File f : files) {
                         if (f.getName().startsWith(".")) continue;
@@ -669,7 +681,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
     private void findFilesRecursively(File dir, String query, List<File> results, int limit) {
         if (results.size() >= limit) return;
-        File[] files = dir.listFiles();
+        List<File> files = VFSManager.getInstance().listCachedFiles(dir);
         if (files == null) return;
         for (File f : files) {
             if (f.getName().startsWith(".")) continue;

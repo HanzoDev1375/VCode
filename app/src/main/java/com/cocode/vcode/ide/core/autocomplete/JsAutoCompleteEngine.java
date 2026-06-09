@@ -459,7 +459,7 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         if (!searchDir.exists() || !searchDir.isDirectory()) return new ArrayList<>();
 
         List<CompletionItem> items = new ArrayList<>();
-        File[] files = searchDir.listFiles();
+        List<File> files = VFSManager.getInstance().listCachedFiles(searchDir);
         if (files != null) {
             for (File f : files) {
                 String name = f.getName();
