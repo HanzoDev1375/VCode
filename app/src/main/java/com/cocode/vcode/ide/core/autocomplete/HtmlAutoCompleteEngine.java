@@ -566,10 +566,10 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         List<CompletionItem> items = new ArrayList<>();
         int lastSlash = typedPath.lastIndexOf('/');
 
-        if (lastSlash != -1) {
-            // User typed a path with a directory component — list that directory
-            String dirPart      = typedPath.substring(0, lastSlash);
-            String filterPrefix = typedPath.substring(lastSlash + 1).toLowerCase();
+        if (lastSlash != -1 || typedPath.isEmpty()) {
+            // User typed a path with a directory component OR it's empty — list that directory
+            String dirPart      = lastSlash != -1 ? typedPath.substring(0, lastSlash) : "";
+            String filterPrefix = lastSlash != -1 ? typedPath.substring(lastSlash + 1).toLowerCase() : typedPath.toLowerCase();
             File   searchDir    = dirPart.isEmpty() ? currentDir : new File(currentDir, dirPart);
 
             if (searchDir.exists() && searchDir.isDirectory()) {
@@ -666,15 +666,14 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         if (files == null) return;
         for (File f : files) {
             if (f.getName().startsWith(".")) continue;
+            if (!isFileAllowed(f, tagName, attrName)) continue;
             
+            if (f.getName().toLowerCase().startsWith(query)) {
+                results.add(f);
+                if (results.size() >= limit) return;
+            }
             if (f.isDirectory()) {
                 findFilesRecursively(f, query, results, limit, tagName, attrName);
-            } else {
-                if (!isFileAllowed(f, tagName, attrName)) continue;
-                if (f.getName().toLowerCase().startsWith(query)) {
-                    results.add(f);
-                    if (results.size() >= limit) return;
-                }
             }
         }
     }
