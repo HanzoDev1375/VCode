@@ -175,6 +175,7 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
     /** Cache for keys extracted from the document itself. */
     private int lastTextHash = 0;
     private final List<CompletionItem> cachedDocKeys = new ArrayList<>();
+    private final FastTrie docKeysTrie = new FastTrie();
     private File currentFile;
 
     public JsonAutoCompleteEngine(Context context) {
@@ -234,6 +235,7 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         if (hash == lastTextHash) return;
         lastTextHash = hash;
         cachedDocKeys.clear();
+        docKeysTrie.clear();
 
         java.util.Set<String> seen = new java.util.HashSet<>();
         java.util.regex.Matcher m = java.util.regex.Pattern.compile(
@@ -242,11 +244,13 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         while (m.find() && m.start() < limit) {
             String key = m.group(1);
             if (seen.add(key)) {
-                cachedDocKeys.add(new CompletionItem(
+                CompletionItem item = new CompletionItem(
                         "\"" + key + "\"",
                         "\"" + key + "\": |",
                         "Document key",
-                        CompletionItem.Type.JSON_KEY, 0));
+                        CompletionItem.Type.JSON_KEY, 0);
+                cachedDocKeys.add(item);
+                docKeysTrie.insert(item);
             }
         }
     }
@@ -303,9 +307,17 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         // ── Key suggestions: snippets + document-extracted keys ──────────────
-        List<CompletionItem> all = new ArrayList<>(snippetItems);
-        all.addAll(cachedDocKeys);
-        return fuzzyFilter(all, word);
+        List<CompletionItem> all = new ArrayList<>();
+        List<CompletionItem> prefixMatches = docKeysTrie.getCompletions(word, MAX_SUGGESTIONS);
+        if (!prefixMatches.isEmpty()) {
+            all.addAll(prefixMatches);
+            all.addAll(fuzzyFilter(snippetItems, word));
+            return all;
+        } else {
+            List<CompletionItem> fallback = new ArrayList<>(snippetItems);
+            fallback.addAll(cachedDocKeys);
+            return fuzzyFilter(fallback, word);
+        }
     }
 
     /**

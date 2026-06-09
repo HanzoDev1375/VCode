@@ -17,7 +17,14 @@ public class FastTrie {
         CompletionItem item = null;
     }
 
-    private final TrieNode root = new TrieNode();
+    private TrieNode root = new TrieNode();
+
+    /**
+     * Clears all items from the Trie.
+     */
+    public void clear() {
+        root = new TrieNode();
+    }
 
     /**
      * Inserts a CompletionItem into the Trie based on its label.

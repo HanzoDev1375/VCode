@@ -122,6 +122,7 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
 
     private int lastTextHash = 0;
     private final List<CompletionItem> cachedCustomProps = new ArrayList<>();
+    private final FastTrie propertyTrie = new FastTrie();
 
     public CssAutoCompleteEngine(Context context) {
         super(context);
@@ -184,8 +185,10 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
                 JSONArray values = obj.optJSONArray("values");
 
                 // Cursor between colon and semicolon after selection
-                propertyItems.add(new CompletionItem(property, property + ": |;",
-                        detail, CompletionItem.Type.CSS_PROPERTY, 0));
+                CompletionItem item = new CompletionItem(property, property + ": |;",
+                        detail, CompletionItem.Type.CSS_PROPERTY, 0);
+                propertyItems.add(item);
+                propertyTrie.insert(item);
 
                 if (values != null) {
                     List<String> vals = new ArrayList<>();
@@ -480,9 +483,17 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             return res;
         }
 
-        List<CompletionItem> all = new ArrayList<>(propertyItems);
-        all.addAll(cachedCustomProps);
-        return fuzzyFilter(all, word);
+        List<CompletionItem> all = new ArrayList<>();
+        List<CompletionItem> prefixMatches = propertyTrie.getCompletions(word, MAX_SUGGESTIONS);
+        if (!prefixMatches.isEmpty()) {
+            all.addAll(prefixMatches);
+            all.addAll(fuzzyFilter(cachedCustomProps, word));
+            return all;
+        } else {
+            List<CompletionItem> fallback = new ArrayList<>(propertyItems);
+            fallback.addAll(cachedCustomProps);
+            return fuzzyFilter(fallback, word);
+        }
     }
 
     /**
