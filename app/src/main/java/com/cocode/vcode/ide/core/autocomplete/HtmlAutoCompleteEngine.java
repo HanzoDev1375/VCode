@@ -420,7 +420,8 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
                 // 5c. Inside file-path attribute → file suggestions
                 if (attrName.equals("src") || attrName.equals("href") || attrName.equals("action") || 
-                    attrName.equals("poster") || attrName.equals("data") || attrName.equals("srcset")) {
+                    attrName.equals("formaction") || attrName.equals("poster") || attrName.equals("data") || 
+                    attrName.equals("cite") || attrName.equals("manifest") || attrName.equals("srcset")) {
                     return getFileSuggestions(typedValue);
                 }
 
