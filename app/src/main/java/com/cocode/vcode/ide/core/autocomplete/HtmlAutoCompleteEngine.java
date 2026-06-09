@@ -666,12 +666,16 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         if (files == null) return;
         for (File f : files) {
             if (f.getName().startsWith(".")) continue;
-            if (!isFileAllowed(f, tagName, attrName)) continue;
-            if (f.getName().toLowerCase().startsWith(query)) {
-                results.add(f);
-                if (results.size() >= limit) return;
+            
+            if (f.isDirectory()) {
+                findFilesRecursively(f, query, results, limit, tagName, attrName);
+            } else {
+                if (!isFileAllowed(f, tagName, attrName)) continue;
+                if (f.getName().toLowerCase().startsWith(query)) {
+                    results.add(f);
+                    if (results.size() >= limit) return;
+                }
             }
-            if (f.isDirectory()) findFilesRecursively(f, query, results, limit, tagName, attrName);
         }
     }
 
@@ -684,7 +688,8 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp") || name.endsWith(".ico");
         }
         if ("script".equals(tagName)) {
-            return name.endsWith(".js") || name.endsWith(".ts");
+            return name.endsWith(".js") || name.endsWith(".ts") || name.endsWith(".jsx") 
+                || name.endsWith(".tsx") || name.endsWith(".mjs") || name.endsWith(".cjs") || name.endsWith(".vue");
         }
         if ("link".equals(tagName) && "href".equals(attrName)) {
             return name.endsWith(".css") || name.endsWith(".png") || name.endsWith(".ico") || name.endsWith(".svg");
@@ -694,6 +699,12 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
         if ("video".equals(tagName) && "src".equals(attrName)) {
             return name.endsWith(".mp4") || name.endsWith(".webm") || name.endsWith(".ogg");
+        }
+        if ("source".equals(tagName)) {
+            return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") 
+                || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp")
+                || name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg")
+                || name.endsWith(".mp4") || name.endsWith(".webm");
         }
         if ("html".equals(tagName) && "manifest".equals(attrName)) {
             return name.endsWith(".json") || name.endsWith(".webmanifest");
