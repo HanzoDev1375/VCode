@@ -462,6 +462,31 @@ public class EditorViewModel extends ViewModel {
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 FileUtils.renameFile(file, newName);
+                
+                File renamedFile = new File(file.getParentFile(), newName);
+                List<EditorFile> currentDocs = getOpenFilesList();
+                boolean changed = false;
+                
+                for (EditorFile doc : currentDocs) {
+                    if (doc.getFile().getAbsolutePath().equals(file.getAbsolutePath())) {
+                        doc.setFile(renamedFile);
+                        // Also update fileType just in case the extension changed
+                        doc.setFileType(FileType.fromExtension(FileUtils.getExtension(renamedFile.getName())));
+                        changed = true;
+                    } else if (doc.getFile().getAbsolutePath().startsWith(file.getAbsolutePath() + "/")) {
+                        String relativePath = doc.getFile().getAbsolutePath().substring(file.getAbsolutePath().length());
+                        File updatedChildFile = new File(renamedFile.getAbsolutePath() + relativePath);
+                        doc.setFile(updatedChildFile);
+                        doc.setFileType(FileType.fromExtension(FileUtils.getExtension(updatedChildFile.getName())));
+                        changed = true;
+                    }
+                }
+                
+                if (changed) {
+                    // Update tabs with a fresh list to trigger RecyclerView/DiffUtil correctly
+                    openFilesLiveData.postValue(new java.util.ArrayList<>(currentDocs));
+                }
+
                 refreshFileTree();
                 projectRepo.touchProjectById(projectId);
             } catch (Exception ignored) {
