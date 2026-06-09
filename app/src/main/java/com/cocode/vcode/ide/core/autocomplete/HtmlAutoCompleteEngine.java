@@ -422,7 +422,21 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 if (attrName.equals("src") || attrName.equals("href") || attrName.equals("action") || 
                     attrName.equals("formaction") || attrName.equals("poster") || attrName.equals("data") || 
                     attrName.equals("cite") || attrName.equals("manifest") || attrName.equals("srcset")) {
-                    return getFileSuggestions(typedValue, ctx.currentTagName, attrName);
+                    
+                    String pathQuery = typedValue;
+                    if (attrName.equals("srcset")) {
+                        // In srcset, URLs can be separated by commas and spaces. We only want the last token.
+                        int lastComma = pathQuery.lastIndexOf(',');
+                        if (lastComma != -1) {
+                            pathQuery = pathQuery.substring(lastComma + 1).trim();
+                        }
+                        int lastSpace = pathQuery.lastIndexOf(' ');
+                        if (lastSpace != -1) {
+                            pathQuery = pathQuery.substring(lastSpace + 1);
+                        }
+                    }
+                    
+                    return getFileSuggestions(pathQuery, ctx.currentTagName, attrName);
                 }
 
                 // 5d. Inside a generic attribute value (e.g. class="…", id="…", dir="…")
@@ -581,9 +595,11 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                         String name = f.getName();
                         if (!filterPrefix.isEmpty() && !name.toLowerCase().startsWith(filterPrefix)) continue;
                         String completion = name + (f.isDirectory() ? "/" : "");
-                        items.add(new CompletionItem(completion, completion,
+                        CompletionItem ci = new CompletionItem(completion, completion,
                                 f.isDirectory() ? "Directory" : getFileSizeHint(f),
-                                f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
+                                f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0);
+                        ci.setReplaceLength(filterPrefix.length());
+                        items.add(ci);
                     }
                 }
             }
@@ -601,9 +617,11 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         for (File f : allMatching) {
             String relPath = getRelativeHtmlPath(currentDir, f);
             String label   = f.getName() + (f.isDirectory() ? "/" : "");
-            items.add(new CompletionItem(label, relPath,
+            CompletionItem ci = new CompletionItem(label, relPath,
                     f.isDirectory() ? "Directory" : relPath,
-                    f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0));
+                    f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0);
+            ci.setReplaceLength(typedPath.length());
+            items.add(ci);
         }
         sortFileItems(items);
         return items;
@@ -691,7 +709,10 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 || name.endsWith(".tsx") || name.endsWith(".mjs") || name.endsWith(".cjs") || name.endsWith(".vue");
         }
         if ("link".equals(tagName) && "href".equals(attrName)) {
-            return name.endsWith(".css") || name.endsWith(".png") || name.endsWith(".ico") || name.endsWith(".svg");
+            return name.endsWith(".css") || name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".ico") 
+                || name.endsWith(".svg") || name.endsWith(".json") || name.endsWith(".webmanifest")
+                || name.endsWith(".woff") || name.endsWith(".woff2") || name.endsWith(".ttf") 
+                || name.endsWith(".otf") || name.endsWith(".eot") || name.endsWith(".xml");
         }
         if ("audio".equals(tagName)) {
             return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg");
