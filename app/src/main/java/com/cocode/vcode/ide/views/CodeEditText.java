@@ -941,6 +941,12 @@ public class CodeEditText extends AppCompatEditText {
     @Override
     protected void onScrollChanged(int horiz, int vert, int oldHoriz, int oldVert) {
         super.onScrollChanged(horiz, vert, oldHoriz, oldVert);
+        
+        // Hide autocomplete popup if the user manually scrolls the editor
+        if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
+            autoCompletePopup.dismiss();
+        }
+
         if (scrollChangeListener != null) {
             scrollChangeListener.onScrollChanged(horiz, vert);
         }
