@@ -1,0 +1,250 @@
+package com.cocode.vcode.ide.core.autocomplete;
+
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.io.BufferedReader;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+/**
+ * Global project indexer that extracts CSS classes, IDs, and HTML IDs
+ * for cross-file intellisense.
+ */
+public class ProjectSymbolIndex {
+    private static ProjectSymbolIndex instance;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    
+    private final List<CompletionItem> cssClassItems = new ArrayList<>();
+    private final List<CompletionItem> cssIdItems = new ArrayList<>();
+    private final List<CompletionItem> htmlIdItems = new ArrayList<>();
+    
+    private String projectRoot = null;
+    
+    // CSS class regex: .my-class
+    private static final Pattern PAT_CSS_CLASS = Pattern.compile("\\.([a-zA-Z_][a-zA-Z0-9_-]*)");
+    // CSS ID regex: #my-id
+    private static final Pattern PAT_CSS_ID = Pattern.compile("#([a-zA-Z_][a-zA-Z0-9_-]*)");
+    // HTML ID regex: id="my-id" or id='my-id'
+    private static final Pattern PAT_HTML_ID = Pattern.compile("id\\s*=\\s*[\"']([a-zA-Z0-9_-]+)[\"']");
+
+    // JS Exports
+    private static final Pattern PAT_JS_EXPORT_DECL = Pattern.compile("export\\s+(?:const|let|var|function|class)\\s+([a-zA-Z_$][\\w$]*)");
+    private static final Pattern PAT_JS_EXPORT_BLOCK = Pattern.compile("export\\s*\\{\\s*([^}]+)\\s*\\}");
+    
+    // Maps absolute file path to its exported CompletionItems
+    private final Map<String, List<CompletionItem>> jsFileExports = new HashMap<>();
+
+    private ProjectSymbolIndex() {}
+
+    public static synchronized ProjectSymbolIndex getInstance() {
+        if (instance == null) {
+            instance = new ProjectSymbolIndex();
+        }
+        return instance;
+    }
+
+    public void buildIndex(File rootDir) {
+        if (rootDir == null) return;
+        String rootPath = rootDir.getAbsolutePath();
+        if (rootPath.equals(projectRoot)) return;
+        
+        projectRoot = rootPath;
+        executor.execute(() -> {
+            Set<String> classNames = new HashSet<>();
+            Set<String> cssIds = new HashSet<>();
+            Set<String> htmlIds = new HashSet<>();
+            
+            indexDirectoryRecursively(rootDir, classNames, cssIds, htmlIds);
+            
+            synchronized(this) {
+                cssClassItems.clear();
+                for (String c : classNames) {
+                    cssClassItems.add(new CompletionItem(c, c, "CSS Class", CompletionItem.Type.CSS_VALUE, 0));
+                }
+                cssIdItems.clear();
+                for (String id : cssIds) {
+                    cssIdItems.add(new CompletionItem(id, id, "CSS ID", CompletionItem.Type.CSS_VALUE, 0));
+                }
+                htmlIdItems.clear();
+                for (String id : htmlIds) {
+                    htmlIdItems.add(new CompletionItem(id, id, "HTML ID", CompletionItem.Type.VALUE, 0));
+                }
+            }
+        });
+    }
+
+    private void indexDirectoryRecursively(File dir, Set<String> classNames, Set<String> cssIds, Set<String> htmlIds) {
+        List<File> files = VFSManager.getInstance().listCachedFiles(dir);
+        if (files == null) {
+            // Fallback if VFS isn't built yet
+            File[] diskFiles = dir.listFiles();
+            if (diskFiles == null) return;
+            files = new ArrayList<>();
+            for (File f : diskFiles) {
+                if (!f.getName().startsWith(".")) {
+                    files.add(f);
+                }
+            }
+        }
+        
+        for (File f : files) {
+            if (f.isDirectory()) {
+                indexDirectoryRecursively(f, classNames, cssIds, htmlIds);
+            } else {
+                String name = f.getName().toLowerCase();
+                if (name.endsWith(".css")) {
+                    indexCssFile(f, classNames, cssIds);
+                } else if (name.endsWith(".html") || name.endsWith(".htm")) {
+                    indexHtmlFile(f, classNames, htmlIds);
+                } else if (name.endsWith(".js") || name.endsWith(".ts") || name.endsWith(".jsx") || name.endsWith(".tsx") || name.endsWith(".mjs")) {
+                    indexJsFile(f);
+                }
+            }
+        }
+    }
+
+    private void indexCssFile(File file, Set<String> classNames, Set<String> cssIds) {
+        String content = readFile(file);
+        if (content == null) return;
+        
+        Matcher mClass = PAT_CSS_CLASS.matcher(content);
+        while (mClass.find()) {
+            classNames.add(mClass.group(1));
+        }
+        
+        Matcher mId = PAT_CSS_ID.matcher(content);
+        while (mId.find()) {
+            String id = mId.group(1);
+            // Ignore hex colors matching exactly 3, 4, 6, or 8 hex digits
+            if (id.matches("^([0-9a-fA-F]{3}|[0-9a-fA-F]{4}|[0-9a-fA-F]{6}|[0-9a-fA-F]{8})$")) {
+                continue;
+            }
+            cssIds.add(id);
+        }
+    }
+
+    private void indexHtmlFile(File file, Set<String> classNames, Set<String> htmlIds) {
+        String content = readFile(file);
+        if (content == null) return;
+        
+        Matcher m = PAT_HTML_ID.matcher(content);
+        while (m.find()) {
+            htmlIds.add(m.group(1));
+        }
+
+        Matcher mClass = Pattern.compile("class\\s*=\\s*[\"']([^\"']+)[\"']").matcher(content);
+        while (mClass.find()) {
+            String[] classes = mClass.group(1).split("\\s+");
+            for (String c : classes) {
+                if (!c.isEmpty()) {
+                    classNames.add(c);
+                }
+            }
+        }
+    }
+
+    private void indexJsFile(File file) {
+        String content = readFile(file);
+        if (content == null) return;
+        List<CompletionItem> exports = new ArrayList<>();
+        
+        Matcher mDecl = PAT_JS_EXPORT_DECL.matcher(content);
+        while (mDecl.find()) {
+            String name = mDecl.group(1);
+            exports.add(new CompletionItem(name, name, "Export", CompletionItem.Type.VALUE, 0));
+        }
+        
+        Matcher mBlock = PAT_JS_EXPORT_BLOCK.matcher(content);
+        while (mBlock.find()) {
+            String[] names = mBlock.group(1).split(",");
+            for (String n : names) {
+                String name = n.trim();
+                if (name.contains(" as ")) {
+                    name = name.split(" as ")[1].trim();
+                }
+                if (!name.isEmpty()) {
+                    exports.add(new CompletionItem(name, name, "Export", CompletionItem.Type.VALUE, 0));
+                }
+            }
+        }
+        
+        synchronized(this) {
+            try {
+                jsFileExports.put(file.getCanonicalPath(), exports);
+            } catch (Exception e) {
+                jsFileExports.put(file.getAbsolutePath(), exports);
+            }
+        }
+    }
+
+    private String readFile(File file) {
+        try {
+            if (file.length() > 500 * 1024) return null; // Skip files > 500KB
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+                char[] buffer = new char[4096];
+                int read;
+                while ((read = br.read(buffer)) != -1) {
+                    sb.append(buffer, 0, read);
+                }
+            }
+            return sb.toString();
+        } catch (Exception e) {
+            return null;
+        }
+    }
+
+    public synchronized List<CompletionItem> getCssClassItems() {
+        return new ArrayList<>(cssClassItems);
+    }
+
+    public synchronized List<CompletionItem> getCssIdItems() {
+        return new ArrayList<>(cssIdItems);
+    }
+
+    public synchronized List<CompletionItem> getHtmlIdItems() {
+        return new ArrayList<>(htmlIdItems);
+    }
+
+    public synchronized List<CompletionItem> getExportsForPath(File currentFile, String importPath) {
+        if (currentFile == null || importPath == null) return new ArrayList<>();
+        
+        File parent = currentFile.getParentFile();
+        if (parent == null) return new ArrayList<>();
+        
+        File targetFile = new File(parent, importPath);
+        if (!targetFile.exists() && !importPath.endsWith(".js") && !importPath.endsWith(".ts")) {
+            targetFile = new File(parent, importPath + ".js");
+            if (!targetFile.exists()) {
+                targetFile = new File(parent, importPath + ".ts");
+            }
+        }
+        
+        List<CompletionItem> exports = null;
+        try {
+            exports = jsFileExports.get(targetFile.getCanonicalPath());
+        } catch (Exception e) {
+            exports = jsFileExports.get(targetFile.getAbsolutePath());
+        }
+        return exports != null ? new ArrayList<>(exports) : new ArrayList<>();
+    }
+
+    public static File getProjectRoot(File file) {
+        if (file == null) return null;
+        File dir = file.isDirectory() ? file : file.getParentFile();
+        while (dir != null) {
+            if (new File(dir, "project_meta.json").exists()) return dir;
+            dir = dir.getParentFile();
+        }
+        return null;
+    }
+}

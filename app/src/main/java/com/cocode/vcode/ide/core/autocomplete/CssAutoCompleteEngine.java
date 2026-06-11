@@ -5,6 +5,7 @@ import android.content.Context;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -129,6 +130,13 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         loadProperties();
         loadHtmlTags();
         loadColors();
+    }
+
+    public void setCurrentFile(File file) {
+        File projectRoot = ProjectSymbolIndex.getProjectRoot(file);
+        if (projectRoot != null) {
+            ProjectSymbolIndex.getInstance().buildIndex(projectRoot);
+        }
     }
 
     // ─── Asset loading ─────────────────────────────────────────────────────────
@@ -526,14 +534,32 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         List<CompletionItem> all = new ArrayList<>(propertyItems);
         all.addAll(cachedCustomProps);
         all.addAll(htmlTagItems);
+        if (word.startsWith(".") || word.startsWith("#")) {
+            addCrossFileSelectors(all);
+        }
         return fuzzyFilter(all, word);
+    }
+
+    private void addCrossFileSelectors(List<CompletionItem> list) {
+        List<CompletionItem> classes = ProjectSymbolIndex.getInstance().getCssClassItems();
+        for (CompletionItem ci : classes) {
+            list.add(new CompletionItem("." + ci.getLabel(), "." + ci.getEffectiveInsertText(), "CSS Class", CompletionItem.Type.CSS_VALUE, 0));
+        }
+        List<CompletionItem> htmlIds = ProjectSymbolIndex.getInstance().getHtmlIdItems();
+        for (CompletionItem ci : htmlIds) {
+            list.add(new CompletionItem("#" + ci.getLabel(), "#" + ci.getEffectiveInsertText(), "ID", CompletionItem.Type.CSS_VALUE, 0));
+        }
     }
 
     private List<CompletionItem> getSelectorSuggestions(String word, String trimmed) {
         if (word.startsWith(":")) {
             return fuzzyFilter(PSEUDO_ITEMS, word.substring(1));
         }
-        return fuzzyFilter(htmlTagItems, word);
+        List<CompletionItem> all = new ArrayList<>(htmlTagItems);
+        if (word.startsWith(".") || word.startsWith("#") || word.isEmpty()) {
+            addCrossFileSelectors(all);
+        }
+        return fuzzyFilter(all, word);
     }
 
     // ─── Helpers ───────────────────────────────────────────────────────────────

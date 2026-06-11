@@ -44,6 +44,11 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
     private static final Pattern PAT_EVENT_STRING = Pattern.compile(
             "(?:addEventListener|removeEventListener|on)\\s*\\(\\s*['\"]([^'\"]*?)$");
 
+    private static final Pattern PAT_GET_ELEMENT_BY_ID = Pattern.compile("getElementById\\s*\\(\\s*['\"]([^'\"]*?)$");
+    private static final Pattern PAT_QUERY_SELECTOR = Pattern.compile("querySelector(?:All)?\\s*\\(\\s*['\"]([^'\"]*?)$");
+    private static final Pattern PAT_JSDOC_TYPE = Pattern.compile("@(?:type|returns?|param)\\s*\\{([^}]+)\\}");
+    private static final Pattern PAT_IMPORT_STAR = Pattern.compile("import\\s+\\*\\s+as\\s+([a-zA-Z_$][\\w$]*)\\s+from\\s+['\"]([^'\"]+)['\"]");
+
     // ─── Static namespace → comma-separated method list ────────────────────────
     private static final String[][] DOT_METHODS = {
             {"console",        "log,warn,error,info,table,time,timeEnd,timeLog,assert,clear,count,countReset,group,groupEnd,groupCollapsed,dir,dirxml,trace,debug,profile,profileEnd"},
@@ -179,13 +184,20 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                 "offsetWidth","offsetHeight","offsetTop","offsetLeft","offsetParent",
                 "clientWidth","clientHeight","clientTop","clientLeft",
                 "scrollWidth","scrollHeight","scrollTop","scrollLeft",
-                "hidden","isConnected","slot","assignedSlot"
+                "hidden","isConnected","slot","assignedSlot",
+                "value","type","checked","disabled","readOnly","name","form",
+                "min","max","step","placeholder","required","maxLength","minLength",
+                "play","pause","load","currentTime","duration","paused","muted","volume","src","playbackRate"
         });
         PROTOTYPE_METHODS.put("nodelist", new String[]{"forEach","entries","keys","values","item","length"});
         PROTOTYPE_METHODS.put("response", new String[]{"json","text","blob","arrayBuffer","formData","clone","ok","status","statusText","headers","url","type","redirected"});
         PROTOTYPE_METHODS.put("event", new String[]{"preventDefault","stopPropagation","stopImmediatePropagation","target","currentTarget","type","bubbles","cancelable","composed","timeStamp","isTrusted","defaultPrevented","eventPhase"});
         PROTOTYPE_METHODS.put("classlist", new String[]{"add","remove","toggle","contains","replace","item","length","value","entries","keys","values","forEach","supports"});
         PROTOTYPE_METHODS.put("style", new String[]{"getPropertyValue","setProperty","removeProperty","cssText","length","item"});
+        PROTOTYPE_METHODS.put("canvascontext", new String[]{"arc","arcTo","beginPath","bezierCurveTo","clearRect","clip","closePath","createImageData","createLinearGradient","createPattern","createRadialGradient","drawFocusIfNeeded","drawImage","ellipse","fill","fillRect","fillText","getImageData","getLineDash","isPointInPath","isPointInStroke","lineTo","measureText","moveTo","putImageData","quadraticCurveTo","rect","restore","rotate","save","scale","setLineDash","setTransform","stroke","strokeRect","strokeText","transform","translate","fillStyle","font","globalAlpha","globalCompositeOperation","imageSmoothingEnabled","lineCap","lineDashOffset","lineJoin","lineWidth","miterLimit","shadowBlur","shadowColor","shadowOffsetX","shadowOffsetY","strokeStyle","textAlign","textBaseline"});
+        PROTOTYPE_METHODS.put("blob", new String[]{"size","type","arrayBuffer","slice","stream","text"});
+        PROTOTYPE_METHODS.put("file", new String[]{"name","lastModified","size","type","arrayBuffer","slice","stream","text"});
+        PROTOTYPE_METHODS.put("filereader", new String[]{"readAsArrayBuffer","readAsBinaryString","readAsDataURL","readAsText","abort","error","readyState","result","onload","onloadstart","onloadend","onprogress","onabort","onerror"});
 
         // Array methods that return arrays (chained calls)
         for (String m : new String[]{"filter","map","slice","concat","flat","flatMap","sort","reverse","toReversed","toSorted","splice","copyWithin","fill","from","of","keys","values","entries"}) {
@@ -231,7 +243,18 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
     // ─── Instance state ─────────────────────────────────────────────────────────
     private final List<CompletionItem> builtinItems = new ArrayList<>();
     private int lastTextHash = 0;
-    private final List<CompletionItem> cachedUserSymbols = new ArrayList<>();
+    
+    private static class JsSymbol {
+        CompletionItem item;
+        JsScopeParser.ScopeBlock scope;
+        public JsSymbol(CompletionItem item, JsScopeParser.ScopeBlock scope) {
+            this.item = item;
+            this.scope = scope;
+        }
+    }
+
+    private final List<JsSymbol> cachedUserSymbols = new ArrayList<>();
+    private List<JsScopeParser.ScopeBlock> documentScopes = new ArrayList<>();
     private final Map<String, String> varTypeMap = new HashMap<>();
     private File currentFile;
 
@@ -242,6 +265,10 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
     public void setCurrentFile(File file) {
         this.currentFile = file;
+        File projectRoot = ProjectSymbolIndex.getProjectRoot(file);
+        if (projectRoot != null) {
+            ProjectSymbolIndex.getInstance().buildIndex(projectRoot);
+        }
     }
 
     // ─── Keyword loading ───────────────────────────────────────────────────────
@@ -287,6 +314,10 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         List<CompletionItem> importItems = getImportPathSuggestions(fullText, cursorPos);
         if (importItems != null) return importItems;
 
+        // ── 1c. Import block completion ──────────────────────────────────────
+        List<CompletionItem> importExport = getImportExportSuggestions(fullText, cursorPos, word);
+        if (importExport != null) return importExport;
+
         // ── 1b. Event name string completions (addEventListener/removeEventListener) ──
         String lineBefore = getLineBeforeCursor(fullText, cursorPos);
         Matcher eventMatcher = PAT_EVENT_STRING.matcher(lineBefore);
@@ -297,6 +328,31 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                 eventItems.add(new CompletionItem(ev, ev, "DOM Event", CompletionItem.Type.VALUE, 0));
             }
             return fuzzyFilter(eventItems, typedEvent);
+        }
+
+        Matcher idMatcher = PAT_GET_ELEMENT_BY_ID.matcher(lineBefore);
+        if (idMatcher.find()) {
+            String typedId = idMatcher.group(1);
+            List<CompletionItem> ids = ProjectSymbolIndex.getInstance().getHtmlIdItems();
+            return fuzzyFilter(ids, typedId);
+        }
+
+        Matcher queryMatcher = PAT_QUERY_SELECTOR.matcher(lineBefore);
+        if (queryMatcher.find()) {
+            String typedQuery = queryMatcher.group(1);
+            List<CompletionItem> prefixed = new ArrayList<>();
+            
+            for (CompletionItem ci : ProjectSymbolIndex.getInstance().getCssClassItems()) {
+                CompletionItem prefixedItem = new CompletionItem("." + ci.getLabel(), "." + ci.getEffectiveInsertText(), ci.getDetail(), ci.getType(), ci.getCursorOffset());
+                prefixedItem.setReplaceLength(typedQuery.length());
+                prefixed.add(prefixedItem);
+            }
+            for (CompletionItem ci : ProjectSymbolIndex.getInstance().getHtmlIdItems()) {
+                CompletionItem prefixedItem = new CompletionItem("#" + ci.getLabel(), "#" + ci.getEffectiveInsertText(), ci.getDetail(), ci.getType(), ci.getCursorOffset());
+                prefixedItem.setReplaceLength(typedQuery.length());
+                prefixed.add(prefixedItem);
+            }
+            return fuzzyFilter(prefixed, typedQuery);
         }
 
         if (isInsideStringLiteral(fullText, cursorPos)) {
@@ -318,7 +374,16 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         // ── 3. General: keywords + user symbols ──────────────────────────────
         ensureDocumentIndexed(fullText);
         List<CompletionItem> all = new ArrayList<>(builtinItems);
-        all.addAll(cachedUserSymbols);
+        Set<String> added = new HashSet<>();
+        for (CompletionItem item : builtinItems) added.add(item.getLabel());
+
+        for (JsSymbol sym : cachedUserSymbols) {
+            if (sym.scope == null || sym.scope.contains(cursorPos)) {
+                if (added.add(sym.item.getLabel())) {
+                    all.add(sym.item);
+                }
+            }
+        }
         return fuzzyFilter(all, word);
     }
 
@@ -414,6 +479,21 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
     }
 
     // ─── Import / require path completion ─────────────────────────────────────
+
+    private List<CompletionItem> getImportExportSuggestions(String fullText, int cursorPos, String word) {
+        String before = fullText.substring(0, cursorPos);
+        Matcher mBefore = Pattern.compile("import\\s+\\{[^{}]*$").matcher(before);
+        if (!mBefore.find()) return null;
+
+        String after = fullText.substring(cursorPos);
+        Matcher mAfter = Pattern.compile("^[^{}]*\\}\\s*from\\s*['\"]([^'\"]+)['\"]").matcher(after);
+        if (mAfter.find()) {
+            String path = mAfter.group(1);
+            List<CompletionItem> exports = ProjectSymbolIndex.getInstance().getExportsForPath(currentFile, path);
+            if (!exports.isEmpty()) return fuzzyFilter(exports, word);
+        }
+        return null;
+    }
 
     /**
      * Returns file completions when cursor is inside an import/require path string.
@@ -526,6 +606,12 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         // ── d. User-variable type inference ───────────────────────────────────
         String inferredType = varTypeMap.get(objectToken);
         if (inferredType != null) {
+            if (inferredType.startsWith("module:")) {
+                String path = inferredType.substring(7);
+                List<CompletionItem> exports = ProjectSymbolIndex.getInstance().getExportsForPath(currentFile, path);
+                if (!exports.isEmpty()) return fuzzyFilter(exports, word);
+            }
+            
             // First check prototype methods (array, string, etc.)
             String[] methods = PROTOTYPE_METHODS.get(inferredType);
             if (methods != null) {
@@ -628,36 +714,80 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         cachedUserSymbols.clear();
         varTypeMap.clear();
 
-        Set<String> seen = new HashSet<>();
-        for (CompletionItem item : builtinItems) seen.add(item.getLabel());
+        Set<String> builtinNames = new HashSet<>();
+        for (CompletionItem item : builtinItems) builtinNames.add(item.getLabel());
 
+        documentScopes = JsScopeParser.buildScopes(text);
         int scanLimit = Math.min(text.length(), 100_000);
+
+        Set<String> declNames = new HashSet<>(builtinNames);
 
         Matcher m = PAT_USER_DECL.matcher(text);
         while (m.find() && m.start() < scanLimit) {
             String name = firstNonNull(m.group(1), m.group(2), m.group(3), m.group(4));
-            if (name == null || name.isEmpty() || !seen.add(name)) continue;
+            if (name == null || name.isEmpty() || builtinNames.contains(name)) continue;
+
+            declNames.add(name);
 
             boolean isFunction = m.group(1) != null || m.group(3) != null;
             boolean isClass    = m.group(2) != null;
 
             CompletionItem.Type type;
             String detail;
+            String jsDocType = extractJsDocType(text, m.start());
+
             if (isClass) { type = CompletionItem.Type.KEYWORD; detail = "Class"; }
             else if (isFunction) { type = CompletionItem.Type.FUNCTION; detail = "Function"; }
-            else { type = CompletionItem.Type.VALUE; detail = "Variable";
-                inferVariableType(text, m.end(), name, scanLimit); }
+            else { type = CompletionItem.Type.VALUE; detail = "Variable"; }
 
-            cachedUserSymbols.add(new CompletionItem(name, name, detail, type, 0));
+            if (jsDocType != null) {
+                varTypeMap.put(name, jsDocType.toLowerCase());
+            } else if (!isFunction && !isClass) {
+                inferVariableType(text, m.end(), name, scanLimit);
+            }
+
+            JsScopeParser.ScopeBlock symScope = JsScopeParser.findDeepestScope(documentScopes, m.start());
+            cachedUserSymbols.add(new JsSymbol(new CompletionItem(name, name, detail, type, 0), symScope));
         }
 
         Matcher wordMatcher = PAT_WORD.matcher(text);
+        JsScopeParser.ScopeBlock rootScope = documentScopes.isEmpty() ? null : documentScopes.get(0);
+        
+        Matcher mImport = PAT_IMPORT_STAR.matcher(text);
+        while (mImport.find() && mImport.start() < scanLimit) {
+            String name = mImport.group(1);
+            String path = mImport.group(2);
+            varTypeMap.put(name, "module:" + path);
+            declNames.add(name);
+            cachedUserSymbols.add(new JsSymbol(new CompletionItem(name, name, "Module", CompletionItem.Type.KEYWORD, 0), rootScope));
+        }
+        
+        Set<String> wordSeen = new HashSet<>(declNames);
         while (wordMatcher.find() && wordMatcher.start() < scanLimit) {
             String w = wordMatcher.group();
-            if (w.length() >= 3 && seen.add(w)) {
-                cachedUserSymbols.add(new CompletionItem(w, w, "Word", CompletionItem.Type.VALUE, 0));
+            if (w.length() >= 3 && wordSeen.add(w)) {
+                cachedUserSymbols.add(new JsSymbol(new CompletionItem(w, w, "Word", CompletionItem.Type.VALUE, 0), rootScope));
             }
         }
+    }
+
+    private String extractJsDocType(String text, int declStart) {
+        int limit = Math.max(0, declStart - 500);
+        int commentEnd = text.lastIndexOf("*/", declStart);
+        if (commentEnd > limit) {
+            String between = text.substring(commentEnd + 2, declStart);
+            if (between.trim().isEmpty()) {
+                int commentStart = text.lastIndexOf("/**", commentEnd);
+                if (commentStart >= limit) {
+                    String jsdoc = text.substring(commentStart, commentEnd);
+                    Matcher m = PAT_JSDOC_TYPE.matcher(jsdoc);
+                    if (m.find()) {
+                        return m.group(1);
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private void inferVariableType(String text, int afterDeclEnd, String varName, int scanLimit) {
@@ -679,17 +809,21 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
             else if (snippet.startsWith("new Set"))               varTypeMap.put(varName, "set");
             else if (snippet.startsWith("new Date"))              varTypeMap.put(varName, "date");
             else if (snippet.startsWith("new RegExp") || snippet.startsWith("/"))  varTypeMap.put(varName, "regexp");
-            else if (snippet.startsWith("new IntersectionObserver")) varTypeMap.put(varName, "IntersectionObserver");
-            else if (snippet.startsWith("new ResizeObserver"))    varTypeMap.put(varName, "ResizeObserver");
-            else if (snippet.startsWith("new MutationObserver"))  varTypeMap.put(varName, "MutationObserver");
-            else if (snippet.startsWith("new WebSocket"))         varTypeMap.put(varName, "WebSocket");
-            else if (snippet.startsWith("new Worker"))            varTypeMap.put(varName, "Worker");
-            else if (snippet.startsWith("new BroadcastChannel")) varTypeMap.put(varName, "BroadcastChannel");
-            else if (snippet.startsWith("new AbortController"))  varTypeMap.put(varName, "AbortController");
-            else if (snippet.startsWith("new URL("))             varTypeMap.put(varName, "URL");
-            else if (snippet.startsWith("new URLSearchParams"))  varTypeMap.put(varName, "URLSearchParams");
-            else if (snippet.startsWith("new FormData"))         varTypeMap.put(varName, "FormData");
-            else if (snippet.startsWith("new Headers"))          varTypeMap.put(varName, "Headers");
+            else if (snippet.contains("new IntersectionObserver")) varTypeMap.put(varName, "IntersectionObserver");
+            else if (snippet.contains("new ResizeObserver"))    varTypeMap.put(varName, "ResizeObserver");
+            else if (snippet.contains("new MutationObserver"))  varTypeMap.put(varName, "MutationObserver");
+            else if (snippet.contains("new WebSocket"))         varTypeMap.put(varName, "WebSocket");
+            else if (snippet.contains("new Worker"))            varTypeMap.put(varName, "Worker");
+            else if (snippet.contains("new BroadcastChannel")) varTypeMap.put(varName, "BroadcastChannel");
+            else if (snippet.contains("new AbortController"))  varTypeMap.put(varName, "AbortController");
+            else if (snippet.contains("new URL("))             varTypeMap.put(varName, "URL");
+            else if (snippet.contains("new URLSearchParams"))  varTypeMap.put(varName, "URLSearchParams");
+            else if (snippet.contains("new FormData"))         varTypeMap.put(varName, "FormData");
+            else if (snippet.contains("new Headers"))          varTypeMap.put(varName, "Headers");
+            else if (snippet.contains("new FileReader"))       varTypeMap.put(varName, "filereader");
+            else if (snippet.contains("new Blob"))             varTypeMap.put(varName, "blob");
+            else if (snippet.contains("new File("))            varTypeMap.put(varName, "file");
+            else if (snippet.contains("getContext('2d')") || snippet.contains("getContext(\"2d\")")) varTypeMap.put(varName, "canvascontext");
             else if (snippet.startsWith("document.querySelector") || snippet.startsWith("document.getElementById") || snippet.startsWith("document.createElement")) varTypeMap.put(varName, "element");
             else if (snippet.startsWith("document.querySelectorAll") || snippet.startsWith("document.getElementsBy")) varTypeMap.put(varName, "nodelist");
             else if (snippet.contains(".filter(") || snippet.contains(".map(") || snippet.contains(".slice(") || snippet.contains(".concat(") || snippet.contains(".flat(") || snippet.contains("Array.from")) varTypeMap.put(varName, "array");

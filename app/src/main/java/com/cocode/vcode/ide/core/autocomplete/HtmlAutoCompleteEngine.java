@@ -281,6 +281,10 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     public void setCurrentFile(File file) {
         this.currentFile = file;
         jsEngine.setCurrentFile(file);
+        File projectRoot = getProjectRoot(file);
+        if (projectRoot != null) {
+            ProjectSymbolIndex.getInstance().buildIndex(projectRoot);
+        }
     }
 
     // ─── Tag loading ────────────────────────────────────────────────────────────
@@ -440,6 +444,27 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 }
 
                 // 5d. Inside a generic attribute value (e.g. class="…", id="…", dir="…")
+                String attrWord = typedValue;
+                int lastSpace = typedValue.lastIndexOf(' ');
+                if (lastSpace != -1) {
+                    attrWord = typedValue.substring(lastSpace + 1);
+                }
+                
+                if ("class".equals(attrName)) {
+                    List<CompletionItem> classes = ProjectSymbolIndex.getInstance().getCssClassItems();
+                    if (!classes.isEmpty()) {
+                        return fuzzyFilter(classes, attrWord);
+                    }
+                } else if ("id".equals(attrName)) {
+                    List<CompletionItem> ids = ProjectSymbolIndex.getInstance().getCssIdItems();
+                    List<CompletionItem> htmlIds = ProjectSymbolIndex.getInstance().getHtmlIdItems();
+                    List<CompletionItem> allIds = new ArrayList<>(ids);
+                    allIds.addAll(htmlIds);
+                    if (!allIds.isEmpty()) {
+                        return fuzzyFilter(allIds, attrWord);
+                    }
+                }
+
                 String[] values = ATTR_VALUES.get(attrName);
                 if (values != null) {
                     List<CompletionItem> valItems = new ArrayList<>();

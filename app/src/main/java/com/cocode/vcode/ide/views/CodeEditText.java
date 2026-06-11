@@ -890,7 +890,9 @@ public class CodeEditText extends AppCompatEditText {
                     break;
                 case CSS:
                     this.syntaxHighlighter = new CssSyntaxHighlighter(ctx);
-                    this.autoCompleteEngine = new CssAutoCompleteEngine(ctx);
+                    CssAutoCompleteEngine cssEngine = new CssAutoCompleteEngine(ctx);
+                    if (currentFile != null) cssEngine.setCurrentFile(currentFile);
+                    this.autoCompleteEngine = cssEngine;
                     break;
                 case JAVASCRIPT:
                     this.syntaxHighlighter = new JsSyntaxHighlighter(ctx);
@@ -925,12 +927,12 @@ public class CodeEditText extends AppCompatEditText {
         this.currentFile = file;
         if (autoCompleteEngine instanceof HtmlAutoCompleteEngine) {
             ((HtmlAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
-        }
-        if (autoCompleteEngine instanceof JsAutoCompleteEngine) {
+        } else if (autoCompleteEngine instanceof JsAutoCompleteEngine) {
             ((JsAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
-        }
-        if (autoCompleteEngine instanceof JsonAutoCompleteEngine) {
+        } else if (autoCompleteEngine instanceof JsonAutoCompleteEngine) {
             ((JsonAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
+        } else if (autoCompleteEngine instanceof CssAutoCompleteEngine) {
+            ((CssAutoCompleteEngine) autoCompleteEngine).setCurrentFile(file);
         }
     }
 
