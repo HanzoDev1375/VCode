@@ -5,6 +5,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 
 import com.cocode.vcode.ide.R;
+import com.cocode.vcode.ide.views.ColorPreviewSpan;
 import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
 
 import java.util.ArrayList;
@@ -129,6 +130,9 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         // Pass 9: Entities
         applySkippingRanges(ssb, PAT_ENTITY, code, colorEntity, embeddedRanges);
 
+        // Pass 10: Inline CSS Colors
+        applyInlineColors(ssb, code, embeddedRanges, 0);
+
         return ssb;
     }
 
@@ -217,6 +221,8 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
 
         applySkippingRangesForRange(ssb, PAT_ENTITY, sub, colorEntity, embeddedRanges, start);
 
+        applyInlineColors(ssb, sub, embeddedRanges, start);
+
         return ssb;
     }
 
@@ -260,18 +266,61 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         return false;
     }
 
+    private void applyInlineColors(SpannableStringBuilder ssb, String sub, List<int[]> embeddedRanges, int rangeOffset) {
+        Matcher styleAttrMatcher = Pattern.compile("(?i)style\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')").matcher(sub);
+        while (styleAttrMatcher.find()) {
+            if (styleAttrMatcher.group(1) != null) {
+                int valStart = styleAttrMatcher.start(1);
+                String valStr = styleAttrMatcher.group(1);
+                
+                Matcher m = Pattern.compile("(#(?:[0-9a-fA-F]{3,4}){1,2}\\b|\\b(?:rgb|hsl)a?\\([^)]+\\)|\\b(?i)(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|transparent|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)\\b)").matcher(valStr);
+                while (m.find()) {
+                    int absStart = valStart + m.start();
+                    int absEnd = valStart + m.end();
+                    if (!isInsideEmbeddedRange(absStart + rangeOffset, absEnd + rangeOffset, embeddedRanges)) {
+                        Integer colorVal = com.cocode.vcode.ide.utils.ColorParser.parse(m.group());
+                        if (colorVal != null && absStart < absEnd) {
+                            ssb.setSpan(
+                                    new ColorPreviewSpan(colorVal, colorAttrVal),
+                                    absStart,
+                                    absStart + 1,
+                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                            );
+                        }
+                    }
+                }
+            }
+        }
+    }
+
     /**
      * Merges syntax spans from a sub-highlighter into the target buffer at the given offset.
      */
     private void mergeSpans(SpannableStringBuilder target,
                             SpannableStringBuilder source, int offset) {
         if (source == null || offset < 0) return;
+        
         SyntaxHighlightSpan[] spans =
                 source.getSpans(0, source.length(), SyntaxHighlightSpan.class);
         for (SyntaxHighlightSpan span : spans) {
             int s = source.getSpanStart(span) + offset;
             int e = source.getSpanEnd(span) + offset;
             applySpan(target, s, e, span.getForegroundColor());
+        }
+        
+        ColorPreviewSpan[] colorSpans =
+                source.getSpans(0, source.length(), ColorPreviewSpan.class);
+        for (ColorPreviewSpan span : colorSpans) {
+            int s = source.getSpanStart(span) + offset;
+            int e = source.getSpanEnd(span) + offset;
+            if (s >= 0 && e <= target.length()) {
+                target.setSpan(
+                        new ColorPreviewSpan(span.getPreviewColor(), span.getTextColor()),
+                        s,
+                        e,
+                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+            }
         }
     }
 }

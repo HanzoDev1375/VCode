@@ -13,6 +13,7 @@ import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
+import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.View;
@@ -532,6 +533,9 @@ public class CodeEditText extends AppCompatEditText {
         SyntaxHighlightSpan[] old = getText().getSpans(rangeStart, safeEnd, SyntaxHighlightSpan.class);
         for (SyntaxHighlightSpan s : old) getText().removeSpan(s);
 
+        ColorPreviewSpan[] oldColors = getText().getSpans(rangeStart, safeEnd, ColorPreviewSpan.class);
+        for (ColorPreviewSpan s : oldColors) getText().removeSpan(s);
+
         // Apply new spans offset by rangeStart
         SyntaxHighlightSpan[] newSpans = ssb.getSpans(0, ssb.length(), SyntaxHighlightSpan.class);
         for (SyntaxHighlightSpan span : newSpans) {
@@ -539,6 +543,16 @@ public class CodeEditText extends AppCompatEditText {
             int end = ssb.getSpanEnd(span) + rangeStart;
             if (start >= 0 && end <= textLen && start < end) {
                 getText().setSpan(new SyntaxHighlightSpan(span.getForegroundColor()),
+                        start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+        }
+
+        ColorPreviewSpan[] newColorSpans = ssb.getSpans(0, ssb.length(), ColorPreviewSpan.class);
+        for (ColorPreviewSpan span : newColorSpans) {
+            int start = ssb.getSpanStart(span) + rangeStart;
+            int end = ssb.getSpanEnd(span) + rangeStart;
+            if (start >= 0 && end <= textLen && start < end) {
+                getText().setSpan(new ColorPreviewSpan(span.getPreviewColor(), span.getTextColor()),
                         start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }
