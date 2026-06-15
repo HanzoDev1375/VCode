@@ -37,6 +37,10 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.vcode_bottom_sheet_outline, container, false);
         RecyclerView recycler = view.findViewById(R.id.rv_outline);
+        TextView tvTitle = view.findViewById(R.id.tv_title);
+        if (tvTitle != null && getContext() != null) {
+            tvTitle.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiSemiBold(getContext()));
+        }
         
         List<SymbolModel> symbols = extractSymbols();
         
@@ -54,6 +58,10 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
                 holder.name.setText(symbol.getName());
                 holder.line.setText("Line " + symbol.getLineNumber());
                 holder.icon.setImageResource(symbol.getIconResId());
+                
+                holder.name.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiMedium(holder.itemView.getContext()));
+                holder.details.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiFont(holder.itemView.getContext()));
+                holder.line.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
                 
                 if (symbol.getDetails() != null && !symbol.getDetails().isEmpty()) {
                     holder.details.setVisibility(View.VISIBLE);
