@@ -83,6 +83,8 @@ public class JsSyntaxHighlighter extends SyntaxHighlighter {
         apply(ssb, PAT_COMMENT_SL, code, colorComment); // Line comments paint over text strings safely
         apply(ssb, PAT_COMMENT_ML, code, colorComment); // Block comments retain maximum overlay layout priority
 
+        applyLinks(ssb, code);
+
         return ssb;
     }
 

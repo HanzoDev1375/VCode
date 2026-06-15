@@ -133,6 +133,8 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         // Pass 10: Inline CSS Colors
         applyInlineColors(ssb, code, embeddedRanges, 0);
 
+        applyLinks(ssb, code);
+
         return ssb;
     }
 
@@ -223,6 +225,8 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
 
         applyInlineColors(ssb, sub, embeddedRanges, start);
 
+        applyLinks(ssb, sub);
+
         return ssb;
     }
 
@@ -305,7 +309,7 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         for (SyntaxHighlightSpan span : spans) {
             int s = source.getSpanStart(span) + offset;
             int e = source.getSpanEnd(span) + offset;
-            applySpan(target, s, e, span.getForegroundColor());
+            applySpan(target, s, e, span.getForegroundColor(), span.isUnderline());
         }
         
         ColorPreviewSpan[] colorSpans =

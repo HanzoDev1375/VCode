@@ -8,12 +8,17 @@ import androidx.core.content.ContextCompat;
 
 import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
 
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 /**
  * Base abstract class for real-time code token styling engine.
  * Provides utility helpers to extract resource theme colors and safely apply
  * text styling spans to document ranges without risking index out of bounds exceptions.
  */
 public abstract class SyntaxHighlighter {
+
+    protected static final Pattern PAT_LINK = Pattern.compile("(?i)(https?://[^\\s\"'<>]+|(?:[.]{1,2}/)+[a-zA-Z0-9_.-/]+|\\b[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-/]+\\.[a-zA-Z0-9]{2,5}\\b|\\b[a-zA-Z0-9_.-]+\\.(?:html|css|js|json|xml|png|jpg|jpeg|gif|svg|ico|webp|mp4|webm|wav|mp3|ogg|ttf|woff|woff2|eot|otf)\\b)");
 
     protected final Context context;
 
@@ -54,13 +59,24 @@ public abstract class SyntaxHighlighter {
      * Incorporates safety boundary filtering checks to discard invalid or overlapping range requests.
      */
     protected void applySpan(SpannableStringBuilder ssb, int start, int end, int color) {
+        applySpan(ssb, start, end, color, false);
+    }
+
+    protected void applySpan(SpannableStringBuilder ssb, int start, int end, int color, boolean underline) {
         if (ssb == null || start < 0 || end > ssb.length() || start >= end) return;
         ssb.setSpan(
-                new SyntaxHighlightSpan(color),
+                new SyntaxHighlightSpan(color, underline),
                 start,
                 end,
                 Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
         );
+    }
+
+    protected void applyLinks(SpannableStringBuilder ssb, String code) {
+        Matcher m = PAT_LINK.matcher(code);
+        while (m.find()) {
+            applySpan(ssb, m.start(), m.end(), 0, true);
+        }
     }
 
     /**

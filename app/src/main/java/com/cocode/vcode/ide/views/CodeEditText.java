@@ -542,7 +542,7 @@ public class CodeEditText extends AppCompatEditText {
             int start = ssb.getSpanStart(span) + rangeStart;
             int end = ssb.getSpanEnd(span) + rangeStart;
             if (start >= 0 && end <= textLen && start < end) {
-                getText().setSpan(new SyntaxHighlightSpan(span.getForegroundColor()),
+                getText().setSpan(new SyntaxHighlightSpan(span.getForegroundColor(), span.isUnderline()),
                         start, end, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             }
         }

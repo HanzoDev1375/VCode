@@ -71,6 +71,8 @@ public class CssSyntaxHighlighter extends SyntaxHighlighter {
         apply(ssb, PAT_IMPORTANT, code, colorWarning);
         apply(ssb, PAT_COMMENT, code, colorComment); // Comments retain maximum layout priority hierarchy
 
+        applyLinks(ssb, code);
+
         return ssb;
     }
 
