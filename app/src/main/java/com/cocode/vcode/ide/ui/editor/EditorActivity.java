@@ -656,29 +656,35 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         GoToLineBottomSheet sheet = new GoToLineBottomSheet();
         sheet.setMaxLines(maxLines);
-        sheet.setListener(line -> {
-            int targetLineIndex = line - 1;
-            Layout layout = codeEditText.getLayout();
-            if (layout != null) {
-                int offset = layout.getLineStart(targetLineIndex);
-                codeEditText.setSelection(offset);
-                int y = layout.getLineTop(targetLineIndex);
-                codeEditText.scrollTo(0, Math.max(0, y - codeEditText.getPaddingTop()));
-            } else {
-                String text = codeEditText.getText().toString();
-                int currentLine = 0;
-                int offset = 0;
-                for (int i = 0; i < text.length(); i++) {
-                    if (currentLine == targetLineIndex) {
-                        offset = i;
-                        break;
-                    }
-                    if (text.charAt(i) == '\n') currentLine++;
-                }
-                codeEditText.setSelection(offset);
-            }
-        });
+        sheet.setListener(this::jumpToLine);
         sheet.show(getSupportFragmentManager(), "GoToLineSheet");
+    }
+
+    public void jumpToLine(int line) {
+        CodeEditText codeEditText = getActiveCodeEditor();
+        if (codeEditText == null || codeEditText.getText() == null) return;
+
+        int targetLineIndex = line - 1;
+        Layout layout = codeEditText.getLayout();
+        if (layout != null) {
+            if (targetLineIndex < 0 || targetLineIndex >= layout.getLineCount()) return;
+            int offset = layout.getLineStart(targetLineIndex);
+            codeEditText.setSelection(offset);
+            int y = layout.getLineTop(targetLineIndex);
+            codeEditText.scrollTo(0, Math.max(0, y - codeEditText.getPaddingTop()));
+        } else {
+            String text = codeEditText.getText().toString();
+            int currentLine = 0;
+            int offset = 0;
+            for (int i = 0; i < text.length(); i++) {
+                if (currentLine == targetLineIndex) {
+                    offset = i;
+                    break;
+                }
+                if (text.charAt(i) == '\n') currentLine++;
+            }
+            codeEditText.setSelection(offset);
+        }
     }
 
     private void formatCurrentFile() {

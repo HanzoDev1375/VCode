@@ -45,7 +45,7 @@ public class LocalWebServer {
                 try {
                     while (isRunning) {
                         Socket socket = serverSocket.accept();
-                        handleRequest(socket);
+                        com.cocode.vcode.ide.utils.ExecutorProvider.getInstance().runOnCpu(() -> handleRequest(socket));
                     }
                 } catch (Exception e) {
                     isRunning = false;

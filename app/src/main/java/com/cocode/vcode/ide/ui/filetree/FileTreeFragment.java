@@ -128,6 +128,29 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         binding.btnRefresh.setOnClickListener(v -> viewModel.refreshFileTree());
         binding.btnImportFiles.setOnClickListener(v -> showImportDestinationDialog(() -> importFilesLauncher.launch("*/*")));
         binding.btnImportFolder.setOnClickListener(v -> showImportDestinationDialog(() -> importFolderLauncher.launch(null)));
+        
+        binding.btnSearch.setOnClickListener(v -> {
+            if (viewModel.getProjectRoot() != null) {
+                com.cocode.vcode.ide.ui.sheets.ProjectSearchBottomSheet bottomSheet = new com.cocode.vcode.ide.ui.sheets.ProjectSearchBottomSheet();
+                bottomSheet.setProjectRoot(viewModel.getProjectRoot());
+                bottomSheet.setListener((file, lineNumber) -> {
+                    if (selectionListener != null) {
+                        selectionListener.onFileSelected(new FileNode(file, 0));
+                        // Jump to line logic
+                        if (getActivity() instanceof com.cocode.vcode.ide.ui.editor.EditorActivity) {
+                            com.cocode.vcode.ide.ui.editor.EditorActivity editorActivity = (com.cocode.vcode.ide.ui.editor.EditorActivity) getActivity();
+                            // Delay slightly to allow the file to load and viewer to resume
+                            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> {
+                                editorActivity.jumpToLine(lineNumber);
+                            }, 500);
+                        }
+                    }
+                });
+                bottomSheet.show(getChildFragmentManager(), "ProjectSearch");
+            } else {
+                Toast.makeText(getContext(), "Project root not loaded", Toast.LENGTH_SHORT).show();
+            }
+        });
     }
 
     /**

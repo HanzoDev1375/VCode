@@ -34,7 +34,6 @@ public class PreviewActivity extends BaseActivity {
     private ActivityPreviewBinding binding;
 
     private String currentUrl;
-    private boolean isDesktopMode = false;
     private int logCount = 0;
 
     @Override
@@ -63,6 +62,27 @@ public class PreviewActivity extends BaseActivity {
         setupWebView();
         setupFloatingPreviewStyles();
         setupListeners();
+
+        // Hot Reload implementation
+        com.cocode.vcode.ide.data.repository.FileRepository.getFileSavedEvent().observe(this, file -> {
+            if (file != null && binding != null && binding.webView != null) {
+                String name = file.getName();
+                if (name.endsWith(".css")) {
+                    // CSS hot-swap
+                    String js = "var links = document.getElementsByTagName('link');" +
+                                "for (var i = 0; i < links.length; i++) {" +
+                                "  var link = links[i];" +
+                                "  if (link.rel === 'stylesheet' && link.href.indexOf('" + name + "') !== -1) {" +
+                                "    link.href = link.href.split('?')[0] + '?t=' + new Date().getTime();" +
+                                "  }" +
+                                "}";
+                    binding.webView.evaluateJavascript(js, null);
+                } else if (name.endsWith(".html") || name.endsWith(".js")) {
+                    // Full reload
+                    binding.webView.evaluateJavascript("location.reload();", null);
+                }
+            }
+        });
 
         loadUrl(currentUrl);
 
@@ -129,7 +149,6 @@ public class PreviewActivity extends BaseActivity {
 
             @Override
             public boolean onConsoleMessage(android.webkit.ConsoleMessage consoleMessage) {
-                String time = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
                 String prefix = "";
                 int prefixColorRes;
                 switch (consoleMessage.messageLevel()) {
@@ -147,43 +166,11 @@ public class PreviewActivity extends BaseActivity {
                         break;
                 }
 
-                String msgText = consoleMessage.message();
-                String timeStr = time + " ";
-                String fullLine = timeStr + prefix + "  " + msgText + "\n";
+                int msgColor = consoleMessage.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR
+                        ? com.cocode.vcode.ide.R.color.vcode_accent_error
+                        : com.cocode.vcode.ide.R.color.vcode_text_primary;
 
-                android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(fullLine);
-
-                // Dim timestamp
-                int dimColor = androidx.core.content.ContextCompat.getColor(PreviewActivity.this, com.cocode.vcode.ide.R.color.vcode_text_secondary);
-                ssb.setSpan(new android.text.style.ForegroundColorSpan(dimColor), 0, timeStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                // Colored + bold prefix badge
-                int prefixStart = timeStr.length();
-                int prefixEnd = prefixStart + prefix.length();
-                int prefixColor = androidx.core.content.ContextCompat.getColor(PreviewActivity.this, prefixColorRes);
-                ssb.setSpan(new android.text.style.ForegroundColorSpan(prefixColor), prefixStart, prefixEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                ssb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), prefixStart, prefixEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                // Message text color
-                int msgStart = prefixEnd + 2;
-                int msgEnd = fullLine.length() - 1;
-                int msgColor = androidx.core.content.ContextCompat.getColor(PreviewActivity.this,
-                        consoleMessage.messageLevel() == android.webkit.ConsoleMessage.MessageLevel.ERROR
-                                ? com.cocode.vcode.ide.R.color.vcode_accent_error
-                                : com.cocode.vcode.ide.R.color.vcode_text_primary);
-                if (msgStart < msgEnd) {
-                    ssb.setSpan(new android.text.style.ForegroundColorSpan(msgColor), msgStart, msgEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-
-                binding.tvConsoleLogs.append(ssb);
-
-                // Update count badge
-                logCount++;
-                binding.tvConsoleCount.setVisibility(View.VISIBLE);
-                binding.tvConsoleCount.setText(String.valueOf(logCount));
-
-                // Auto-scroll to bottom
-                binding.tvConsoleLogs.post(() -> binding.scrollConsole.fullScroll(View.FOCUS_DOWN));
+                appendLog(prefix, consoleMessage.message(), prefixColorRes, msgColor);
                 return super.onConsoleMessage(consoleMessage);
             }
         });
@@ -195,13 +182,11 @@ public class PreviewActivity extends BaseActivity {
                 super.onPageStarted(view, url, favicon);
                 binding.layoutError.setVisibility(View.GONE);
                 binding.webView.setVisibility(View.VISIBLE);
-                enforceViewport(view);
             }
 
             @Override
             public void onPageFinished(WebView view, String url) {
                 super.onPageFinished(view, url);
-                enforceViewport(view);
             }
 
             @Override
@@ -224,7 +209,9 @@ public class PreviewActivity extends BaseActivity {
 
         binding.btnTryAgain.setOnClickListener(v -> loadUrl(currentUrl));
 
-        binding.btnToggleDesktop.setOnClickListener(v -> toggleDesktopMode());
+        binding.btnVpPhone.setOnClickListener(v -> setViewport(0));
+        binding.btnVpTablet.setOnClickListener(v -> setViewport(768));
+        binding.btnVpDesktop.setOnClickListener(v -> setViewport(1280));
         
         binding.btnToggleConsole.setOnClickListener(v -> toggleConsoleMode());
         binding.btnCloseConsole.setOnClickListener(v -> {
@@ -236,6 +223,27 @@ public class PreviewActivity extends BaseActivity {
             binding.tvConsoleLogs.setText("");
             logCount = 0;
             binding.tvConsoleCount.setVisibility(View.GONE);
+        });
+
+        binding.etRepl.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND ||
+                    (event != null && event.getAction() == android.view.KeyEvent.ACTION_DOWN && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER)) {
+                String js = binding.etRepl.getText().toString().trim();
+                if (!js.isEmpty()) {
+                    binding.etRepl.setText("");
+                    
+                    // Log the command
+                    appendLog(" CMD ", js, com.cocode.vcode.ide.R.color.vcode_text_secondary, com.cocode.vcode.ide.R.color.vcode_text_primary);
+                    
+                    binding.webView.evaluateJavascript(js, result -> {
+                        if (result != null && !result.equals("null")) {
+                            appendLog(" RES ", result, com.cocode.vcode.ide.R.color.vcode_accent_success, com.cocode.vcode.ide.R.color.vcode_text_primary);
+                        }
+                    });
+                }
+                return true;
+            }
+            return false;
         });
 
         // Attempt to open the current preview URL in an external system browser
@@ -293,23 +301,44 @@ public class PreviewActivity extends BaseActivity {
         binding.tvErrorMsg.setText(msg);
     }
 
-    private void enforceViewport(WebView view) {
-        if (isDesktopMode) {
-            view.evaluateJavascript(
-                    "var meta = document.querySelector('meta[name=\"viewport\"]');" +
-                            "if (meta) { meta.setAttribute('content', 'width=1024'); }" +
-                            "else { " +
-                            "  meta = document.createElement('meta');" +
-                            "  meta.name = 'viewport';" +
-                            "  meta.content = 'width=1024';" +
-                            "  document.getElementsByTagName('head')[0].appendChild(meta);" +
-                            "}", null);
-        } else {
-            view.evaluateJavascript(
-                    "var meta = document.querySelector('meta[name=\"viewport\"]');" +
-                            "if (meta) { meta.setAttribute('content', 'width=device-width, initial-scale=1.0'); }", null);
+    private void appendLog(String prefix, String msgText, int prefixColorRes, int msgColorRes) {
+        String time = new java.text.SimpleDateFormat("HH:mm:ss", java.util.Locale.getDefault()).format(new java.util.Date());
+        String timeStr = time + " ";
+        String fullLine = timeStr + prefix + "  " + msgText + "\n";
+
+        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(fullLine);
+
+        // Dim timestamp
+        int dimColor = androidx.core.content.ContextCompat.getColor(this, com.cocode.vcode.ide.R.color.vcode_text_secondary);
+        ssb.setSpan(new android.text.style.ForegroundColorSpan(dimColor), 0, timeStr.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        // Colored + bold prefix badge
+        int prefixStart = timeStr.length();
+        int prefixEnd = prefixStart + prefix.length();
+        int prefixColor = androidx.core.content.ContextCompat.getColor(this, prefixColorRes);
+        ssb.setSpan(new android.text.style.ForegroundColorSpan(prefixColor), prefixStart, prefixEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ssb.setSpan(new android.text.style.StyleSpan(android.graphics.Typeface.BOLD), prefixStart, prefixEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+        // Message text color
+        int msgStart = prefixEnd + 2;
+        int msgEnd = fullLine.length() - 1;
+        int msgColor = androidx.core.content.ContextCompat.getColor(this, msgColorRes);
+        if (msgStart < msgEnd) {
+            ssb.setSpan(new android.text.style.ForegroundColorSpan(msgColor), msgStart, msgEnd, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
+
+        binding.tvConsoleLogs.append(ssb);
+
+        // Update count badge
+        logCount++;
+        binding.tvConsoleCount.setVisibility(View.VISIBLE);
+        binding.tvConsoleCount.setText(String.valueOf(logCount));
+
+        // Auto-scroll to bottom
+        binding.tvConsoleLogs.post(() -> binding.scrollConsole.fullScroll(View.FOCUS_DOWN));
     }
+
+    // Viewport scaling is now handled entirely natively via FrameLayout + scaleX/scaleY
 
     private void setupFloatingPreviewStyles() {
         android.util.TypedValue value = new android.util.TypedValue();
@@ -317,18 +346,10 @@ public class PreviewActivity extends BaseActivity {
         int baseColor = value.data;
         int glassAccentColor = (baseColor & 0x00FFFFFF) | 0xD9000000;
 
-        // Each button must get its own drawable instance.
-        // Sharing a single Drawable between two Views causes state mutations
-        // (press, focus) on one view to visually bleed onto the other.
-        android.graphics.drawable.GradientDrawable desktopDrawable = new android.graphics.drawable.GradientDrawable();
-        desktopDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
-        desktopDrawable.setColor(glassAccentColor);
-
         android.graphics.drawable.GradientDrawable consoleDrawable = new android.graphics.drawable.GradientDrawable();
         consoleDrawable.setShape(android.graphics.drawable.GradientDrawable.OVAL);
         consoleDrawable.setColor(glassAccentColor);
 
-        binding.btnToggleDesktop.setBackground(desktopDrawable);
         binding.btnToggleConsole.setBackground(consoleDrawable);
     }
 
@@ -345,24 +366,58 @@ public class PreviewActivity extends BaseActivity {
         }
     }
 
-    private void toggleDesktopMode() {
-        isDesktopMode = !isDesktopMode;
-        android.webkit.WebSettings settings = binding.webView.getSettings();
+    private void setViewport(int widthDp) {
+        float density = getResources().getDisplayMetrics().density;
+        int screenWidthPx = binding.layoutViewport.getWidth();
+        int screenHeightPx = binding.layoutViewport.getHeight();
 
-        if (isDesktopMode) {
-            binding.btnToggleDesktop.setImageResource(com.cocode.vcode.ide.R.drawable.ic_mobile);
+        int primaryColor = androidx.core.content.ContextCompat.getColor(this, com.cocode.vcode.ide.R.color.vcode_accent_primary);
+        int secondaryColor = androidx.core.content.ContextCompat.getColor(this, com.cocode.vcode.ide.R.color.vcode_text_secondary);
+
+        binding.btnVpPhone.setColorFilter(widthDp == 0 ? primaryColor : secondaryColor);
+        binding.btnVpTablet.setColorFilter(widthDp == 768 ? primaryColor : secondaryColor);
+        binding.btnVpDesktop.setColorFilter(widthDp == 1280 ? primaryColor : secondaryColor);
+
+        if (widthDp == 0 || screenWidthPx == 0) { // Phone or not laid out yet
+            binding.webView.getLayoutParams().width = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+            binding.webView.getLayoutParams().height = android.view.ViewGroup.LayoutParams.MATCH_PARENT;
+            binding.webView.setScaleX(1f);
+            binding.webView.setScaleY(1f);
+            binding.webView.setPivotX(0);
+            binding.webView.setPivotY(0);
+            binding.webView.requestLayout();
+            
+            android.webkit.WebSettings settings = binding.webView.getSettings();
+            settings.setUserAgentString(null);
+            settings.setUseWideViewPort(true);
+            return;
+        }
+
+        int targetWidthPx = (int) (widthDp * density);
+        float scale = (float) screenWidthPx / targetWidthPx;
+        
+        if (scale > 1f) scale = 1f;
+
+        int targetHeightPx = (int) (screenHeightPx / scale);
+
+        binding.webView.getLayoutParams().width = targetWidthPx;
+        binding.webView.getLayoutParams().height = targetHeightPx;
+        
+        binding.webView.setPivotX(0);
+        binding.webView.setPivotY(0);
+        binding.webView.setScaleX(scale);
+        binding.webView.setScaleY(scale);
+        
+        binding.webView.requestLayout();
+        
+        android.webkit.WebSettings settings = binding.webView.getSettings();
+        if (widthDp == 1280) {
             String desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
             settings.setUserAgentString(desktopUserAgent);
         } else {
-            binding.btnToggleDesktop.setImageResource(com.cocode.vcode.ide.R.drawable.ic_monitor);
-            settings.setUserAgentString(null); // restores default user agent
+            settings.setUserAgentString(null);
         }
-        settings.setUseWideViewPort(true);
-        settings.setLoadWithOverviewMode(true);
-        settings.setSupportZoom(true);
-        settings.setBuiltInZoomControls(true);
-        settings.setDisplayZoomControls(false);
-
-        binding.webView.reload();
+        
+        binding.webView.evaluateJavascript("window.dispatchEvent(new Event('resize'));", null);
     }
 }

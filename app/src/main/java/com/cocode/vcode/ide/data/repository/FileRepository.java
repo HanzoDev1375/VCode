@@ -16,6 +16,12 @@ import java.io.File;
  */
 public class FileRepository {
 
+    private static final MutableLiveData<File> fileSavedEvent = new MutableLiveData<>();
+
+    public static LiveData<File> getFileSavedEvent() {
+        return fileSavedEvent;
+    }
+
     /**
      * Instantiates the file repository component.
      */
@@ -44,7 +50,10 @@ public class FileRepository {
             try {
                 FileUtils.writeFile(file, content != null ? content : "");
                 // Safely post a successful status state back onto the user interface thread
-                ExecutorProvider.getInstance().runOnMain(() -> liveData.setValue(Result.success(true)));
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    liveData.setValue(Result.success(true));
+                    fileSavedEvent.setValue(file);
+                });
             } catch (Exception e) {
                 // Route failures gracefully back to active UI components
                 ExecutorProvider.getInstance()
@@ -63,6 +72,7 @@ public class FileRepository {
             return;
         try {
             FileUtils.writeFile(file, content != null ? content : "");
+            ExecutorProvider.getInstance().runOnMain(() -> fileSavedEvent.setValue(file));
         } catch (Exception ignored) {
             // Fails silently; optimized for fast-paced ambient background sync calls
         }

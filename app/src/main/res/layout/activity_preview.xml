@@ -92,90 +92,128 @@
         android:layout_height="0dp"
         android:layout_weight="1">
 
-        <WebView
-            android:id="@+id/web_view"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent" />
-
         <LinearLayout
-            android:id="@+id/layout_error"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_gravity="center"
-            android:gravity="center"
-            android:orientation="vertical"
-            android:visibility="gone"
-            tools:visibility="gone">
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:clipChildren="false">
 
-            <ImageView
-                android:layout_width="48dp"
-                android:layout_height="48dp"
-                android:importantForAccessibility="no"
-                android:src="@drawable/ic_triangle_exclamation"
-                app:tint="@color/vcode_accent_error" />
+            <FrameLayout
+                android:id="@+id/layout_viewport"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:layout_gravity="center">
 
-            <TextView
+                <WebView
+                    android:id="@+id/web_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent" />
+            </FrameLayout>
+
+            <LinearLayout
+                android:id="@+id/layout_error"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_marginTop="16dp"
-                android:fontFamily="sans-serif-medium"
-                android:text="@string/vcode_page_could_not_load"
-                android:textColor="@color/vcode_text_primary"
-                android:textSize="18sp" />
-
-            <TextView
-                android:id="@+id/tv_error_msg"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="8dp"
-                android:fontFamily="sans-serif"
+                android:layout_gravity="center"
                 android:gravity="center"
-                android:textColor="@color/vcode_text_secondary"
-                android:textSize="14sp"
-                tools:text="ERR_FILE_NOT_FOUND" />
+                android:orientation="vertical"
+                android:visibility="gone"
+                tools:visibility="gone">
 
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_try_again"
-                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:layout_marginTop="24dp"
-                android:text="@string/vcode_try_again_btn"
-                android:textColor="@color/vcode_text_primary"
-                app:strokeColor="@color/vcode_divider" />
+                <ImageView
+                    android:layout_width="48dp"
+                    android:layout_height="48dp"
+                    android:importantForAccessibility="no"
+                    android:src="@drawable/ic_triangle_exclamation"
+                    app:tint="@color/vcode_accent_error" />
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="16dp"
+                    android:fontFamily="sans-serif-medium"
+                    android:text="@string/vcode_page_could_not_load"
+                    android:textColor="@color/vcode_text_primary"
+                    android:textSize="18sp" />
+
+                <TextView
+                    android:id="@+id/tv_error_msg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="8dp"
+                    android:fontFamily="sans-serif"
+                    android:gravity="center"
+                    android:textColor="@color/vcode_text_secondary"
+                    android:textSize="14sp"
+                    tools:text="ERR_FILE_NOT_FOUND" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_try_again"
+                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="24dp"
+                    android:text="@string/vcode_try_again_btn"
+                    android:textColor="@color/vcode_text_primary"
+                    app:strokeColor="@color/vcode_divider" />
+            </LinearLayout>
+
         </LinearLayout>
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_gravity="bottom|end"
-            android:layout_marginEnd="16dp"
+            android:layout_gravity="bottom|center_horizontal"
             android:layout_marginBottom="16dp"
-            android:orientation="vertical">
+            android:background="@drawable/vcode_bg_symbol_key"
+            android:elevation="4dp"
+            android:orientation="horizontal"
+            android:paddingHorizontal="4dp"
+            android:paddingVertical="4dp">
 
             <ImageView
-                android:id="@+id/btn_toggle_console"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:layout_marginBottom="16dp"
-                android:clickable="true"
-                android:focusable="true"
+                android:id="@+id/btn_vp_phone"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:importantForAccessibility="no"
                 android:padding="12dp"
-                android:src="@drawable/ic_code"
-                app:tint="@color/vcode_bg_surface" />
+                android:src="@drawable/ic_mobile"
+                app:tint="@color/vcode_accent_primary" />
 
             <ImageView
-                android:id="@+id/btn_toggle_desktop"
-                android:layout_width="50dp"
-                android:layout_height="50dp"
-                android:clickable="true"
-                android:focusable="true"
+                android:id="@+id/btn_vp_tablet"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:importantForAccessibility="no"
+                android:padding="12dp"
+                android:src="@drawable/ic_tablet"
+                app:tint="@color/vcode_text_secondary" />
+
+            <ImageView
+                android:id="@+id/btn_vp_desktop"
+                android:layout_width="44dp"
+                android:layout_height="44dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
                 android:importantForAccessibility="no"
                 android:padding="12dp"
                 android:src="@drawable/ic_monitor"
-                app:tint="@color/vcode_bg_surface" />
+                app:tint="@color/vcode_text_secondary" />
         </LinearLayout>
+
+        <ImageView
+            android:id="@+id/btn_toggle_console"
+            android:layout_width="50dp"
+            android:layout_height="50dp"
+            android:layout_gravity="bottom|end"
+            android:layout_marginEnd="16dp"
+            android:layout_marginBottom="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            android:importantForAccessibility="no"
+            android:padding="12dp"
+            android:src="@drawable/ic_code"
+            app:tint="@color/vcode_bg_surface" />
     </FrameLayout>
 
     <com.google.android.material.card.MaterialCardView
@@ -279,7 +317,8 @@
             <ScrollView
                 android:id="@+id/scroll_console"
                 android:layout_width="match_parent"
-                android:layout_height="match_parent"
+                android:layout_height="0dp"
+                android:layout_weight="1"
                 android:layout_margin="8dp"
                 android:background="@drawable/vcode_bg_console_log_area"
                 android:fillViewport="true"
@@ -295,6 +334,38 @@
                     android:textIsSelectable="true"
                     android:textSize="11.5sp" />
             </ScrollView>
+            
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="> "
+                    android:textColor="@color/vcode_accent_primary"
+                    android:fontFamily="monospace"
+                    android:textStyle="bold"
+                    android:textSize="14sp" />
+
+                <EditText
+                    android:id="@+id/et_repl"
+                    android:layout_width="0dp"
+                    android:layout_weight="1"
+                    android:layout_height="wrap_content"
+                    android:background="@null"
+                    android:hint="evaluate JavaScript..."
+                    android:fontFamily="monospace"
+                    android:textColor="?attr/colorOnSurface"
+                    android:textColorHint="?attr/colorOnSurfaceVariant"
+                    android:textSize="13sp"
+                    android:imeOptions="actionSend"
+                    android:inputType="textNoSuggestions" />
+            </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
