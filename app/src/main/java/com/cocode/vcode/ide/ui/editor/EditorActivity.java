@@ -493,9 +493,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
         boolean showTextEditingOptions = false;
+        EditorFile activeFile = files.get(activeIndex);
 
         if (hasOpenFile) {
-            EditorFile activeFile = files.get(activeIndex);
             FileType type = activeFile.getFileType();
             boolean isBinary = activeFile.isBinaryAsset();
 

@@ -36,7 +36,7 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         View view = inflater.inflate(R.layout.vcode_bottom_sheet_outline, container, false);
-        RecyclerView recycler = view.findViewById(R.id.vcode_recycler_outline);
+        RecyclerView recycler = view.findViewById(R.id.rv_outline);
         
         List<SymbolModel> symbols = extractSymbols();
         
@@ -116,7 +116,7 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
                 symbols.add(new SymbolModel(name, details, line, R.drawable.ic_html_icon));
             }
         } else if (fileType == FileType.CSS || fileType == FileType.SCSS) {
-            Pattern p = Pattern.compile("(?m)^\\s*([.#]?[a-zA-Z0-9_:-]+(?:\\s*[.#]?[a-zA-Z0-9_:-]+)*)\\s*\\{");
+            Pattern p = Pattern.compile("(?m)^\\s*([a-zA-Z0-9_.#:&\\-\\[\\]=~|^$*+> ,]+)\\s*\\{");
             Matcher m = p.matcher(text);
             while (m.find()) {
                 String name = m.group(1).trim();
@@ -143,10 +143,10 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
 
         public SymbolViewHolder(@NonNull View itemView) {
             super(itemView);
-            name = itemView.findViewById(R.id.vcode_txt_symbol_name);
-            details = itemView.findViewById(R.id.vcode_txt_symbol_details);
-            line = itemView.findViewById(R.id.vcode_txt_symbol_line);
-            icon = itemView.findViewById(R.id.vcode_img_symbol_icon);
+            name = itemView.findViewById(R.id.tv_name);
+            details = itemView.findViewById(R.id.tv_details);
+            line = itemView.findViewById(R.id.tv_line);
+            icon = itemView.findViewById(R.id.iv_icon);
         }
     }
 }
