@@ -528,6 +528,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             });
 
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
+
+            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_bars, "Symbol Outline", () -> {
+                com.cocode.vcode.ide.ui.editor.outline.SymbolOutlineBottomSheet bottomSheet = new com.cocode.vcode.ide.ui.editor.outline.SymbolOutlineBottomSheet();
+                bottomSheet.setEditor(getActiveCodeEditor(), activeFile.getFileType());
+                bottomSheet.show(getSupportFragmentManager(), "SymbolOutline");
+            });
         }
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
