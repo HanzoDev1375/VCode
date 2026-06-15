@@ -43,6 +43,9 @@ public class LanguageDetector {
 
         // 4. Trace programming keywords or functional arrow symbols common to script scopes
         if (JS_KEYWORDS.matcher(content).matches() || content.contains("=>")) {
+            if (content.contains("interface ") || content.contains("type ") || content.contains(" as ")) {
+                return FileType.TYPESCRIPT;
+            }
             return FileType.JAVASCRIPT;
         }
 

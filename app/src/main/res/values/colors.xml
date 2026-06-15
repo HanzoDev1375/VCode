@@ -13,6 +13,11 @@
     <color name="vcode_accent_json">#B58B00</color>
     <color name="vcode_accent_git">#C0392B</color>
 
+    <color name="vcode_bracket_1">#FFD700</color> <!-- Gold -->
+    <color name="vcode_bracket_2">#DA70D6</color> <!-- Orchid -->
+    <color name="vcode_bracket_3">#1E90FF</color> <!-- DodgerBlue -->
+    <color name="vcode_bracket_4">#00FA9A</color> <!-- MediumSpringGreen -->
+
     <!-- M3 On/Container colors (light) -->
     <color name="vcode_on_primary">#FFFFFF</color>
     <color name="vcode_primary_container">#D6E4FF</color>

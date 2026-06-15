@@ -82,6 +82,8 @@ public class CodeFileViewer implements IFileViewer {
             codeEditText.setAutoIndent(settings.autoIndent);
             editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
         }
+        
+        codeEditText.setHorizontallyScrolling(!file.isWordWrapEnabled());
 
         codeEditText.setTag(file.getId());
         codeEditText.setCurrentFile(file.getFile());

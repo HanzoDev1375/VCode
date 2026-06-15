@@ -15,8 +15,10 @@ public enum FileType {
     HTML(R.drawable.ic_html_icon, R.color.vcode_lang_html, "HTML", true, "html"),
     CSS(R.drawable.ic_css_icon, R.color.vcode_lang_css, "CSS", true, "css"),
     JAVASCRIPT(R.drawable.ic_js_icon, R.color.vcode_lang_js, "JavaScript", true, "js", "mjs", "cjs"),
+    TYPESCRIPT(R.drawable.ic_js_icon, R.color.vcode_lang_js, "TypeScript", true, "ts", "tsx"),
     JSON(R.drawable.ic_json_icon, R.color.vcode_lang_json, "JSON", true, "json"),
     MARKDOWN(R.drawable.ic_md_icon, R.color.vcode_lang_md, "Markdown", true, "md"),
+    SCSS(R.drawable.ic_css_icon, R.color.vcode_lang_css, "SCSS", true, "scss", "less"),
 
     // Text-based Assets
     CSV(R.drawable.ic_csv_icon, R.color.vcode_file_csv, "CSV", true, "csv"),

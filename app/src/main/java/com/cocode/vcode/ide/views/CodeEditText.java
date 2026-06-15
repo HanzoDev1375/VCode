@@ -100,6 +100,36 @@ public class CodeEditText extends AppCompatEditText {
     private boolean isInsertingCompletion = false;
     private File currentFile;
     private OnScrollChangeListener scrollChangeListener;
+
+    private static class DirtyRangeTracker {
+        int start = -1;
+        int end = -1;
+
+        void addEdit(int editStart, int beforeLength, int afterLength) {
+            if (start == -1) {
+                start = editStart;
+                end = editStart + afterLength;
+            } else {
+                int diff = afterLength - beforeLength;
+                if (editStart <= end) {
+                    end += diff;
+                }
+                start = Math.min(start, editStart);
+                end = Math.max(end, editStart + afterLength);
+            }
+        }
+
+        void reset() {
+            start = -1;
+            end = -1;
+        }
+
+        boolean isDirty() {
+            return start != -1;
+        }
+    }
+
+    private final DirtyRangeTracker dirtyTracker = new DirtyRangeTracker();
     private int lastHighlightStart = -1;
     private int lastHighlightEnd = -1;
     private long highlightVersion = 0;
@@ -197,6 +227,8 @@ public class CodeEditText extends AppCompatEditText {
                 // Ignore self-induced system operations or text styling passes
                 if (isApplyingHighlight || isUndoRedoActive || isSettingText || isAutoClosing)
                     return;
+
+                dirtyTracker.addEdit(start, before, count);
 
                 if (count == 1) {
                     char typed = s.charAt(start);
@@ -490,30 +522,44 @@ public class CodeEditText extends AppCompatEditText {
         final String code = getText().toString();
         final long version = ++highlightVersion;
 
-        if (code.length() <= LARGE_FILE_THRESHOLD) {
-            // Small file — highlight everything
-            ExecutorProvider.getInstance().runOnCpu(() -> {
-                SpannableStringBuilder ssb = syntaxHighlighter.highlight(code);
-                mainHandler.post(() -> {
-                    if (version != highlightVersion) return;
-                    applyHighlightSpans(ssb, 0, code.length());
-                });
-            });
-        } else {
-            // Large file — viewport-only highlighting
-            int[] range = getVisibleCharRange();
-            if (range == null) return;
-            final int rangeStart = range[0];
-            final int rangeEnd = range[1];
+        int finalRangeStart;
+        int finalRangeEnd;
 
-            ExecutorProvider.getInstance().runOnCpu(() -> {
-                SpannableStringBuilder ssb = syntaxHighlighter.highlightRange(code, rangeStart, rangeEnd);
-                mainHandler.post(() -> {
-                    if (version != highlightVersion) return;
-                    applyHighlightSpans(ssb, rangeStart, rangeEnd);
-                });
-            });
+        if (code.length() <= LARGE_FILE_THRESHOLD && !dirtyTracker.isDirty()) {
+            finalRangeStart = 0;
+            finalRangeEnd = code.length();
+        } else {
+            android.text.Layout layout = getLayout();
+            if (layout == null) return;
+
+            if (dirtyTracker.isDirty()) {
+                int ds = dirtyTracker.start;
+                int de = dirtyTracker.end;
+                ds = Math.max(0, ds);
+                de = Math.min(code.length(), Math.max(ds, de));
+
+                int firstLine = Math.max(0, layout.getLineForOffset(ds) - VIEWPORT_BUFFER_LINES);
+                int lastLine = Math.min(layout.getLineCount() - 1, layout.getLineForOffset(de) + VIEWPORT_BUFFER_LINES);
+
+                finalRangeStart = layout.getLineStart(firstLine);
+                finalRangeEnd = layout.getLineEnd(lastLine);
+            } else {
+                int[] vp = getVisibleCharRange();
+                if (vp == null) return;
+                finalRangeStart = vp[0];
+                finalRangeEnd = vp[1];
+            }
         }
+
+        dirtyTracker.reset();
+
+        ExecutorProvider.getInstance().runOnCpu(() -> {
+            SpannableStringBuilder ssb = syntaxHighlighter.highlightRange(code, finalRangeStart, finalRangeEnd);
+            mainHandler.post(() -> {
+                if (version != highlightVersion) return;
+                applyHighlightSpans(ssb, finalRangeStart, finalRangeEnd);
+            });
+        });
     }
 
     /**
@@ -908,11 +954,21 @@ public class CodeEditText extends AppCompatEditText {
                     if (currentFile != null) cssEngine.setCurrentFile(currentFile);
                     this.autoCompleteEngine = cssEngine;
                     break;
+                case SCSS:
+                    this.syntaxHighlighter = new com.cocode.vcode.ide.core.syntax.ScssSyntaxHighlighter(ctx);
+                    this.autoCompleteEngine = null;
+                    break;
                 case JAVASCRIPT:
                     this.syntaxHighlighter = new JsSyntaxHighlighter(ctx);
                     JsAutoCompleteEngine jsEngine = new JsAutoCompleteEngine(ctx);
                     if (currentFile != null) jsEngine.setCurrentFile(currentFile);
                     this.autoCompleteEngine = jsEngine;
+                    break;
+                case TYPESCRIPT:
+                    this.syntaxHighlighter = new com.cocode.vcode.ide.core.syntax.TsSyntaxHighlighter(ctx);
+                    JsAutoCompleteEngine tsEngine = new JsAutoCompleteEngine(ctx); // Use JS engine for TS for now
+                    if (currentFile != null) tsEngine.setCurrentFile(currentFile);
+                    this.autoCompleteEngine = tsEngine;
                     break;
                 case JSON:
                     this.syntaxHighlighter = new JsonSyntaxHighlighter(ctx);

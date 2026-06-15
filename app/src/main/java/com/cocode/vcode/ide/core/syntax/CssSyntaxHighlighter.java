@@ -18,26 +18,26 @@ import java.util.regex.Pattern;
 public class CssSyntaxHighlighter extends SyntaxHighlighter {
 
     // RegEx rules capturing core CSS syntactic patterns
-    private static final Pattern PAT_COMMENT = Pattern.compile("/\\*[\\s\\S]*?\\*/", Pattern.DOTALL);
-    private static final Pattern PAT_AT_RULE = Pattern.compile("@[\\w-]+");
-    private static final Pattern PAT_PSEUDO = Pattern.compile("::?[\\w-]+(?:\\([^)]*\\))?");
-    private static final Pattern PAT_SELECTOR = Pattern.compile("[^{}]+(?=\\s*\\{)"); // Matches everything leading to an opening bracket
-    private static final Pattern PAT_PROPERTY = Pattern.compile("(?<=[{;]\\s{0,20})[\\w-]+(?=\\s*:)"); // Isolates property name parameters
-    private static final Pattern PAT_HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{3,8}\\b");
-    private static final Pattern PAT_COLOR = Pattern.compile("(#(?:[0-9a-fA-F]{3,4}){1,2}\\b|\\b(?:rgb|hsl)a?\\([^)]+\\)|\\b(?i)(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|transparent|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)\\b)");
-    private static final Pattern PAT_NUMBER_UNIT = Pattern.compile("\\b\\d+(\\.\\d+)?(px|em|rem|%|vh|vw|dvh|dvw|s|ms|deg|rad|fr|ch|ex|vmin|vmax)\\b");
-    private static final Pattern PAT_STRING = Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'");
-    private static final Pattern PAT_IMPORTANT = Pattern.compile("!important");
-    private static final Pattern PAT_CSS_VALUE = Pattern.compile("(?<=:)[^;{}]+(?=[;{}])"); // Catches values mapped behind structural colons
+    protected static final Pattern PAT_COMMENT = Pattern.compile("/\\*[\\s\\S]*?\\*/", Pattern.DOTALL);
+    protected static final Pattern PAT_AT_RULE = Pattern.compile("@[\\w-]+");
+    protected static final Pattern PAT_PSEUDO = Pattern.compile("::?[\\w-]+(?:\\([^)]*\\))?");
+    protected static final Pattern PAT_SELECTOR = Pattern.compile("[^{}]+(?=\\s*\\{)"); // Matches everything leading to an opening bracket
+    protected static final Pattern PAT_PROPERTY = Pattern.compile("(?<=[{;]\\s{0,20})[\\w-]+(?=\\s*:)"); // Isolates property name parameters
+    protected static final Pattern PAT_HEX_COLOR = Pattern.compile("#[0-9a-fA-F]{3,8}\\b");
+    protected static final Pattern PAT_COLOR = Pattern.compile("(#(?:[0-9a-fA-F]{3,4}){1,2}\\b|\\b(?:rgb|hsl)a?\\([^)]+\\)|\\b(?i)(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|transparent|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)\\b)");
+    protected static final Pattern PAT_NUMBER_UNIT = Pattern.compile("\\b\\d+(\\.\\d+)?(px|em|rem|%|vh|vw|dvh|dvw|s|ms|deg|rad|fr|ch|ex|vmin|vmax)\\b");
+    protected static final Pattern PAT_STRING = Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*'");
+    protected static final Pattern PAT_IMPORTANT = Pattern.compile("!important");
+    protected static final Pattern PAT_CSS_VALUE = Pattern.compile("(?<=:)[^;{}]+(?=[;{}])"); // Catches values mapped behind structural colons
 
-    private final int colorComment;
-    private final int colorAtRule;
-    private final int colorSelector;
-    private final int colorProperty;
-    private final int colorValue;
-    private final int colorNumber;
-    private final int colorString;
-    private final int colorWarning;
+    protected final int colorComment;
+    protected final int colorAtRule;
+    protected final int colorSelector;
+    protected final int colorProperty;
+    protected final int colorValue;
+    protected final int colorNumber;
+    protected final int colorString;
+    protected final int colorWarning;
 
     public CssSyntaxHighlighter(Context context) {
         super(context);
@@ -72,18 +72,19 @@ public class CssSyntaxHighlighter extends SyntaxHighlighter {
         apply(ssb, PAT_COMMENT, code, colorComment); // Comments retain maximum layout priority hierarchy
 
         applyLinks(ssb, code);
+        applyBrackets(ssb, code);
 
         return ssb;
     }
 
-    private void apply(SpannableStringBuilder ssb, Pattern pattern, String code, int color) {
+    protected void apply(SpannableStringBuilder ssb, Pattern pattern, String code, int color) {
         Matcher m = pattern.matcher(code);
         while (m.find()) {
             applySpan(ssb, m.start(), m.end(), color);
         }
     }
 
-    private void applyColors(SpannableStringBuilder ssb, String code) {
+    protected void applyColors(SpannableStringBuilder ssb, String code) {
         Matcher m = PAT_COLOR.matcher(code);
         while (m.find()) {
             applySpan(ssb, m.start(), m.end(), colorNumber);

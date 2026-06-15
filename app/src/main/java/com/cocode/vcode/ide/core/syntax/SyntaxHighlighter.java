@@ -79,6 +79,16 @@ public abstract class SyntaxHighlighter {
         }
     }
 
+    protected void applyBrackets(SpannableStringBuilder ssb, String code) {
+        int[] bracketColors = new int[]{
+                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_1),
+                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_2),
+                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_3),
+                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_4)
+        };
+        com.cocode.vcode.ide.core.parser.BracketMatcher.applyRainbowBrackets(ssb, code, bracketColors);
+    }
+
     /**
      * Resolves an internal application theme color resource identifier to its hex integer value.
      */

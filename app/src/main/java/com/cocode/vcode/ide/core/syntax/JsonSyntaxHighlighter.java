@@ -75,6 +75,8 @@ public class JsonSyntaxHighlighter extends SyntaxHighlighter {
         // Pass 4: Apply general color theme layouts across strings first, then overlay specialized key styles onto descriptive keys
         apply(ssb, PAT_STRING, code, colorString);
         apply(ssb, PAT_KEY, code, colorKey);
+        applyLinks(ssb, code);
+        applyBrackets(ssb, code);
 
         return ssb;
     }

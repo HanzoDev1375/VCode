@@ -16,39 +16,39 @@ import java.util.regex.Pattern;
 public class JsSyntaxHighlighter extends SyntaxHighlighter {
 
     // RegEx definitions classifying core JS lexical tokens
-    private static final Pattern PAT_COMMENT_ML = Pattern.compile("/\\*[\\s\\S]*?\\*/", Pattern.DOTALL);
-    private static final Pattern PAT_COMMENT_SL = Pattern.compile("//[^\n]*");
-    private static final Pattern PAT_TEMPLATE_LIT = Pattern.compile("`(?:[^`\\\\]|\\\\.|\n)*`", Pattern.DOTALL);
-    private static final Pattern PAT_STRING_DQ = Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"");
-    private static final Pattern PAT_STRING_SQ = Pattern.compile("'(?:[^'\\\\]|\\\\.)*'");
-    private static final Pattern PAT_KEYWORDS = Pattern.compile(
+    protected static final Pattern PAT_COMMENT_ML = Pattern.compile("/\\*[\\s\\S]*?\\*/", Pattern.DOTALL);
+    protected static final Pattern PAT_COMMENT_SL = Pattern.compile("//[^\n]*");
+    protected static final Pattern PAT_TEMPLATE_LIT = Pattern.compile("`(?:[^`\\\\]|\\\\.|\n)*`", Pattern.DOTALL);
+    protected static final Pattern PAT_STRING_DQ = Pattern.compile("\"(?:[^\"\\\\]|\\\\.)*\"");
+    protected static final Pattern PAT_STRING_SQ = Pattern.compile("'(?:[^'\\\\]|\\\\.)*'");
+    protected static final Pattern PAT_KEYWORDS = Pattern.compile(
             "\\b(var|let|const|function|return|if|else|for|while|do|switch|case|break|" +
                     "continue|new|delete|typeof|instanceof|in|of|class|extends|import|export|" +
                     "default|async|await|try|catch|finally|throw|void|yield|this|super)\\b");
-    private static final Pattern PAT_BOOL_NULL = Pattern.compile(
+    protected static final Pattern PAT_BOOL_NULL = Pattern.compile(
             "\\b(true|false|null|undefined|NaN|Infinity)\\b");
-    private static final Pattern PAT_BUILTINS = Pattern.compile(
+    protected static final Pattern PAT_BUILTINS = Pattern.compile(
             "\\b(console|document|window|Math|JSON|Array|Object|String|Number|Boolean|" +
                     "Promise|fetch|setTimeout|setInterval|clearTimeout|clearInterval|" +
                     "localStorage|sessionStorage|navigator|location|history|alert|confirm|" +
                     "prompt|Symbol|Map|Set|WeakMap|WeakSet|Proxy|Reflect|Error|TypeError|" +
                     "RangeError|parseInt|parseFloat|isNaN|isFinite|encodeURIComponent|" +
                     "decodeURIComponent|requestAnimationFrame|cancelAnimationFrame)\\b");
-    private static final Pattern PAT_NUMBER = Pattern.compile(
+    protected static final Pattern PAT_NUMBER = Pattern.compile(
             "\\b(0x[0-9a-fA-F]+|\\d+(\\.\\d+)?([eE][+-]?\\d+)?)\\b");
-    private static final Pattern PAT_OPERATORS = Pattern.compile(
+    protected static final Pattern PAT_OPERATORS = Pattern.compile(
             "[+\\-*/%=!<>&|^~?:]+");
-    private static final Pattern PAT_FUNC_NAME = Pattern.compile(
+    protected static final Pattern PAT_FUNC_NAME = Pattern.compile(
             "\\b([a-zA-Z_$][\\w$]*)(?=\\s*\\()"); // Identifies labels followed directly by call parentheses
 
-    private final int colorComment;
-    private final int colorString;
-    private final int colorKeyword;
-    private final int colorBoolean;
-    private final int colorBuiltin;
-    private final int colorNumber;
-    private final int colorOperator;
-    private final int colorFunc;
+    protected final int colorComment;
+    protected final int colorString;
+    protected final int colorKeyword;
+    protected final int colorBoolean;
+    protected final int colorBuiltin;
+    protected final int colorNumber;
+    protected final int colorOperator;
+    protected final int colorFunc;
 
     public JsSyntaxHighlighter(Context context) {
         super(context);
@@ -84,11 +84,12 @@ public class JsSyntaxHighlighter extends SyntaxHighlighter {
         apply(ssb, PAT_COMMENT_ML, code, colorComment); // Block comments retain maximum overlay layout priority
 
         applyLinks(ssb, code);
+        applyBrackets(ssb, code);
 
         return ssb;
     }
 
-    private void apply(SpannableStringBuilder ssb, Pattern pattern, String code, int color) {
+    protected void apply(SpannableStringBuilder ssb, Pattern pattern, String code, int color) {
         Matcher m = pattern.matcher(code);
         while (m.find()) {
             applySpan(ssb, m.start(), m.end(), color);

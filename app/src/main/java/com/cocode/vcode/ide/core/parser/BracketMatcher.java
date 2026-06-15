@@ -62,6 +62,52 @@ public class BracketMatcher {
         return new MatchResult(-1, -1, false);
     }
 
+    public static void applyRainbowBrackets(android.text.SpannableStringBuilder ssb, String text, int[] colors) {
+        if (text == null || colors == null || colors.length == 0) return;
+        
+        int[] depthArray = new int[text.length()];
+        int currentDepthParenthesis = 0;
+        int currentDepthBracket = 0;
+        int currentDepthBrace = 0;
+        
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            
+            if (c == '(') {
+                depthArray[i] = currentDepthParenthesis % colors.length;
+                currentDepthParenthesis++;
+            } else if (c == ')') {
+                currentDepthParenthesis = Math.max(0, currentDepthParenthesis - 1);
+                depthArray[i] = currentDepthParenthesis % colors.length;
+            } else if (c == '[') {
+                depthArray[i] = currentDepthBracket % colors.length;
+                currentDepthBracket++;
+            } else if (c == ']') {
+                currentDepthBracket = Math.max(0, currentDepthBracket - 1);
+                depthArray[i] = currentDepthBracket % colors.length;
+            } else if (c == '{') {
+                depthArray[i] = currentDepthBrace % colors.length;
+                currentDepthBrace++;
+            } else if (c == '}') {
+                currentDepthBrace = Math.max(0, currentDepthBrace - 1);
+                depthArray[i] = currentDepthBrace % colors.length;
+            } else {
+                depthArray[i] = -1;
+            }
+        }
+        
+        for (int i = 0; i < text.length(); i++) {
+            if (depthArray[i] != -1) {
+                ssb.setSpan(
+                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[depthArray[i]]),
+                        i,
+                        i + 1,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+            }
+        }
+    }
+
     /**
      * Immutable container capturing the absolute coordinates of matched structural pairs.
      */

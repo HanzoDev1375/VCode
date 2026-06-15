@@ -134,6 +134,7 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
         applyInlineColors(ssb, code, embeddedRanges, 0);
 
         applyLinks(ssb, code);
+        applyBrackets(ssb, code);
 
         return ssb;
     }

@@ -517,6 +517,16 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             if (CodeFormatter.isFormatSupported(files.get(activeIndex).getFileType())) {
                 addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
             }
+            
+            boolean wordWrapEnabled = activeFile.isWordWrapEnabled();
+            addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_file_lines, "Word Wrap", wordWrapEnabled, () -> {
+                activeFile.setWordWrapEnabled(!wordWrapEnabled);
+                CodeEditText codeEditText = getActiveCodeEditor();
+                if (codeEditText != null) {
+                    codeEditText.setHorizontallyScrolling(!activeFile.isWordWrapEnabled());
+                }
+            });
+
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
         }
 
