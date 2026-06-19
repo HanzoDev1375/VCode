@@ -18,34 +18,22 @@
         android:orientation="horizontal">
 
         <ImageView
-            android:id="@+id/iv_file_icon"
+            android:id="@+id/iv_severity"
             android:layout_width="16dp"
             android:layout_height="16dp"
             android:importantForAccessibility="no"
-            android:src="@drawable/ic_html_icon"
-            app:tint="?attr/colorPrimary" />
+            android:src="@drawable/ic_triangle_exclamation"
+            app:tint="@color/vcode_accent_error" />
 
         <TextView
-            android:id="@+id/tv_file_name"
+            android:id="@+id/tv_message"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="8dp"
             android:fontFamily="sans-serif-medium"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="?attr/colorOnSurface"
-            tools:text="index.html" />
-
-        <TextView
-            android:id="@+id/tv_file_path"
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
-            android:layout_weight="1"
-            android:ellipsize="start"
-            android:maxLines="1"
-            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
-            android:textColor="?attr/colorOnSurfaceVariant"
-            tools:text="src/main/" />
+            tools:text="Unmatched closing brace" />
     </LinearLayout>
 
     <LinearLayout
@@ -56,25 +44,27 @@
         android:orientation="horizontal">
 
         <TextView
-            android:id="@+id/tv_line_number"
+            android:id="@+id/tv_file_path"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:fontFamily="monospace"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
             android:textColor="?attr/colorOnSurfaceVariant"
-            android:textSize="12sp"
-            tools:text="14:" />
+            tools:text="src/main/index.js" />
+            
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text=":"
+            android:textAppearance="@style/TextAppearance.Material3.BodySmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
 
         <TextView
-            android:id="@+id/tv_snippet"
+            android:id="@+id/tv_line_number"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
             android:layout_weight="1"
-            android:ellipsize="end"
-            android:fontFamily="monospace"
-            android:maxLines="1"
-            android:textColor="?attr/colorOnSurface"
+            android:textColor="?attr/colorOnSurfaceVariant"
             android:textSize="12sp"
-            tools:text="    return this.documentRoot;" />
+            tools:text="14" />
     </LinearLayout>
 </LinearLayout>

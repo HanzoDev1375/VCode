@@ -95,6 +95,7 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:orientation="vertical"
             android:clipChildren="false">
 
             <FrameLayout
@@ -187,7 +188,7 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:importantForAccessibility="no"
                 android:padding="12dp"
-                android:src="@drawable/ic_tablet"
+                android:src="@drawable/ic_tablet_screen"
                 app:tint="@color/vcode_text_secondary" />
 
             <ImageView
@@ -334,38 +335,7 @@
                     android:textIsSelectable="true"
                     android:textSize="11.5sp" />
             </ScrollView>
-            
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:background="?attr/colorSurfaceContainerHigh"
-                android:paddingHorizontal="12dp"
-                android:paddingVertical="8dp">
 
-                <TextView
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:text="> "
-                    android:textColor="@color/vcode_accent_primary"
-                    android:fontFamily="monospace"
-                    android:textStyle="bold"
-                    android:textSize="14sp" />
-
-                <EditText
-                    android:id="@+id/et_repl"
-                    android:layout_width="0dp"
-                    android:layout_weight="1"
-                    android:layout_height="wrap_content"
-                    android:background="@null"
-                    android:hint="evaluate JavaScript..."
-                    android:fontFamily="monospace"
-                    android:textColor="?attr/colorOnSurface"
-                    android:textColorHint="?attr/colorOnSurfaceVariant"
-                    android:textSize="13sp"
-                    android:imeOptions="actionSend"
-                    android:inputType="textNoSuggestions" />
-            </LinearLayout>
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 

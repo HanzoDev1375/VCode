@@ -29,6 +29,15 @@ public class FileIconHelper {
         FileType fileType = FileType.fromExtension(ext);
 
         imageView.setImageResource(fileType.getIconResId());
+        applyFileTypeColor(imageView, fileType);
+    }
+
+    /**
+     * Applies the appropriate color for a FileType to an ImageView's current drawable.
+     */
+    public static void applyFileTypeColor(ImageView imageView, FileType fileType) {
+        if (imageView == null || fileType == null) return;
+        Context context = imageView.getContext();
         imageView.setColorFilter(
                 ContextCompat.getColor(context, fileType.getColorResId()),
                 PorterDuff.Mode.SRC_IN

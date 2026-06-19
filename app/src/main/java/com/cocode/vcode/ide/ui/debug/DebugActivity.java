@@ -35,6 +35,7 @@ public class DebugActivity extends AppCompatActivity {
         binding.tvAnUnexpectedErrorOccurred.setTypeface(fontManager.getUiMedium(this));
         binding.tvCrashLog.setTypeface(fontManager.getCodeFont(this));
         binding.btnCopyError.setTypeface(fontManager.getUiMedium(this));
+        binding.btnShareError.setTypeface(fontManager.getUiMedium(this));
         binding.btnRestartApp.setTypeface(fontManager.getUiMedium(this));
 
         String crashLog = getIntent().getStringExtra(EXTRA_CRASH_LOG);
@@ -52,6 +53,30 @@ public class DebugActivity extends AppCompatActivity {
                 clipboard.setPrimaryClip(clip);
                 Toast.makeText(this, "Crash log copied.", Toast.LENGTH_SHORT).show();
             }
+        });
+
+        binding.btnShareError.setOnClickListener(v -> {
+            String deviceInfo = "Android " + android.os.Build.VERSION.RELEASE
+                    + " (API " + android.os.Build.VERSION.SDK_INT + ")"
+                    + " | " + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL;
+            String versionName = "unknown";
+            try {
+                versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
+            } catch (Exception ignored) {}
+
+            String issueBody = "## Bug Report\n\n"
+                    + "**App version:** " + versionName + "\n"
+                    + "**Device:** " + deviceInfo + "\n\n"
+                    + "### Steps to reproduce\n"
+                    + "<!-- Describe what you were doing when the crash occurred -->\n\n"
+                    + "### Crash log\n"
+                    + "```\n" + finalCrashLog + "\n```\n";
+
+            Intent shareIntent = new Intent(Intent.ACTION_SEND);
+            shareIntent.setType("text/plain");
+            shareIntent.putExtra(Intent.EXTRA_SUBJECT, "[VCode] Crash Report");
+            shareIntent.putExtra(Intent.EXTRA_TEXT, issueBody);
+            startActivity(Intent.createChooser(shareIntent, "Share crash report"));
         });
 
         binding.btnRestartApp.setOnClickListener(v -> {

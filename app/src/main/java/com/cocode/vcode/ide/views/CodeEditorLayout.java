@@ -58,7 +58,6 @@ public class CodeEditorLayout extends LinearLayout {
         addView(codeEditText);
 
         lineNumberView.bindEditor(codeEditText);
-
         // Synchronize scroll shifts from the editor to the line numbers gutter
         codeEditText.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             lineNumberView.setScrollY(scrollY);

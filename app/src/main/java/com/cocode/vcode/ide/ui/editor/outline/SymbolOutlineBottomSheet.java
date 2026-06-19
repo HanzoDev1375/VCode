@@ -63,6 +63,8 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
                 holder.details.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiFont(holder.itemView.getContext()));
                 holder.line.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
                 
+                com.cocode.vcode.ide.utils.FileIconHelper.applyFileTypeColor(holder.icon, fileType);
+                
                 if (symbol.getDetails() != null && !symbol.getDetails().isEmpty()) {
                     holder.details.setVisibility(View.VISIBLE);
                     holder.details.setText(symbol.getDetails());
@@ -72,10 +74,12 @@ public class SymbolOutlineBottomSheet extends BottomSheetDialogFragment {
                 
                 holder.itemView.setOnClickListener(v -> {
                     if (editor != null && editor.getLayout() != null) {
-                        int line = symbol.getLineNumber() - 1;
+                        int line = Math.max(0, symbol.getLineNumber() - 1);
                         int offset = editor.getLayout().getLineStart(line);
                         editor.setSelection(offset);
-                        // Optional: scroll to position could be handled by editor
+                        // Scroll so the selected line is visible
+                        int lineTop = editor.getLayout().getLineTop(line);
+                        editor.scrollTo(0, Math.max(0, lineTop - editor.getHeight() / 3));
                     }
                     dismiss();
                 });

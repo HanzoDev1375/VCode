@@ -151,6 +151,15 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                 Toast.makeText(getContext(), "Project root not loaded", Toast.LENGTH_SHORT).show();
             }
         });
+
+        binding.btnSettings.setOnClickListener(v -> {
+            if (viewModel.getProjectRoot() != null) {
+                File metaFile = new File(viewModel.getProjectRoot(), "project_meta.json");
+                if (metaFile.exists() && selectionListener != null) {
+                    selectionListener.onFileSelected(new FileNode(metaFile, 0));
+                }
+            }
+        });
     }
 
     /**
@@ -423,7 +432,21 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             if (ivIcon != null) ivIcon.setColorFilter(errorColor);
         }
 
-        popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -anchor.getHeight() / 2);
+        popupBinding.getRoot().measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int popupHeight = popupBinding.getRoot().getMeasuredHeight();
+
+        int[] anchorLocation = new int[2];
+        anchor.getLocationOnScreen(anchorLocation);
+        int screenHeight = requireActivity().getWindow().getDecorView().getHeight();
+        int spaceBelow = screenHeight - anchorLocation[1] - anchor.getHeight();
+
+        if (spaceBelow >= popupHeight) {
+            popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -anchor.getHeight() / 2);
+        } else {
+            popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -(popupHeight + anchor.getHeight() / 2));
+        }
     }
 
     private void showCopyPathPopup(View anchor, File file) {
@@ -452,7 +475,21 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             }
         });
 
-        popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -anchor.getHeight() / 2);
+        popupBinding.getRoot().measure(
+                View.MeasureSpec.makeMeasureSpec(width, View.MeasureSpec.EXACTLY),
+                View.MeasureSpec.makeMeasureSpec(0, View.MeasureSpec.UNSPECIFIED));
+        int popupHeight = popupBinding.getRoot().getMeasuredHeight();
+
+        int[] loc = new int[2];
+        anchor.getLocationOnScreen(loc);
+        int screenH = requireActivity().getWindow().getDecorView().getHeight();
+        int spaceBelow = screenH - loc[1] - anchor.getHeight();
+
+        if (spaceBelow >= popupHeight) {
+            popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -anchor.getHeight() / 2);
+        } else {
+            popupWindow.showAsDropDown(anchor, anchor.getWidth() / 2, -(popupHeight + anchor.getHeight() / 2));
+        }
     }
 
     private View addPopupItem(ViewGroup container, PopupWindow popup, int iconRes, String title, Runnable action) {

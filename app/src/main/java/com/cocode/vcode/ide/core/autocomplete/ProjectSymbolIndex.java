@@ -37,9 +37,14 @@ public class ProjectSymbolIndex {
     private static final Pattern PAT_HTML_ID = Pattern.compile("id\\s*=\\s*[\"']([a-zA-Z0-9_-]+)[\"']");
 
     // JS Exports
-    private static final Pattern PAT_JS_EXPORT_DECL = Pattern.compile("export\\s+(?:const|let|var|function|class)\\s+([a-zA-Z_$][\\w$]*)");
+    private static final Pattern PAT_JS_EXPORT_DECL = Pattern.compile("export\\s+(?:const|let|var|function|class|interface|type)\\s+([a-zA-Z_$][\\w$]*)");
+    private static final Pattern PAT_JS_EXPORT_DEFAULT = Pattern.compile("export\\s+default\\s+(?:class\\s+|function\\s+)?([a-zA-Z_$][\\w$]*)?");
     private static final Pattern PAT_JS_EXPORT_BLOCK = Pattern.compile("export\\s*\\{\\s*([^}]+)\\s*\\}");
-    
+    private static final Pattern PAT_JS_EXPORT_DESTRUCT = Pattern.compile("export\\s+(?:const|let|var)\\s*\\{\\s*([^}]+)\\s*\\}");
+    private static final Pattern PAT_MODULE_EXPORTS = Pattern.compile("module\\.exports\\s*=\\s*(?:[a-zA-Z_$][\\w$]*|\\{([^}]+)\\})");
+    private static final Pattern PAT_FUNC_SIG = Pattern.compile("(?:export\\s+)?(?:default\\s+)?function\\s+([a-zA-Z_$][\\w$]*)\\s*(\\([^)]*\\))");
+    private static final Pattern PAT_ARROW_FUNC = Pattern.compile("(?:export\\s+)?(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*)\\s*=\\s*(\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>");
+
     // Maps absolute file path to its exported CompletionItems
     private final Map<String, List<CompletionItem>> jsFileExports = new HashMap<>();
 
@@ -156,13 +161,45 @@ public class ProjectSymbolIndex {
         String content = readFile(file);
         if (content == null) return;
         List<CompletionItem> exports = new ArrayList<>();
-        
+        Map<String, String> signatures = new HashMap<>();
+
+        // 1. Find signatures first so we can attach them to exports later
+        Matcher mFunc = PAT_FUNC_SIG.matcher(content);
+        while (mFunc.find()) {
+            signatures.put(mFunc.group(1), mFunc.group(2));
+        }
+        Matcher mArrow = PAT_ARROW_FUNC.matcher(content);
+        while (mArrow.find()) {
+            String args = mArrow.group(2);
+            if (!args.startsWith("(")) args = "(" + args + ")";
+            signatures.put(mArrow.group(1), args);
+        }
+
+        // 2. Standard exports: export const foo ...
         Matcher mDecl = PAT_JS_EXPORT_DECL.matcher(content);
         while (mDecl.find()) {
             String name = mDecl.group(1);
-            exports.add(new CompletionItem(name, name, "Export", CompletionItem.Type.VALUE, 0));
+            String sig = signatures.getOrDefault(name, "");
+            exports.add(new CompletionItem(name + sig, name, "Export", CompletionItem.Type.VALUE, 0));
         }
-        
+
+        // 3. Export default
+        Matcher mDefault = PAT_JS_EXPORT_DEFAULT.matcher(content);
+        while (mDefault.find()) {
+            String name = mDefault.group(1);
+            if (name != null && !name.isEmpty()) {
+                String sig = signatures.getOrDefault(name, "");
+                exports.add(new CompletionItem(name + sig, name, "Default Export", CompletionItem.Type.VALUE, 0));
+            } else {
+                // Anonymous default export, try to guess from filename
+                String fileName = file.getName();
+                int dotIdx = fileName.lastIndexOf('.');
+                if (dotIdx > 0) fileName = fileName.substring(0, dotIdx);
+                exports.add(new CompletionItem(fileName, fileName, "Default Export", CompletionItem.Type.VALUE, 0));
+            }
+        }
+
+        // 4. Export blocks: export { a, b as c }
         Matcher mBlock = PAT_JS_EXPORT_BLOCK.matcher(content);
         while (mBlock.find()) {
             String[] names = mBlock.group(1).split(",");
@@ -172,8 +209,44 @@ public class ProjectSymbolIndex {
                     name = name.split(" as ")[1].trim();
                 }
                 if (!name.isEmpty()) {
+                    String sig = signatures.getOrDefault(name, "");
+                    exports.add(new CompletionItem(name + sig, name, "Export", CompletionItem.Type.VALUE, 0));
+                }
+            }
+        }
+
+        // 5. Destructured exports: export const { a, b } = ...
+        Matcher mDestruct = PAT_JS_EXPORT_DESTRUCT.matcher(content);
+        while (mDestruct.find()) {
+            String[] names = mDestruct.group(1).split(",");
+            for (String n : names) {
+                String name = n.trim().split(":")[0].trim(); // Handle aliases { a: b }
+                if (!name.isEmpty()) {
                     exports.add(new CompletionItem(name, name, "Export", CompletionItem.Type.VALUE, 0));
                 }
+            }
+        }
+
+        // 6. module.exports
+        Matcher mModExp = PAT_MODULE_EXPORTS.matcher(content);
+        while (mModExp.find()) {
+            String block = mModExp.group(1);
+            if (block != null && !block.isEmpty()) {
+                // It's a block: module.exports = { a, b }
+                String[] names = block.split(",");
+                for (String n : names) {
+                    String name = n.trim().split(":")[0].trim();
+                    if (!name.isEmpty()) {
+                        String sig = signatures.getOrDefault(name, "");
+                        exports.add(new CompletionItem(name + sig, name, "module.exports", CompletionItem.Type.VALUE, 0));
+                    }
+                }
+            } else {
+                // Just a single assignment (fallback to file name heuristic like default export)
+                String fileName = file.getName();
+                int dotIdx = fileName.lastIndexOf('.');
+                if (dotIdx > 0) fileName = fileName.substring(0, dotIdx);
+                exports.add(new CompletionItem(fileName, fileName, "module.exports", CompletionItem.Type.VALUE, 0));
             }
         }
         

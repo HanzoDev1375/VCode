@@ -72,7 +72,6 @@ public class SettingsRepository {
         } catch (Exception e) {
             s.theme = AppSettings.Theme.SYSTEM;
         }
-
         // Preview rendering options
         s.openPreviewInApp = prefs.getBoolean(PreferenceKeys.OPEN_PREVIEW_IN_APP, s.openPreviewInApp);
         s.autoRefreshPreview = prefs.getBoolean(PreferenceKeys.AUTO_REFRESH_PREVIEW, s.autoRefreshPreview);
@@ -86,6 +85,49 @@ public class SettingsRepository {
         s.confirmOnProjectDelete = prefs.getBoolean(PreferenceKeys.CONFIRM_ON_PROJECT_DEL, s.confirmOnProjectDelete);
 
         return s;
+    }
+
+    public AppSettings loadMergedSettings(java.io.File projectDir) {
+        AppSettings global = loadSettings();
+        if (projectDir == null) return global;
+        
+        java.io.File metaFile = new java.io.File(projectDir, "project_meta.json");
+        if (!metaFile.exists()) return global;
+        
+        try {
+            java.io.File settingsFile = new java.io.File(projectDir, "project_settings.json");
+            java.io.File targetFile = settingsFile.exists() ? settingsFile : metaFile;
+            
+            if (targetFile.exists()) {
+                StringBuilder sb = new StringBuilder();
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(targetFile), "UTF-8"))) {
+                    String line;
+                    while ((line = reader.readLine()) != null) {
+                        sb.append(line);
+                    }
+                }
+                org.json.JSONObject obj = new org.json.JSONObject(sb.toString());
+                org.json.JSONObject sObj = null;
+                
+                if (targetFile == metaFile && obj.has("settings")) {
+                    sObj = obj.getJSONObject("settings");
+                } else if (targetFile == settingsFile) {
+                    sObj = obj; // project_settings.json itself is the settings object
+                }
+                
+                if (sObj != null) {
+                    if (sObj.has("tabSize")) global.tabSize = sObj.getInt("tabSize");
+                    if (sObj.has("autoIndent")) global.autoIndent = sObj.getBoolean("autoIndent");
+                    if (sObj.has("jsonValidateRealtime")) global.jsonValidateRealtime = sObj.getBoolean("jsonValidateRealtime");
+                    if (sObj.has("jsonFormatOnSave")) global.jsonFormatOnSave = sObj.getBoolean("jsonFormatOnSave");
+                    if (sObj.has("autoCloseBrackets")) global.autoCloseBrackets = sObj.getBoolean("autoCloseBrackets");
+                    if (sObj.has("autoCloseHtmlTags")) global.autoCloseHtmlTags = sObj.getBoolean("autoCloseHtmlTags");
+                }
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
+        return global;
     }
 
     // --- Section: Save ---
@@ -139,6 +181,38 @@ public class SettingsRepository {
                 s.gitAuthorName != null ? s.gitAuthorName : "",
                 s.gitAuthorEmail != null ? s.gitAuthorEmail : ""
         );
+    }
+
+    public void saveProjectSettings(java.io.File projectDir, AppSettings s) {
+        if (projectDir == null || s == null) return;
+        java.io.File metaFile = new java.io.File(projectDir, "project_meta.json");
+        if (!metaFile.exists()) return;
+        
+        try {
+            StringBuilder sb = new StringBuilder();
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(metaFile), "UTF-8"))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line);
+                }
+            }
+            org.json.JSONObject obj = new org.json.JSONObject(sb.toString());
+            org.json.JSONObject sObj = new org.json.JSONObject();
+            sObj.put("tabSize", s.tabSize);
+            sObj.put("autoIndent", s.autoIndent);
+            sObj.put("jsonValidateRealtime", s.jsonValidateRealtime);
+            sObj.put("jsonFormatOnSave", s.jsonFormatOnSave);
+            sObj.put("autoCloseBrackets", s.autoCloseBrackets);
+            sObj.put("autoCloseHtmlTags", s.autoCloseHtmlTags);
+            
+            obj.put("settings", sObj);
+            
+            try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(new java.io.FileOutputStream(metaFile), "UTF-8"))) {
+                writer.write(obj.toString(2));
+            }
+        } catch (Exception e) {
+            // Ignore
+        }
     }
 
     // --- Section: Last Project ---

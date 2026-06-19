@@ -36,7 +36,7 @@ import java.io.File;
  */
 public class GitActivity extends BaseActivity {
 
-    private final String[] tabTitles = {"Changes", "History", "Branches", "Remote"};
+    private final String[] tabTitles = {"Changes", "History", "Branches", "Remote", "Stash"};
     private ActivityGitBinding binding;
     private GitViewModel viewModel;
     private File projectDirectory;
@@ -190,8 +190,10 @@ public class GitActivity extends BaseActivity {
                     return new GitHistoryFragment();
                 case 2:
                     return new GitBranchFragment();
-                default:
+                case 3:
                     return new GitRemoteFragment();
+                default:
+                    return new com.cocode.vcode.ide.ui.git.tabs.GitStashFragment();
             }
         }
 

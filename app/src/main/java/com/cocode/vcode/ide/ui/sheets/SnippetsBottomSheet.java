@@ -107,7 +107,12 @@ public class SnippetsBottomSheet extends BottomSheetDialogFragment {
     private void loadSnippetsFromRepository() {
         repository.getSnippets().observe(getViewLifecycleOwner(), result -> {
             if (result != null && result.isSuccess()) {
-                allSnippets = result.getData();
+                List<SnippetItem> fetched = result.getData();
+                allSnippets = new ArrayList<>();
+                for (SnippetItem item : fetched) {
+                    if (item.getId() != null && item.getId().startsWith("git_template_")) continue;
+                    allSnippets.add(item);
+                }
 
                 // Apply existing search filter to the new data
                 String currentQuery = binding.etSearch.getText() != null ? binding.etSearch.getText().toString() : "";

@@ -20,7 +20,7 @@ public class EditorFile {
     private int cursorPosition;
     private int scrollY;
     private boolean isContentLoaded = false;
-    private boolean wordWrapEnabled = false;
+    private boolean readOnly = false;
 
     public EditorFile() {
     }
@@ -151,11 +151,11 @@ public class EditorFile {
         isContentLoaded = contentLoaded;
     }
 
-    public boolean isWordWrapEnabled() {
-        return wordWrapEnabled;
+    public boolean isReadOnly() {
+        return readOnly;
     }
 
-    public void setWordWrapEnabled(boolean wordWrapEnabled) {
-        this.wordWrapEnabled = wordWrapEnabled;
+    public void setReadOnly(boolean readOnly) {
+        this.readOnly = readOnly;
     }
 }

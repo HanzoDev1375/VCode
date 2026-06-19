@@ -64,8 +64,8 @@ public class CodeEditText extends AppCompatEditText {
     private static final int VIEWPORT_BUFFER_LINES = 30; // extra lines above/below visible area
     private static final long AUTOCOMPLETE_DELAY_MS = 100;
 
-    /** Characters that trigger a new autocomplete session — never dismiss on these. */
-    private static final String TRIGGER_CHARS = ".<>/:'\"@#!^({[})]";
+    /** Characters that trigger a new completion context — typed alone (no word before them). */
+    private static final String TRIGGER_CHARS = ".</:'" + "\"" + "@#!";
 
     private final HtmlTagParser htmlTagParser = new HtmlTagParser();
     private final BracketMatcher bracketMatcher = new BracketMatcher();
@@ -251,7 +251,13 @@ public class CodeEditText extends AppCompatEditText {
                 if (isApplyingHighlight || isUndoRedoActive || isSettingText || isAutoClosing)
                     return;
                 scheduleHighlight();
-                scheduleAutoComplete();
+                // Only trigger autocomplete on insertions — not on deletions or pure selections
+                if (undoInsertedCount > 0) {
+                    scheduleAutoComplete();
+                } else if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
+                    // On deletion, update the popup (word fragment got shorter) or dismiss
+                    scheduleAutoComplete();
+                }
                 // Intelligent undo recording with edit metadata
                 if (undoOldText != null) {
                     undoRedoManager.onEdit(s.toString(), getSelectionStart(),
@@ -617,12 +623,12 @@ public class CodeEditText extends AppCompatEditText {
     }
 
     /**
-     * Evaluates cursor location to prompt contextual vocabulary proposals.
-     * Mirrors VS Code's trigger logic:
-     * — Always trigger on identifier characters (letters, digits, _, $, -).
-     * — Also trigger on designated trigger characters (., <, /, :, @, #, quotes).
-     * — Dismiss on whitespace, newlines, or non-trigger punctuation.
-     * — Dismiss when cursor is at position 0.
+     * Professional IDE autocomplete trigger logic:
+     * — Trigger chars (. < / : ' " @ # !)  → show immediately (0 word chars needed).
+     * — Identifier chars (letters, digits, _ $ -)  → require ≥ 2 chars to avoid flooding.
+     * — Space, newline, operator, closing bracket → dismiss.
+     * — Never trigger inside a string literal or comment (left to engine filtering).
+     * — Never trigger when the popup was just dismissed by the user (handled by delay reset).
      */
     private void triggerAutoComplete() {
         if (autoCompleteEngine == null || getText() == null) return;
@@ -630,7 +636,6 @@ public class CodeEditText extends AppCompatEditText {
         String text   = getText().toString();
         int    cursor = getSelectionStart();
 
-        // Must have at least one char before cursor and valid position
         if (cursor <= 0 || cursor > text.length()) {
             autoCompletePopup.dismiss();
             return;
@@ -638,23 +643,44 @@ public class CodeEditText extends AppCompatEditText {
 
         char lastChar = text.charAt(cursor - 1);
 
-        // Newlines never trigger — dismiss immediately
-        if (lastChar == '\n' || lastChar == '\r') {
+        // Whitespace and newlines always dismiss
+        if (Character.isWhitespace(lastChar)) {
             autoCompletePopup.dismiss();
             return;
         }
 
-        // Trigger on identifier chars or explicit trigger characters
-        boolean isIdentifier = Character.isLetterOrDigit(lastChar)
-                || lastChar == '_' || lastChar == '-' || lastChar == '$';
-        boolean isTriggerChar = TRIGGER_CHARS.indexOf(lastChar) >= 0;
+        boolean isTriggerChar  = TRIGGER_CHARS.indexOf(lastChar) >= 0;
+        boolean isIdentifier   = Character.isLetterOrDigit(lastChar)
+                || lastChar == '_' || lastChar == '$'
+                || (lastChar == '-' && (fileType == FileType.CSS || fileType == FileType.HTML));
 
         if (!isIdentifier && !isTriggerChar) {
+            // Operator, closing bracket, punctuation etc. — dismiss
             autoCompletePopup.dismiss();
             return;
         }
 
-        // Capture cursor for the lambda — prevents stale reference
+        if (isIdentifier && !isTriggerChar) {
+            // Count the current word length — require ≥ 2 chars to avoid trivial single-letter floods
+            int wordLen = 1;
+            int i = cursor - 2;
+            while (i >= 0) {
+                char c = text.charAt(i);
+                if (Character.isLetterOrDigit(c) || c == '_' || c == '$'
+                        || (c == '-' && (fileType == FileType.CSS || fileType == FileType.HTML))) {
+                    wordLen++;
+                    i--;
+                } else {
+                    break;
+                }
+            }
+            if (wordLen < 2) {
+                // Single char typed — dismiss any stale popup but don't open a new one
+                autoCompletePopup.dismiss();
+                return;
+            }
+        }
+
         final int capturedCursor = cursor;
         final String capturedText = text;
 
@@ -956,7 +982,9 @@ public class CodeEditText extends AppCompatEditText {
                     break;
                 case SCSS:
                     this.syntaxHighlighter = new com.cocode.vcode.ide.core.syntax.ScssSyntaxHighlighter(ctx);
-                    this.autoCompleteEngine = null;
+                    CssAutoCompleteEngine scssEngine = new CssAutoCompleteEngine(ctx);
+                    if (currentFile != null) scssEngine.setCurrentFile(currentFile);
+                    this.autoCompleteEngine = scssEngine;
                     break;
                 case JAVASCRIPT:
                     this.syntaxHighlighter = new JsSyntaxHighlighter(ctx);
@@ -966,7 +994,8 @@ public class CodeEditText extends AppCompatEditText {
                     break;
                 case TYPESCRIPT:
                     this.syntaxHighlighter = new com.cocode.vcode.ide.core.syntax.TsSyntaxHighlighter(ctx);
-                    JsAutoCompleteEngine tsEngine = new JsAutoCompleteEngine(ctx); // Use JS engine for TS for now
+                    com.cocode.vcode.ide.core.autocomplete.TsAutoCompleteEngine tsEngine =
+                            new com.cocode.vcode.ide.core.autocomplete.TsAutoCompleteEngine(ctx);
                     if (currentFile != null) tsEngine.setCurrentFile(currentFile);
                     this.autoCompleteEngine = tsEngine;
                     break;
@@ -1065,14 +1094,6 @@ public class CodeEditText extends AppCompatEditText {
                 && !isApplyingHighlight && !isInsertingCompletion) {
             if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
                 autoCompletePopup.dismiss();
-            }
-            // When cursor lands right after a closing delimiter, trigger autocomplete
-            // so Emmet abbreviations like a{text} expand after navigating past }
-            if (selStart == selEnd && selStart > 0 && getText() != null && selStart <= getText().length()) {
-                char charBefore = getText().charAt(selStart - 1);
-                if (charBefore == '}' || charBefore == ')' || charBefore == ']') {
-                    scheduleAutoComplete();
-                }
             }
         }
     }

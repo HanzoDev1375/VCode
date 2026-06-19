@@ -28,6 +28,13 @@ import com.cocode.vcode.ide.ui.sheets.GitAuthorInfoBottomSheet;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 
+import android.widget.PopupMenu;
+import com.cocode.vcode.ide.data.model.SnippetItem;
+import com.cocode.vcode.ide.data.repository.SnippetRepository;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.UUID;
+
 /**
  * GitChangesFragment displays the staging area for the current repository.
  * It allows users to view unstaged and staged modifications, stage/unstage files,
@@ -152,6 +159,21 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
             }
         });
 
+        binding.btnCommitTemplates.setOnClickListener(v -> {
+            SnippetRepository repo = new SnippetRepository(requireContext());
+            repo.getSnippets().observe(getViewLifecycleOwner(), result -> {
+                if (result != null && result.isSuccess()) {
+                    List<SnippetItem> templates = new ArrayList<>();
+                    for (SnippetItem item : result.getData()) {
+                        if (item.getId() != null && item.getId().startsWith("git_template_")) {
+                            templates.add(item);
+                        }
+                    }
+                    showTemplatePicker(v, templates, repo);
+                }
+            });
+        });
+
         binding.btnCommit.setOnClickListener(v -> {
             String message = binding.etCommitMessage.getText().toString().trim();
             if (message.isEmpty()) {
@@ -177,6 +199,60 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
             // Reset input state upon submission
             binding.etCommitMessage.setText("");
             binding.cbAmendCommit.setChecked(false);
+        });
+    }
+
+    private void showTemplatePicker(View anchor, List<SnippetItem> templates, SnippetRepository repo) {
+        com.cocode.vcode.ide.ui.dialogs.CommitTemplatesDialog.show(requireContext(), templates, new com.cocode.vcode.ide.ui.dialogs.CommitTemplatesDialog.CommitTemplateListener() {
+            @Override
+            public void onTemplateSelected(SnippetItem template) {
+                binding.etCommitMessage.setText(template.getContent());
+            }
+
+            @Override
+            public void onSaveCurrentMessage() {
+                String currentMsg = binding.etCommitMessage.getText().toString().trim();
+                if (currentMsg.isEmpty()) {
+                    Toast.makeText(requireContext(), "Enter a message to save as template", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                
+                String title = currentMsg;
+                if (title.length() > 20) title = title.substring(0, 20) + "...";
+                
+                SnippetItem newTemplate = new SnippetItem("git_template_" + UUID.randomUUID().toString(), title, currentMsg, com.cocode.vcode.ide.core.model.FileType.TEXT);
+                repo.saveSnippet(newTemplate).observe(getViewLifecycleOwner(), res -> {
+                    if (res != null && res.isSuccess()) {
+                        Toast.makeText(requireContext(), "Template saved", Toast.LENGTH_SHORT).show();
+                    }
+                });
+            }
+
+            @Override
+            public void onTemplateEdit(SnippetItem template) {
+                com.cocode.vcode.ide.ui.sheets.CreateSnippetBottomSheet editSheet = new com.cocode.vcode.ide.ui.sheets.CreateSnippetBottomSheet();
+                editSheet.setExistingSnippet(template);
+                editSheet.setListener((updatedSnippet, isEdit) -> repo.updateSnippet(updatedSnippet).observe(getViewLifecycleOwner(), result -> {
+                    if (result != null && result.isSuccess()) {
+                        Toast.makeText(requireContext(), "Template updated", Toast.LENGTH_SHORT).show();
+                    }
+                }));
+                editSheet.show(getChildFragmentManager(), "EditTemplate");
+            }
+
+            @Override
+            public void onTemplateDelete(SnippetItem template) {
+                com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet.show(getChildFragmentManager(),
+                        com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet.DeleteType.SNIPPET,
+                        template.getTitle(),
+                        null,
+                        () -> repo.deleteSnippet(template.getId()).observe(getViewLifecycleOwner(), result -> {
+                            if (result != null && result.isSuccess()) {
+                                Toast.makeText(requireContext(), "Template deleted", Toast.LENGTH_SHORT).show();
+                                // We'd ideally refresh the dialog list here, but it's simpler to just dismiss/let user reopen
+                            }
+                        }));
+            }
         });
     }
 

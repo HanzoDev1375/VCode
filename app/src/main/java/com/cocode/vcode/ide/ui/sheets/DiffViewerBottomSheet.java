@@ -138,6 +138,7 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
 
     /**
      * Parses the raw diff string and dynamically populates the UI with highlighted lines.
+     * Supports word-level diffing for single-line changes.
      *
      * @param diff The raw JGit unified diff output.
      */
@@ -152,27 +153,97 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
             return;
         }
 
-        // Split raw output into lines and process each for color coding
         String[] lines = diff.split("\n");
-        for (String line : lines) {
+        int i = 0;
+        while (i < lines.length) {
+            String line = lines[i];
+
+            // Simple heuristic for word-level diff: exactly one deletion followed by exactly one addition
+            if (line.startsWith("-") && i + 1 < lines.length && lines[i + 1].startsWith("+")
+                    && (i + 2 >= lines.length || (!lines[i + 2].startsWith("-") && !lines[i + 2].startsWith("+")))) {
+                String removedLine = line;
+                String addedLine = lines[i + 1];
+
+                CharSequence[] spans = computeWordDiff(removedLine.substring(1), addedLine.substring(1));
+                
+                // Render removed line
+                View removedView = getLayoutInflater().inflate(R.layout.item_diff_line, binding.layoutDiffLines, false);
+                TextView tvRemovedContent = removedView.findViewById(R.id.root_view).findViewById(R.id.tv_line_content);
+                android.text.SpannableStringBuilder ssbRemoved = new android.text.SpannableStringBuilder("-");
+                ssbRemoved.append(spans[0]);
+                tvRemovedContent.setText(ssbRemoved);
+                removedView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_removed_bg));
+                tvRemovedContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_removed_text));
+                binding.layoutDiffLines.addView(removedView);
+
+                // Render added line
+                View addedView = getLayoutInflater().inflate(R.layout.item_diff_line, binding.layoutDiffLines, false);
+                TextView tvAddedContent = addedView.findViewById(R.id.root_view).findViewById(R.id.tv_line_content);
+                android.text.SpannableStringBuilder ssbAdded = new android.text.SpannableStringBuilder("+");
+                ssbAdded.append(spans[1]);
+                tvAddedContent.setText(ssbAdded);
+                addedView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_added_bg));
+                tvAddedContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_added_text));
+                binding.layoutDiffLines.addView(addedView);
+
+                i += 2;
+                continue;
+            }
+
             View lineView = getLayoutInflater().inflate(R.layout.item_diff_line, binding.layoutDiffLines, false);
             TextView tvContent = lineView.findViewById(R.id.root_view).findViewById(R.id.tv_line_content);
             tvContent.setText(line);
 
             if (line.startsWith("+")) {
-                // Line addition: highlight green
                 lineView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_added_bg));
                 tvContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_added_text));
             } else if (line.startsWith("-")) {
-                // Line removal: highlight red
                 lineView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_removed_bg));
                 tvContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_removed_text));
             } else if (line.startsWith("@@")) {
-                // Hunk header: highlight grey/blue background
                 lineView.setBackgroundColor(ContextCompat.getColor(requireContext(), R.color.vcode_diff_hunk_bg));
             }
 
             binding.layoutDiffLines.addView(lineView);
+            i++;
         }
+    }
+
+    /**
+     * Computes word-level diffs using a simple prefix/suffix matching approach.
+     */
+    private CharSequence[] computeWordDiff(String removed, String added) {
+        int prefixLength = 0;
+        int minLength = Math.min(removed.length(), added.length());
+        while (prefixLength < minLength && removed.charAt(prefixLength) == added.charAt(prefixLength)) {
+            prefixLength++;
+        }
+
+        int suffixLength = 0;
+        // Cap suffix so prefixLength + suffixLength never exceeds either string's length
+        int maxSuffix = minLength - prefixLength;
+        while (suffixLength < maxSuffix
+                && removed.charAt(removed.length() - 1 - suffixLength) == added.charAt(added.length() - 1 - suffixLength)) {
+            suffixLength++;
+        }
+
+        String removedDiff   = removed.substring(prefixLength, removed.length() - suffixLength);
+        String addedDiff     = added.substring(prefixLength,   added.length()   - suffixLength);
+
+        android.text.SpannableString spanRemoved = new android.text.SpannableString(removed);
+        if (!removedDiff.isEmpty()) {
+            spanRemoved.setSpan(new android.text.style.BackgroundColorSpan(
+                            ContextCompat.getColor(requireContext(), R.color.vcode_diff_removed_word_bg)),
+                    prefixLength, prefixLength + removedDiff.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
+        android.text.SpannableString spanAdded = new android.text.SpannableString(added);
+        if (!addedDiff.isEmpty()) {
+            spanAdded.setSpan(new android.text.style.BackgroundColorSpan(
+                            ContextCompat.getColor(requireContext(), R.color.vcode_diff_added_word_bg)),
+                    prefixLength, prefixLength + addedDiff.length(), android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+
+        return new CharSequence[]{spanRemoved, spanAdded};
     }
 }

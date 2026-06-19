@@ -495,6 +495,37 @@ public class GitRepository {
                 .call();
     }
 
+    public void pull(String remoteUrl, String pat, String branch) throws Exception {
+        git.pull()
+                .setRemote(remoteUrl)
+                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat, ""))
+                .setRemoteBranchName(branch)
+                .call();
+    }
+
+    public void fetch(String remoteUrl, String pat) throws Exception {
+        git.fetch()
+                .setRemote(remoteUrl)
+                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat, ""))
+                .call();
+    }
+
+    public org.eclipse.jgit.revwalk.RevCommit stashCreate() throws Exception {
+        return git.stashCreate().call();
+    }
+
+    public void stashApply(int stashId) throws Exception {
+        git.stashApply().setStashRef("stash@{" + stashId + "}").call();
+    }
+
+    public void stashDrop(int stashId) throws Exception {
+        git.stashDrop().setStashRef(stashId).call();
+    }
+
+    public java.util.Collection<org.eclipse.jgit.revwalk.RevCommit> stashList() throws Exception {
+        return git.stashList().call();
+    }
+
     /**
      * Executes soft rollback reset sequences, moving reference tips while keeping staging indexes completely unharmed.
      */

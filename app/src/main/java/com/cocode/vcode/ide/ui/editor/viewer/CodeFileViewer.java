@@ -42,7 +42,7 @@ public class CodeFileViewer implements IFileViewer {
             if (codeEditText != null && currentFile != null && viewModel != null) {
                 String content = s.toString();
                 viewModel.updateActiveFileContent(content, codeEditText.getSelectionStart(), codeEditText.getScrollY());
-                validateJsonIfRequired(content);
+                validateCodeIfRequired(content);
             }
         }
     };
@@ -83,7 +83,7 @@ public class CodeFileViewer implements IFileViewer {
             editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
         }
         
-        codeEditText.setHorizontallyScrolling(!file.isWordWrapEnabled());
+        codeEditText.setHorizontallyScrolling(false);
 
         codeEditText.setTag(file.getId());
         codeEditText.setCurrentFile(file.getFile());
@@ -101,13 +101,13 @@ public class CodeFileViewer implements IFileViewer {
         }
 
         codeEditText.addTextChangedListener(editorTextWatcher);
-        validateJsonIfRequired(file.getContent());
+        validateCodeIfRequired(file.getContent());
     }
 
     @Override
     public void onResume() {
         if (currentFile != null && codeEditText != null) {
-            validateJsonIfRequired(codeEditText.getText().toString());
+            validateCodeIfRequired(codeEditText.getText().toString());
         }
     }
 
@@ -137,33 +137,61 @@ public class CodeFileViewer implements IFileViewer {
         return codeEditText;
     }
 
-    private void validateJsonIfRequired(String text) {
+    private void validateCodeIfRequired(String text) {
         if (editorCallback == null || currentFile == null || viewModel == null) return;
 
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
-        if (settings != null && settings.jsonValidateRealtime && currentFile.getFileType() == FileType.JSON) {
-            editorCallback.showJsonValidating();
+        if (settings != null) {
+            boolean isJson = currentFile.getFileType() == FileType.JSON;
+            if (isJson && settings.jsonValidateRealtime) {
+                editorCallback.showJsonValidating();
+            }
             jsonValidationHandler.removeCallbacksAndMessages(null);
 
-            Runnable jsonValidationRunnable = () -> ExecutorProvider.getInstance().runOnIo(() -> {
-                JsonValidator validator = new JsonValidator();
-                ValidationReport report = validator.validate(text);
+            Runnable validationRunnable = () -> ExecutorProvider.getInstance().runOnIo(() -> {
 
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    // Check if this viewer is still active/alive before updating UI
-                    if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
-                        return;
-                    }
-                    if (report.isValid()) {
-                        editorCallback.showJsonValid();
-                    } else {
-                        JsonError firstError = report.getErrors().get(0);
-                        String formattedError = firstError.message + " (Line " + firstError.line + ", Col " + firstError.column + ")";
-                        editorCallback.showJsonInvalid(formattedError);
-                    }
-                });
+                // Bracket validation
+                java.util.List<com.cocode.vcode.ide.data.model.Problem> problems = new java.util.ArrayList<>(com.cocode.vcode.ide.core.parser.BracketMatcher.findMismatches(currentFile.getFile(), text));
+
+                // JSON Validation
+                if (isJson && settings.jsonValidateRealtime) {
+                    JsonValidator validator = new JsonValidator();
+                    ValidationReport report = validator.validate(text);
+
+                    ExecutorProvider.getInstance().runOnMain(() -> {
+                        if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
+                            return;
+                        }
+                        
+                        if (report.isValid()) {
+                            editorCallback.showJsonValid();
+                        } else {
+                            for (JsonError error : report.getErrors()) {
+                                problems.add(new com.cocode.vcode.ide.data.model.Problem(
+                                        currentFile.getFile(),
+                                        error.line,
+                                        error.column,
+                                        error.message,
+                                        com.cocode.vcode.ide.data.model.Problem.Severity.ERROR
+                                ));
+                            }
+                            JsonError firstError = report.getErrors().get(0);
+                            String formattedError = firstError.message + " (Line " + firstError.line + ", Col " + firstError.column + ")";
+                            editorCallback.showJsonInvalid(formattedError);
+                        }
+                        editorCallback.reportProblems(currentFile.getFile(), problems);
+                    });
+                } else {
+                    ExecutorProvider.getInstance().runOnMain(() -> {
+                        if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
+                            return;
+                        }
+                        editorCallback.hideJsonStatus();
+                        editorCallback.reportProblems(currentFile.getFile(), problems);
+                    });
+                }
             });
-            jsonValidationHandler.postDelayed(jsonValidationRunnable, 500);
+            jsonValidationHandler.postDelayed(validationRunnable, 500);
         } else {
             editorCallback.hideJsonStatus();
         }

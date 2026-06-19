@@ -51,6 +51,8 @@ public class EditorViewModel extends ViewModel {
      * This is used to provide visual feedback (colored overlays) in the File Tree.
      */
     private final MutableLiveData<Map<String, FileStatus.Type>> gitStatusesLiveData = new MutableLiveData<>(new HashMap<>());
+    private final MutableLiveData<List<com.cocode.vcode.ide.data.model.Problem>> problemsLiveData = new MutableLiveData<>(new ArrayList<>());
+    private final Map<String, List<com.cocode.vcode.ide.data.model.Problem>> fileProblemsMap = new HashMap<>();
 
     private File projectRoot;
     private String projectId;
@@ -98,6 +100,26 @@ public class EditorViewModel extends ViewModel {
         return projectName;
     }
 
+    public LiveData<List<com.cocode.vcode.ide.data.model.Problem>> getProblems() {
+        return problemsLiveData;
+    }
+
+    public void reportProblems(File file, List<com.cocode.vcode.ide.data.model.Problem> problems) {
+        if (file == null) return;
+        String path = file.getAbsolutePath();
+        if (problems == null || problems.isEmpty()) {
+            fileProblemsMap.remove(path);
+        } else {
+            fileProblemsMap.put(path, problems);
+        }
+        
+        List<com.cocode.vcode.ide.data.model.Problem> allProblems = new ArrayList<>();
+        for (List<com.cocode.vcode.ide.data.model.Problem> list : fileProblemsMap.values()) {
+            allProblems.addAll(list);
+        }
+        problemsLiveData.postValue(allProblems);
+    }
+
     public LiveData<AppSettings> getSettingsLiveData() {
         return settingsLiveData;
     }
@@ -115,7 +137,7 @@ public class EditorViewModel extends ViewModel {
      */
     public void reloadSettings() {
         ExecutorProvider.getInstance().runOnIo(() -> {
-            AppSettings freshSettings = settingsRepo.loadSettings();
+            AppSettings freshSettings = projectRoot != null ? settingsRepo.loadMergedSettings(projectRoot) : settingsRepo.loadSettings();
             ExecutorProvider.getInstance().runOnMain(() -> settingsLiveData.setValue(freshSettings));
         });
     }
@@ -763,9 +785,7 @@ public class EditorViewModel extends ViewModel {
         if (scrollY >= 0) file.setScrollY(scrollY);
     }
 
-    public AppSettings getSettings() {
-        return settingsRepo.loadSettings();
-    }
+
 
     /**
      * Triggers an asynchronous save of the project's metadata (tabs, positions).
@@ -784,7 +804,7 @@ public class EditorViewModel extends ViewModel {
 
         ExecutorProvider.getInstance().getMainHandler().removeCallbacks(autoSaveRunnable);
 
-        AppSettings appSettings = getSettings();
+        AppSettings appSettings = getSettingsLiveData().getValue();
         if (appSettings != null && appSettings.autoSave) {
             saveAllSync();
         }

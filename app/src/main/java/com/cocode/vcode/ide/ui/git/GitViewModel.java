@@ -37,6 +37,7 @@ public class GitViewModel extends AndroidViewModel {
     private final MutableLiveData<List<BranchItem>> localBranches = new MutableLiveData<>();
     private final MutableLiveData<List<BranchItem>> remoteBranches = new MutableLiveData<>();
     private final MutableLiveData<String> currentBranch = new MutableLiveData<>();
+    private final MutableLiveData<List<com.cocode.vcode.ide.git.model.StashItem>> stashes = new MutableLiveData<>();
 
     // UI state indicators
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
@@ -151,6 +152,21 @@ public class GitViewModel extends AndroidViewModel {
                 localBranches.postValue(locals);
                 remoteBranches.postValue(remotes);
 
+                java.util.Collection<org.eclipse.jgit.revwalk.RevCommit> stashCommits = repository.stashList();
+                List<com.cocode.vcode.ide.git.model.StashItem> stashItems = new java.util.ArrayList<>();
+                int idx = 0;
+                if (stashCommits != null) {
+                    for (org.eclipse.jgit.revwalk.RevCommit commit : stashCommits) {
+                        stashItems.add(new com.cocode.vcode.ide.git.model.StashItem(
+                                idx++,
+                                "stash@{" + (idx - 1) + "}",
+                                commit.getShortMessage(),
+                                com.cocode.vcode.ide.utils.DateUtils.formatDate(commit.getAuthorIdent().getWhen())
+                        ));
+                    }
+                }
+                stashes.postValue(stashItems);
+
                 // Update the current branch name based on the repository state
                 boolean foundActive = false;
                 if (locals != null) {
@@ -229,6 +245,30 @@ public class GitViewModel extends AndroidViewModel {
 
     public GitRepository getRepository() {
         return repository;
+    }
+
+    public LiveData<List<com.cocode.vcode.ide.git.model.StashItem>> getStashes() {
+        return stashes;
+    }
+
+    public void stashCreate() {
+        runAction(() -> repository.stashCreate());
+    }
+
+    public void stashApply(int id) {
+        runAction(() -> repository.stashApply(id));
+    }
+
+    public void stashDrop(int id) {
+        runAction(() -> repository.stashDrop(id));
+    }
+
+    public void pull(String remoteUrl, String pat, String branch) {
+        runAction(() -> repository.pull(remoteUrl, pat, branch));
+    }
+
+    public void fetch(String remoteUrl, String pat) {
+        runAction(() -> repository.fetch(remoteUrl, pat));
     }
 
     public void cherryPick(String commitSha) {

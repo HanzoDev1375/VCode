@@ -81,6 +81,12 @@ public class SettingsActivity extends BaseActivity {
             }
         });
 
+        // Launch SSH Key sheet
+        binding.opSshKey.setOnClickListener(_view -> {
+            com.cocode.vcode.ide.ui.sheets.SshKeyBottomSheet sheet = com.cocode.vcode.ide.ui.sheets.SshKeyBottomSheet.newInstance();
+            sheet.show(getSupportFragmentManager(), "SshKeyBottomSheet");
+        });
+
         // Font size adjustment listeners with boundary checks
         binding.btnFontIncrease.setOnClickListener(v -> {
             AppSettings current = viewModel.getSettingsLiveData().getValue();
@@ -211,6 +217,10 @@ public class SettingsActivity extends BaseActivity {
     }
 
     /**
+     * Builds the syntax theme picker row programmatically.
+     * Each theme gets a rounded swatch showing its editor background + keyword + string colors.
+     * The active theme gets a white border ring.
+    /**
      * Applies the design system fonts to all textual components in the activity.
      */
     private void designUI() {
@@ -242,6 +252,8 @@ public class SettingsActivity extends BaseActivity {
         binding.tvHardResetDesc.setTypeface(fm.getUiFont(this));
         binding.tvGitCredentials.setTypeface(fm.getUiMedium(this));
         binding.tvGitCredentialsDesc.setTypeface(fm.getUiFont(this));
+        binding.tvSshKey.setTypeface(fm.getUiMedium(this));
+        binding.tvSshKeyDesc.setTypeface(fm.getUiFont(this));
 
         // Style theme selection options
         binding.radioThemeSystem.setTypeface(fm.getUiFont(this));

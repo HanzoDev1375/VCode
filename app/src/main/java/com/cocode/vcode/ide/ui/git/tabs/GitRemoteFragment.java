@@ -84,6 +84,8 @@ public class GitRemoteFragment extends Fragment {
         binding.tvLabelBranch.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.autoTargetBranch.setTypeface(FontManager.getInstance().getUiMedium(context));
 
+        binding.btnPull.setTypeface(FontManager.getInstance().getUiSemiBold(context));
+        binding.btnFetch.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.btnPush.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.tvStatusMessage.setTypeface(FontManager.getInstance().getUiMedium(context));
 
@@ -205,7 +207,9 @@ public class GitRemoteFragment extends Fragment {
         });
 
         binding.btnLinkAccount.setOnClickListener(v -> openGitHubLoginSheet());
-        binding.btnPush.setOnClickListener(v -> executePushOperation());
+        binding.btnPush.setOnClickListener(v -> executeRemoteOperation("push"));
+        binding.btnPull.setOnClickListener(v -> executeRemoteOperation("pull"));
+        binding.btnFetch.setOnClickListener(v -> executeRemoteOperation("fetch"));
     }
 
     /**
@@ -247,15 +251,15 @@ public class GitRemoteFragment extends Fragment {
     }
 
     /**
-     * Orchestrates the Git push operation.
-     * Validates inputs, manages the HUD status UI, and executes the push asynchronously.
+     * Orchestrates the Git remote operations (push, pull, fetch).
+     * Validates inputs, manages the HUD status UI, and executes asynchronously.
      */
-    private void executePushOperation() {
+    private void executeRemoteOperation(String operation) {
         Context context = requireContext();
 
         // Ensure authentication is present before attempting a push
         if (!credentialStore.hasCredentials(context)) {
-            Toast.makeText(context, "Connect your GitHub account to push.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, "Connect your GitHub account to " + operation + ".", Toast.LENGTH_SHORT).show();
             openGitHubLoginSheet();
             return;
         }
@@ -287,19 +291,24 @@ public class GitRemoteFragment extends Fragment {
         // Show progress HUD and disable form inputs to prevent concurrent modification
         binding.layoutStatusArea.setVisibility(View.VISIBLE);
         binding.progressIndicator.setVisibility(View.VISIBLE);
-        setHUDStatus("Initializing background push operations stream...", R.color.vcode_accent_primary);
+        setHUDStatus("Initializing background " + operation + " operations stream...", R.color.vcode_accent_primary);
         toggleFormInputState(false);
 
         final String finalToken = globalPatToken;
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
-                // Perform JGit push operation
-                viewModel.getRepository().push(url, finalToken, branch);
+                if (operation.equals("push")) {
+                    viewModel.getRepository().push(url, finalToken, branch);
+                } else if (operation.equals("pull")) {
+                    viewModel.getRepository().pull(url, finalToken, branch);
+                } else if (operation.equals("fetch")) {
+                    viewModel.getRepository().fetch(url, finalToken);
+                }
 
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (binding != null) {
                         binding.progressIndicator.setVisibility(View.GONE);
-                        setHUDStatus("Push operations completed successfully.", R.color.vcode_accent_primary);
+                        setHUDStatus(Character.toUpperCase(operation.charAt(0)) + operation.substring(1) + " operations completed successfully.", R.color.vcode_accent_primary);
                         toggleFormInputState(true);
                         viewModel.refreshAll(); // Refresh local state to reflect remote tracking
                     }
@@ -345,6 +354,8 @@ public class GitRemoteFragment extends Fragment {
         binding.autoTargetBranch.setEnabled(enabled);
         binding.btnDisconnectGithub.setEnabled(enabled);
         binding.btnPush.setEnabled(enabled);
+        binding.btnPull.setEnabled(enabled);
+        binding.btnFetch.setEnabled(enabled);
     }
 
     @Override

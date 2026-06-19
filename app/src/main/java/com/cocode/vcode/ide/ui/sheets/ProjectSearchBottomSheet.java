@@ -15,6 +15,8 @@ import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import java.io.File;
+
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.core.search.SearchEngine;
 import com.cocode.vcode.ide.core.search.SearchResult;
@@ -25,8 +27,8 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 import com.google.android.material.textfield.TextInputEditText;
 import com.google.android.material.progressindicator.LinearProgressIndicator;
 
-import java.io.File;
-import java.nio.file.Files;
+import android.widget.EditText;
+import com.cocode.vcode.ide.databinding.VcodeBottomSheetProjectSearchBinding;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -37,9 +39,7 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
     private SearchAdapter adapter;
     private ProjectSearchListener listener;
     
-    private TextInputEditText etSearchQuery;
-    private LinearProgressIndicator progressSearch;
-    private RecyclerView rvSearchResults;
+    private VcodeBottomSheetProjectSearchBinding binding;
     
     private Runnable pendingSearch;
 
@@ -58,7 +58,8 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        return inflater.inflate(R.layout.vcode_bottom_sheet_project_search, container, false);
+        binding = VcodeBottomSheetProjectSearchBinding.inflate(inflater, container, false);
+        return binding.getRoot();
     }
 
     @Override
@@ -66,25 +67,28 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         super.onViewCreated(view, savedInstanceState);
         searchEngine = new SearchEngine();
 
-        etSearchQuery = view.findViewById(R.id.et_search_query);
-        progressSearch = view.findViewById(R.id.progress_search);
-        rvSearchResults = view.findViewById(R.id.rv_search_results);
+        UiUtils.setViewRounded(binding.etSearchQuery, UiUtils.dpToPx(requireContext(), 10), androidx.core.content.ContextCompat.getColor(requireContext(), R.color.vcode_bg_elevated));
+        binding.etSearchQuery.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
+        
+        if (binding.tvTitle != null) {
+            binding.tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
+        }
 
-        rvSearchResults.setLayoutManager(new LinearLayoutManager(requireContext()));
+        binding.rvSearchResults.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new SearchAdapter();
-        rvSearchResults.setAdapter(adapter);
+        binding.rvSearchResults.setAdapter(adapter);
 
-        etSearchQuery.addTextChangedListener(new TextWatcher() {
+        binding.etSearchQuery.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
                 if (pendingSearch != null) {
-                    etSearchQuery.removeCallbacks(pendingSearch);
+                    binding.etSearchQuery.removeCallbacks(pendingSearch);
                 }
                 pendingSearch = () -> performSearch(s.toString());
-                etSearchQuery.postDelayed(pendingSearch, 300);
+                binding.etSearchQuery.postDelayed(pendingSearch, 300);
             }
 
             @Override
@@ -98,13 +102,13 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
             return;
         }
 
-        progressSearch.setVisibility(View.VISIBLE);
+        binding.progressSearch.setVisibility(View.VISIBLE);
         ExecutorProvider.getInstance().runOnCpu(() -> {
             List<ProjectSearchResult> allResults = new ArrayList<>();
             searchInDirectory(projectRoot, query, allResults);
 
             ExecutorProvider.getInstance().runOnMain(() -> {
-                progressSearch.setVisibility(View.INVISIBLE);
+                binding.progressSearch.setVisibility(View.INVISIBLE);
                 adapter.setResults(allResults);
             });
         });
@@ -115,23 +119,47 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         if (files == null) return;
 
         for (File f : files) {
-            // Very simple exclude
-            if (f.getName().equals(".git") || f.getName().equals("node_modules")) continue;
+            String name = f.getName().toLowerCase();
+            // Directory exclusions
+            if (name.equals(".git") || name.equals("node_modules") || name.equals(".idea") || name.equals("build")) continue;
 
             if (f.isDirectory()) {
                 searchInDirectory(f, query, outResults);
             } else {
+                // File exclusions
+                if (name.equals("project_meta.json") || name.equals("session.json") || name.equals("snippets.json")) continue;
+                
+                // Binary and image exclusions
+                if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") ||
+                    name.endsWith(".gif") || name.endsWith(".webp") || name.endsWith(".bmp") ||
+                    name.endsWith(".ico") || name.endsWith(".ttf") || name.endsWith(".woff") ||
+                    name.endsWith(".woff2") || name.endsWith(".eot") || name.endsWith(".pdf") ||
+                    name.endsWith(".mp3") || name.endsWith(".mp4") || name.endsWith(".wav") ||
+                    name.endsWith(".ogg") || name.endsWith(".zip") || name.endsWith(".tar") ||
+                    name.endsWith(".gz") || name.endsWith(".apk") || name.endsWith(".jar") ||
+                    name.endsWith(".class") || name.endsWith(".dex")) {
+                    continue;
+                }
+
                 try {
-                    // Only read reasonably sized files, skip binaries implicitly or explicitly
-                    if (f.length() > 1024 * 500) continue; // skip files > 500kb
-                    
-                    String content = new String(Files.readAllBytes(f.toPath()));
+                    // Only read reasonably sized files, skip files > 500kb
+                    if (f.length() > 1024 * 500) continue;
+
+                    // Use BufferedReader for API 23 compatibility (Files.readAllBytes requires API 26)
+                    StringBuilder sb = new StringBuilder();
+                    try (java.io.BufferedReader br = new java.io.BufferedReader(
+                            new java.io.InputStreamReader(new java.io.FileInputStream(f), "UTF-8"))) {
+                        char[] buf = new char[4096];
+                        int read;
+                        while ((read = br.read(buf)) != -1) sb.append(buf, 0, read);
+                    }
+                    String content = sb.toString();
                     List<SearchResult> results = searchEngine.find(query, content, false, false, false);
                     for (SearchResult r : results) {
-                        int start = Math.max(0, r.getStart() - 20);
-                        int end = Math.min(content.length(), r.getEnd() + 40);
+                        int start = Math.max(0, r.absoluteStart - 20);
+                        int end = Math.min(content.length(), r.absoluteEnd + 40);
                         String snippet = content.substring(start, end).replace('\n', ' ').trim();
-                        outResults.add(new ProjectSearchResult(f, r.getLine(), snippet));
+                        outResults.add(new ProjectSearchResult(f, r.lineNumber, snippet));
                         if (outResults.size() > 200) return; // limit
                     }
                 } catch (Exception ignored) {
@@ -164,19 +192,29 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.vcode_item_project_search_result, parent, false);
-            return new ViewHolder(view);
+            com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding itemBinding = 
+                com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+            return new ViewHolder(itemBinding);
         }
 
         @Override
         public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
             ProjectSearchResult item = items.get(position);
-            holder.tvFileName.setText(item.file.getName());
+            
+            holder.binding.tvFileName.setText(item.file.getName());
+            holder.binding.tvFileName.setTypeface(FontManager.getInstance().getUiSemiBold(holder.itemView.getContext()));
+            
+            com.cocode.vcode.ide.utils.FileIconHelper.setFileIconAndColor(holder.binding.ivFileIcon, item.file.getName());
             
             String relPath = item.file.getAbsolutePath().replace(projectRoot.getAbsolutePath() + File.separator, "");
-            holder.tvFilePath.setText(relPath);
-            holder.tvLineNumber.setText(item.line + ":");
-            holder.tvSnippet.setText(item.snippet);
+            holder.binding.tvFilePath.setText(relPath);
+            holder.binding.tvFilePath.setTypeface(FontManager.getInstance().getUiMedium(holder.itemView.getContext()));
+            
+            holder.binding.tvLineNumber.setText(item.line + ":");
+            holder.binding.tvLineNumber.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
+            
+            holder.binding.tvSnippet.setText(item.snippet);
+            holder.binding.tvSnippet.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
 
             holder.itemView.setOnClickListener(v -> {
                 if (listener != null) {
@@ -192,14 +230,11 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvFileName, tvFilePath, tvLineNumber, tvSnippet;
+            com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding binding;
 
-            ViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvFileName = itemView.findViewById(R.id.tv_file_name);
-                tvFilePath = itemView.findViewById(R.id.tv_file_path);
-                tvLineNumber = itemView.findViewById(R.id.tv_line_number);
-                tvSnippet = itemView.findViewById(R.id.tv_snippet);
+            ViewHolder(@NonNull com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
             }
         }
     }

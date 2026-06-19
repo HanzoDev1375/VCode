@@ -57,8 +57,10 @@
     <color name="vcode_branch_chip_active_bg">#332B6EE8</color>
 
     <color name="vcode_diff_added_bg">#E6FFEC</color>
+    <color name="vcode_diff_added_word_bg">#ABF2BC</color>
     <color name="vcode_diff_added_text">#1A7F37</color>
     <color name="vcode_diff_removed_bg">#FFEBE9</color>
+    <color name="vcode_diff_removed_word_bg">#FFBDB8</color>
     <color name="vcode_diff_removed_text">#CF222E</color>
     <color name="vcode_diff_modified_bg">#FFF8C5</color>
     <color name="vcode_diff_hunk_bg">#EEF0FA</color>
@@ -72,6 +74,7 @@
     <color name="vcode_lang_html">#E44D26</color>
     <color name="vcode_lang_css">#264DE4</color>
     <color name="vcode_lang_js">#F7DF1E</color>
+    <color name="vcode_lang_ts">#3178C6</color>
     <color name="vcode_lang_on_js">#323330</color>
     <color name="vcode_lang_json">#B58B00</color>
     <color name="vcode_lang_md">#0083D1</color>

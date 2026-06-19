@@ -30,10 +30,12 @@ public class PreviewActivity extends BaseActivity {
      * Intent extra key for passing the URL to be previewed.
      */
     public static final String EXTRA_URL = "extra_preview_url";
+    public static final String EXTRA_PROJECT_PATH = "extra_preview_project_path";
 
     private ActivityPreviewBinding binding;
 
     private String currentUrl;
+    private String projectPath; // null means "any project" (fallback)
     private int logCount = 0;
 
     @Override
@@ -48,6 +50,7 @@ public class PreviewActivity extends BaseActivity {
         if (currentUrl == null) {
             currentUrl = "file:///android_asset/sample_error.html"; // fallback
         }
+        projectPath = getIntent().getStringExtra(EXTRA_PROJECT_PATH);
 
         // Apply system bar insets to handle edge-to-edge display correctly
         UiUtils.applySystemBarInsets(binding.getRoot());
@@ -63,10 +66,16 @@ public class PreviewActivity extends BaseActivity {
         setupFloatingPreviewStyles();
         setupListeners();
 
-        // Hot Reload implementation
+        // Hot Reload — only react to saves from this preview's project
         com.cocode.vcode.ide.data.repository.FileRepository.getFileSavedEvent().observe(this, file -> {
-            if (file != null && binding != null && binding.webView != null) {
-                String name = file.getName();
+            if (file == null || binding == null || binding.webView == null) return;
+            // Filter: if we know our project path, only reload for files within it
+            if (projectPath != null) {
+                try {
+                    if (!file.getCanonicalPath().startsWith(new java.io.File(projectPath).getCanonicalPath())) return;
+                } catch (Exception ignored) {}
+            }
+            String name = file.getName();
                 if (name.endsWith(".css")) {
                     // CSS hot-swap
                     String js = "var links = document.getElementsByTagName('link');" +
@@ -81,7 +90,6 @@ public class PreviewActivity extends BaseActivity {
                     // Full reload
                     binding.webView.evaluateJavascript("location.reload();", null);
                 }
-            }
         });
 
         loadUrl(currentUrl);
@@ -225,26 +233,7 @@ public class PreviewActivity extends BaseActivity {
             binding.tvConsoleCount.setVisibility(View.GONE);
         });
 
-        binding.etRepl.setOnEditorActionListener((v, actionId, event) -> {
-            if (actionId == android.view.inputmethod.EditorInfo.IME_ACTION_SEND ||
-                    (event != null && event.getAction() == android.view.KeyEvent.ACTION_DOWN && event.getKeyCode() == android.view.KeyEvent.KEYCODE_ENTER)) {
-                String js = binding.etRepl.getText().toString().trim();
-                if (!js.isEmpty()) {
-                    binding.etRepl.setText("");
-                    
-                    // Log the command
-                    appendLog(" CMD ", js, com.cocode.vcode.ide.R.color.vcode_text_secondary, com.cocode.vcode.ide.R.color.vcode_text_primary);
-                    
-                    binding.webView.evaluateJavascript(js, result -> {
-                        if (result != null && !result.equals("null")) {
-                            appendLog(" RES ", result, com.cocode.vcode.ide.R.color.vcode_accent_success, com.cocode.vcode.ide.R.color.vcode_text_primary);
-                        }
-                    });
-                }
-                return true;
-            }
-            return false;
-        });
+
 
         // Attempt to open the current preview URL in an external system browser
         binding.btnOpenBrowser.setOnClickListener(v -> {

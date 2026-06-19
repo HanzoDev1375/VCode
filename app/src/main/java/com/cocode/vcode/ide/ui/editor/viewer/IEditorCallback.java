@@ -12,4 +12,6 @@ public interface IEditorCallback {
     void showJsonInvalid(String error);
 
     void hideJsonStatus();
+    
+    void reportProblems(java.io.File file, java.util.List<com.cocode.vcode.ide.data.model.Problem> problems);
 }

@@ -288,15 +288,21 @@ public class SnippetRepository {
         obj.put("title", item.getTitle());
         obj.put("content", item.getContent());
         obj.put("fileType", item.getFileType().name());
+        
+        // Custom namespaces for non-code snippets
+        if (item.getId() != null && item.getId().startsWith("git_template_")) {
+            obj.put("namespace", "git_templates");
+        }
         return obj;
     }
 
     private SnippetItem fromJson(JSONObject obj) {
-        return new SnippetItem(
+        SnippetItem item = new SnippetItem(
                 obj.optString("id", UUID.randomUUID().toString()),
                 obj.optString("title", "Untitled"),
                 obj.optString("content", ""),
                 FileType.valueOf(obj.optString("fileType", obj.optString("language", FileType.TEXT.name())))
         );
+        return item;
     }
 }

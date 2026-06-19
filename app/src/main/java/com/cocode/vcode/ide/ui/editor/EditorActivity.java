@@ -13,6 +13,7 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
+import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -197,6 +198,23 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
         });
 
+        View flProblems = findViewById(R.id.fl_problems);
+        if (flProblems != null) {
+            flProblems.setOnClickListener(v -> {
+                com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet sheet = new com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet();
+                sheet.setListener(this::jumpToLine);
+                sheet.show(getSupportFragmentManager(), "ProblemsSheet");
+            });
+        }
+
+        // Refresh TODO panel on file save
+        com.cocode.vcode.ide.data.repository.FileRepository.getFileSavedEvent().observe(this, file -> {
+            androidx.fragment.app.Fragment f = getSupportFragmentManager().findFragmentByTag("TodoPanel");
+            if (f instanceof com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet) {
+                ((com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet) f).refresh();
+            }
+        });
+
         binding.btnOverflow.setOnClickListener(this::showOverflowMenu);
 
         binding.tabBar.setOnTabClickListener(index -> {
@@ -307,6 +325,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         if (openInApp) {
             Intent intent = new Intent(this, PreviewActivity.class);
             intent.putExtra(PreviewActivity.EXTRA_URL, serverUrl);
+            if (viewModel.getProjectRoot() != null) {
+                intent.putExtra(PreviewActivity.EXTRA_PROJECT_PATH, viewModel.getProjectRoot().getAbsolutePath());
+            }
             startActivity(intent);
         } else {
             try {
@@ -408,6 +429,18 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
             updateToolbarVisibility();
         });
+
+        viewModel.getProblems().observe(this, problems -> {
+            TextView badge = findViewById(R.id.tv_problems_badge);
+            if (badge != null) {
+                if (problems != null && !problems.isEmpty()) {
+                    badge.setVisibility(View.VISIBLE);
+                    badge.setText(String.valueOf(problems.size()));
+                } else {
+                    badge.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 
     private void updateActiveViewer(EditorFile activeFile, boolean isPreview) {
@@ -460,7 +493,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         if (files == null || index < 0 || index >= files.size()) return;
 
         EditorFile file = files.get(index);
-        AppSettings settings = viewModel.getSettings();
+        AppSettings settings = viewModel.getSettingsLiveData().getValue();
         boolean confirm = settings == null || settings.confirmOnTabClose;
 
         Runnable doClose = () -> {
@@ -517,16 +550,6 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             if (CodeFormatter.isFormatSupported(files.get(activeIndex).getFileType())) {
                 addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
             }
-            
-            boolean wordWrapEnabled = activeFile.isWordWrapEnabled();
-            addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_file_lines, "Word Wrap", wordWrapEnabled, () -> {
-                activeFile.setWordWrapEnabled(!wordWrapEnabled);
-                CodeEditText codeEditText = getActiveCodeEditor();
-                if (codeEditText != null) {
-                    codeEditText.setHorizontallyScrolling(!activeFile.isWordWrapEnabled());
-                }
-            });
-
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
 
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_bars, "Symbol Outline", () -> {
@@ -537,6 +560,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
+
+        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_check, "TODO Panel", () -> {
+            popupWindow.dismiss();
+            showTodoPanel();
+        });
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);
@@ -658,6 +686,16 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         sheet.setMaxLines(maxLines);
         sheet.setListener(this::jumpToLine);
         sheet.show(getSupportFragmentManager(), "GoToLineSheet");
+    }
+
+    private void showTodoPanel() {
+        com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet sheet =
+                com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet.newInstance(viewModel.getProjectRoot());
+        sheet.setListener((file, line) -> {
+            viewModel.openFile(file);
+            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> jumpToLine(line), 250);
+        });
+        sheet.show(getSupportFragmentManager(), "TodoPanel");
     }
 
     public void jumpToLine(int line) {
@@ -787,5 +825,12 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     @Override
     public void hideJsonStatus() {
         binding.jsonStatusBar.setVisibility(View.GONE);
+    }
+    
+    @Override
+    public void reportProblems(File file, List<com.cocode.vcode.ide.data.model.Problem> problems) {
+        if (viewModel != null) {
+            viewModel.reportProblems(file, problems);
+        }
     }
 }

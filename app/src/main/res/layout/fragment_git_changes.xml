@@ -233,6 +233,18 @@
                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                 android:textColor="?attr/colorOnSurfaceVariant"
                 app:useMaterialThemeColors="true" />
+                
+            <ImageView
+                android:id="@+id/btn_commit_templates"
+                android:layout_width="32dp"
+                android:layout_height="32dp"
+                android:layout_marginEnd="16dp"
+                android:padding="6dp"
+                android:src="@drawable/ic_wand_magic" 
+                app:tint="?attr/colorOnSurfaceVariant"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:focusable="true"/>
 
             <TextView
                 android:id="@+id/tv_char_counter"

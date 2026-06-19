@@ -90,9 +90,19 @@
             style="@style/Widget.Material3.Button.OutlinedButton"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginEnd="8dp"
+            android:layout_marginEnd="4dp"
             android:layout_weight="1"
             android:text="@string/vcode_copy_error"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btn_share_error"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="4dp"
+            android:layout_weight="1"
+            android:text="Share"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
 
         <com.google.android.material.button.MaterialButton
@@ -100,7 +110,7 @@
             style="@style/Widget.Material3.Button"
             android:layout_width="0dp"
             android:layout_height="wrap_content"
-            android:layout_marginStart="8dp"
+            android:layout_marginStart="4dp"
             android:layout_weight="1"
             android:text="@string/vcode_restart_app"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium" />
