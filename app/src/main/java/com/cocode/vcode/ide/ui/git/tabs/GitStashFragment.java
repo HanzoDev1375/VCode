@@ -18,6 +18,7 @@ import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.git.model.StashItem;
 import com.cocode.vcode.ide.ui.git.GitViewModel;
 import com.cocode.vcode.ide.utils.FontManager;
+import com.google.android.material.button.MaterialButton;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -25,22 +26,20 @@ import java.util.List;
 public class GitStashFragment extends Fragment {
 
     private GitViewModel viewModel;
-    private View rootView;
     private RecyclerView rvStashes;
     private StashAdapter adapter;
     private View layoutEmptyStashes;
 
     @Nullable
     @Override
-    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        rootView = inflater.inflate(R.layout.fragment_git_stash, container, false);
-        return rootView;
+    public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container,
+                             @Nullable Bundle savedInstanceState) {
+        return inflater.inflate(R.layout.fragment_git_stash, container, false);
     }
 
     @Override
     public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
         super.onViewCreated(view, savedInstanceState);
-
         viewModel = new ViewModelProvider(requireActivity()).get(GitViewModel.class);
 
         rvStashes = view.findViewById(R.id.rv_stashes);
@@ -52,81 +51,67 @@ public class GitStashFragment extends Fragment {
 
         setupTypefaces(view);
 
-        view.findViewById(R.id.btn_create_stash).setOnClickListener(v -> {
-            viewModel.stashCreate();
-        });
+        view.findViewById(R.id.btn_create_stash).setOnClickListener(v -> viewModel.stashCreate());
 
         viewModel.getStashes().observe(getViewLifecycleOwner(), stashes -> {
-            if (stashes == null || stashes.isEmpty()) {
-                rvStashes.setVisibility(View.GONE);
-                layoutEmptyStashes.setVisibility(View.VISIBLE);
-            } else {
-                rvStashes.setVisibility(View.VISIBLE);
-                layoutEmptyStashes.setVisibility(View.GONE);
-                adapter.updateData(stashes);
-            }
+            boolean empty = stashes == null || stashes.isEmpty();
+            rvStashes.setVisibility(empty ? View.GONE : View.VISIBLE);
+            layoutEmptyStashes.setVisibility(empty ? View.VISIBLE : View.GONE);
+            if (!empty) adapter.updateData(stashes);
         });
     }
 
     private void setupTypefaces(View view) {
-        TextView tvTitle = view.findViewById(R.id.tv_empty_stash_title);
-        TextView tvDesc = view.findViewById(R.id.tv_empty_stash_desc);
-        com.google.android.material.button.MaterialButton btnCreate = view.findViewById(R.id.btn_create_stash);
-
-        tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
-        tvDesc.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
-        btnCreate.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
+        FontManager fm = FontManager.getInstance();
+        ((TextView) view.findViewById(R.id.tv_stash_title))
+                .setTypeface(fm.getUiSemiBold(requireContext()));
+        ((TextView) view.findViewById(R.id.tv_stash_subtitle))
+                .setTypeface(fm.getUiMedium(requireContext()));
+        ((MaterialButton) view.findViewById(R.id.btn_create_stash))
+                .setTypeface(fm.getUiSemiBold(requireContext()));
+        ((TextView) view.findViewById(R.id.tv_empty_stash_title))
+                .setTypeface(fm.getUiSemiBold(requireContext()));
+        ((TextView) view.findViewById(R.id.tv_empty_stash_desc))
+                .setTypeface(fm.getUiMedium(requireContext()));
     }
 
-    private class StashAdapter extends RecyclerView.Adapter<StashAdapter.ViewHolder> {
+    private class StashAdapter extends RecyclerView.Adapter<StashAdapter.VH> {
         private List<StashItem> items;
 
-        public StashAdapter(List<StashItem> items) {
-            this.items = items;
-        }
+        StashAdapter(List<StashItem> items) { this.items = items; }
 
-        public void updateData(List<StashItem> newItems) {
-            this.items = newItems;
-            notifyDataSetChanged();
-        }
+        void updateData(List<StashItem> data) { this.items = data; notifyDataSetChanged(); }
 
-        @NonNull
-        @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_stash, parent, false);
-            return new ViewHolder(view);
+        @NonNull @Override
+        public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            return new VH(LayoutInflater.from(parent.getContext())
+                    .inflate(R.layout.item_stash, parent, false));
         }
 
         @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            StashItem item = items.get(position);
-            holder.tvStashName.setText(item.getName());
-            holder.tvStashMessage.setText(item.getMessage() + " (" + item.getTimestamp() + ")");
-
-            holder.btnApply.setOnClickListener(v -> viewModel.stashApply(item.getId()));
-            holder.btnDrop.setOnClickListener(v -> viewModel.stashDrop(item.getId()));
+        public void onBindViewHolder(@NonNull VH h, int pos) {
+            StashItem item = items.get(pos);
+            h.tvName.setText(item.getName());
+            h.tvMsg.setText(item.getTimestamp() + " · " + item.getMessage());
+            h.btnApply.setOnClickListener(v -> viewModel.stashApply(item.getId()));
+            h.btnDrop.setOnClickListener(v -> viewModel.stashDrop(item.getId()));
         }
 
-        @Override
-        public int getItemCount() {
-            return items != null ? items.size() : 0;
-        }
+        @Override public int getItemCount() { return items != null ? items.size() : 0; }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
-            TextView tvStashName;
-            TextView tvStashMessage;
-            ImageView btnApply;
-            ImageView btnDrop;
+        class VH extends RecyclerView.ViewHolder {
+            TextView tvName, tvMsg;
+            ImageView btnApply, btnDrop;
 
-            public ViewHolder(@NonNull View itemView) {
-                super(itemView);
-                tvStashName = itemView.findViewById(R.id.tv_stash_name);
-                tvStashMessage = itemView.findViewById(R.id.tv_stash_message);
-                btnApply = itemView.findViewById(R.id.btn_apply_stash);
-                btnDrop = itemView.findViewById(R.id.btn_drop_stash);
-
-                tvStashName.setTypeface(FontManager.getInstance().getUiSemiBold(itemView.getContext()));
-                tvStashMessage.setTypeface(FontManager.getInstance().getUiMedium(itemView.getContext()));
+            VH(@NonNull View v) {
+                super(v);
+                tvName   = v.findViewById(R.id.tv_stash_name);
+                tvMsg    = v.findViewById(R.id.tv_stash_message);
+                btnApply = v.findViewById(R.id.btn_apply_stash);
+                btnDrop  = v.findViewById(R.id.btn_drop_stash);
+                FontManager fm = FontManager.getInstance();
+                tvName.setTypeface(fm.getUiSemiBold(v.getContext()));
+                tvMsg.setTypeface(fm.getUiMedium(v.getContext()));
             }
         }
     }

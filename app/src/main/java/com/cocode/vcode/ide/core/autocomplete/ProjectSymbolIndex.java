@@ -33,6 +33,18 @@ public class ProjectSymbolIndex {
     private static final Pattern PAT_JS_EXPORT_BLOCK = Pattern.compile("export\\s*\\{\\s*([^}]+)\\s*\\}");
     private static final Pattern PAT_JS_EXPORT_DESTRUCT = Pattern.compile("export\\s+(?:const|let|var)\\s*\\{\\s*([^}]+)\\s*\\}");
     private static final Pattern PAT_MODULE_EXPORTS = Pattern.compile("module\\.exports\\s*=\\s*(?:[a-zA-Z_$][\\w$]*|\\{([^}]+)\\})");
+    // Maps class name → list of member CompletionItems (methods + properties)
+    private final Map<String, List<CompletionItem>> classMembers = new HashMap<>();
+
+    // Also maps absolute file path → class members for cross-file class resolution
+    private final Map<String, Map<String, List<CompletionItem>>> fileClassMembers = new HashMap<>();
+
+    private static final Pattern PAT_CLASS_DECL = Pattern.compile(
+            "(?:export\\s+)?(?:default\\s+)?class\\s+([a-zA-Z_$][\\w$]*)(?:\\s+extends\\s+([a-zA-Z_$][\\w$]*))?");
+    private static final Pattern PAT_CLASS_METHOD = Pattern.compile(
+            "(?:(?:static|async|get|set|#)\\s+)*([a-zA-Z_$][\\w$]*)\\s*\\(([^)]*)\\)\\s*\\{");
+    private static final Pattern PAT_CLASS_PROP = Pattern.compile(
+            "(?:(?:static|readonly|#)\\s+)?([a-zA-Z_$][\\w$]*)\\s*(?:=[^{;\\n]+)?;");
     private static final Pattern PAT_FUNC_SIG = Pattern.compile("(?:export\\s+)?(?:default\\s+)?function\\s+([a-zA-Z_$][\\w$]*)\\s*(\\([^)]*\\))");
     private static final Pattern PAT_ARROW_FUNC = Pattern.compile("(?:export\\s+)?(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*)\\s*=\\s*(\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>");
     private static ProjectSymbolIndex instance;
@@ -264,6 +276,55 @@ public class ProjectSymbolIndex {
                 jsFileExports.put(file.getAbsolutePath(), exports);
             }
         }
+        indexClassMembers(file, content);
+    }
+
+    private void indexClassMembers(File file, String content) {
+        Map<String, List<CompletionItem>> fileClasses = new HashMap<>();
+        Matcher mClass = PAT_CLASS_DECL.matcher(content);
+        while (mClass.find()) {
+            String className = mClass.group(1);
+            List<CompletionItem> members = new ArrayList<>();
+            // Find the opening brace of the class body
+            int bodyStart = content.indexOf('{', mClass.end());
+            if (bodyStart < 0) continue;
+            // Find the matching closing brace
+            int depth = 1, pos = bodyStart + 1;
+            while (pos < content.length() && depth > 0) {
+                char c = content.charAt(pos);
+                if (c == '{') depth++; else if (c == '}') depth--;
+                pos++;
+            }
+            String body = content.substring(bodyStart + 1, pos - 1);
+            // Skip constructor for members (still add it)
+            Matcher mMethod = PAT_CLASS_METHOD.matcher(body);
+            Set<String> seen = new HashSet<>();
+            while (mMethod.find()) {
+                String name = mMethod.group(1);
+                String params = mMethod.group(2);
+                if (name.equals("constructor") || seen.contains(name)) { seen.add(name); continue; }
+                seen.add(name);
+                members.add(new CompletionItem(name + "(" + params + ")", name, className + " method", CompletionItem.Type.FUNCTION, 0));
+            }
+            Matcher mProp = PAT_CLASS_PROP.matcher(body);
+            while (mProp.find()) {
+                String name = mProp.group(1);
+                if (seen.contains(name) || name.length() < 2) continue;
+                seen.add(name);
+                members.add(new CompletionItem(name, name, className + " property", CompletionItem.Type.VALUE, 0));
+            }
+            fileClasses.put(className, members);
+        }
+        synchronized (this) {
+            try {
+                fileClassMembers.put(file.getCanonicalPath(), fileClasses);
+                // Merge into global classMembers map
+                classMembers.putAll(fileClasses);
+            } catch (Exception e) {
+                fileClassMembers.put(file.getAbsolutePath(), fileClasses);
+                classMembers.putAll(fileClasses);
+            }
+        }
     }
 
     private String readFile(File file) {
@@ -295,6 +356,11 @@ public class ProjectSymbolIndex {
         return new ArrayList<>(htmlIdItems);
     }
 
+    public synchronized List<CompletionItem> getClassMembers(String className) {
+        List<CompletionItem> members = classMembers.get(className);
+        return members != null ? new ArrayList<>(members) : new ArrayList<>();
+    }
+
     public synchronized List<CompletionItem> getExportsForPath(File currentFile, String importPath) {
         if (currentFile == null || importPath == null) return new ArrayList<>();
 
@@ -304,9 +370,7 @@ public class ProjectSymbolIndex {
         File targetFile = new File(parent, importPath);
         if (!targetFile.exists() && !importPath.endsWith(".js") && !importPath.endsWith(".ts")) {
             targetFile = new File(parent, importPath + ".js");
-            if (!targetFile.exists()) {
-                targetFile = new File(parent, importPath + ".ts");
-            }
+            if (!targetFile.exists()) targetFile = new File(parent, importPath + ".ts");
         }
 
         List<CompletionItem> exports = null;
@@ -315,6 +379,17 @@ public class ProjectSymbolIndex {
         } catch (Exception e) {
             exports = jsFileExports.get(targetFile.getAbsolutePath());
         }
+
+        // If not indexed yet but file exists, index it now (on-demand, synchronous)
+        if ((exports == null || exports.isEmpty()) && targetFile.exists()) {
+            indexJsFile(targetFile);
+            try {
+                exports = jsFileExports.get(targetFile.getCanonicalPath());
+            } catch (Exception e) {
+                exports = jsFileExports.get(targetFile.getAbsolutePath());
+            }
+        }
+
         return exports != null ? new ArrayList<>(exports) : new ArrayList<>();
     }
 }

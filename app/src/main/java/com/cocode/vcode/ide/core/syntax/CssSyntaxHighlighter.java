@@ -85,11 +85,25 @@ public class CssSyntaxHighlighter extends SyntaxHighlighter {
     }
 
     protected void applyColors(SpannableStringBuilder ssb, String code) {
+        // Build a boolean mask of comment ranges so color previews are never shown inside comments
+        boolean[] inComment = new boolean[code.length()];
+        Matcher cm = PAT_COMMENT.matcher(code);
+        while (cm.find()) {
+            for (int ci = cm.start(); ci < cm.end() && ci < inComment.length; ci++) inComment[ci] = true;
+        }
+        // Also mask // line comments
+        for (int ci = 0; ci < code.length() - 1; ci++) {
+            if (code.charAt(ci) == '/' && code.charAt(ci + 1) == '/') {
+                while (ci < code.length() && code.charAt(ci) != '\n') inComment[ci++] = true;
+            }
+        }
+
         Matcher m = PAT_COLOR.matcher(code);
         while (m.find()) {
+            if (inComment[m.start()]) continue; // skip colors inside comments
             applySpan(ssb, m.start(), m.end(), colorNumber);
             Integer colorVal = ColorParser.parse(m.group());
-            if (colorVal != null && m.start() < m.end()) {
+            if (colorVal != null) {
                 ssb.setSpan(
                         new ColorPreviewSpan(colorVal, colorNumber),
                         m.start(),

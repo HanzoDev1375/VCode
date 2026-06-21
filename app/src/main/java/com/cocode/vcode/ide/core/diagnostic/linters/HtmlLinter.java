@@ -93,8 +93,14 @@ public class HtmlLinter {
                         TagFrame[] frames = openStack.toArray(new TagFrame[0]);
                         for (int si = 0; si < frames.length; si++) {
                             if (frames[si].name.equals(tagName)) {
-                                // pop everything above it (implicit close)
-                                for (int si2 = 0; si2 < si; si2++) openStack.pop();
+                                // pop everything above it — report each as unclosed
+                                for (int si2 = 0; si2 < si; si2++) {
+                                    TagFrame unclosed = openStack.pop();
+                                    problems.add(new Problem(file, unclosed.line, unclosed.col,
+                                            unclosed.name.length() + 2,
+                                            "Unclosed tag '<" + unclosed.name + ">'",
+                                            Problem.Severity.ERROR));
+                                }
                                 openStack.pop();
                                 found = true;
                                 break;

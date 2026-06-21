@@ -300,7 +300,9 @@ public class CodeEditText extends AppCompatEditText {
         super.onDraw(canvas);
 
         if (getLayout() != null && currentProblems != null && !currentProblems.isEmpty() && getText() != null) {
-            if (cachedLineOffsets == null) rebuildLineOffsets();
+            // Rebuild if explicitly invalidated OR if text length has changed since last build
+            if (cachedLineOffsets == null || cachedLineOffsetsTextLen == -1
+                    || cachedLineOffsetsTextLen != getText().length()) rebuildLineOffsets();
             if (cachedLineOffsets == null) return;
             int[] lineOffsets = cachedLineOffsets;
             int lineCount = lineOffsets.length;
@@ -665,15 +667,36 @@ public class CodeEditText extends AppCompatEditText {
         invalidate();
     }
 
-    private void rebuildLineOffsets() {
-        if (getText() == null) {
-            cachedLineOffsets = null;
-            return;
+    /** Returns true if the cursor is inside a // line comment or a /* block comment. */
+    private boolean isCursorInComment(String text, int cursor) {
+        // Scan backwards for // on the same line
+        int lineStart = cursor - 1;
+        while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') lineStart--;
+        String lineUpToCursor = text.substring(lineStart, cursor);
+
+        // Check for // line comment (not inside a string — simple heuristic)
+        boolean inStr = false; char strCh = 0;
+        for (int i = 0; i < lineUpToCursor.length() - 1; i++) {
+            char c = lineUpToCursor.charAt(i);
+            if (inStr) { if (c == strCh && (i == 0 || lineUpToCursor.charAt(i-1) != '\\')) inStr = false; continue; }
+            if (c == '"' || c == '\'' || c == '`') { inStr = true; strCh = c; continue; }
+            if (c == '/' && lineUpToCursor.charAt(i + 1) == '/') return true;
         }
+
+        // Check for /* block comment: scan backwards from cursor for /* without a preceding */
+        for (int i = cursor - 2; i >= 0; i--) {
+            if (text.charAt(i) == '/' && text.charAt(i + 1) == '*') return true;
+            if (i + 1 < text.length() && text.charAt(i) == '*' && text.charAt(i + 1) == '/') return false;
+        }
+        return false;
+    }
+
+    private void rebuildLineOffsets() {
+        if (getText() == null) { cachedLineOffsets = null; return; }
         String s = getText().toString();
         int len = s.length();
-        if (cachedLineOffsets != null && cachedLineOffsetsTextLen == len) return; // still valid
-        // count lines
+        // Use length as the primary check; -1 means explicitly invalidated (set by applyHighlightSpans)
+        if (cachedLineOffsetsTextLen == len && cachedLineOffsets != null) return;
         int count = 1;
         for (int i = 0; i < len; i++) if (s.charAt(i) == '\n') count++;
         cachedLineOffsets = new int[count];
@@ -732,6 +755,9 @@ public class CodeEditText extends AppCompatEditText {
         int len = getText().length();
         setSelection(Math.min(savedStart, len), Math.min(savedEnd, len));
         isApplyingHighlight = false;
+
+        // Text changed — force lineOffsets cache to rebuild on next onDraw
+        cachedLineOffsetsTextLen = -1;
     }
 
     private void scheduleAutoComplete() {
@@ -754,6 +780,12 @@ public class CodeEditText extends AppCompatEditText {
         int cursor = getSelectionStart();
 
         if (cursor <= 0 || cursor > text.length()) {
+            autoCompletePopup.dismiss();
+            return;
+        }
+
+        // Never trigger inside a comment
+        if (isCursorInComment(text, cursor)) {
             autoCompletePopup.dismiss();
             return;
         }
@@ -1136,6 +1168,25 @@ public class CodeEditText extends AppCompatEditText {
                     break;
             }
         }
+
+        // Suppress keyboard word suggestions for code file types.
+        // HTML, JSON, Markdown may contain prose so we allow suggestions there.
+        boolean suppressSuggestions = fileType == FileType.CSS
+                || fileType == FileType.SCSS
+                || fileType == FileType.JAVASCRIPT
+                || fileType == FileType.TYPESCRIPT
+                || fileType == FileType.SVG
+                || fileType == FileType.GITIGNORE
+                || fileType == FileType.ENV
+                || fileType == FileType.LOG;
+
+        int baseFlags = android.text.InputType.TYPE_CLASS_TEXT
+                | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE;
+        setInputType(suppressSuggestions
+                ? baseFlags | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
+                        | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                : baseFlags | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+
         scheduleHighlight();
     }
 

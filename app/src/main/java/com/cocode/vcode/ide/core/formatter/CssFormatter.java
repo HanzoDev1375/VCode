@@ -29,6 +29,7 @@ public class CssFormatter extends BaseFormatter {
 
         // ── Pass 1: produce a normalised token stream ───────────────────────
         StringBuilder norm = new StringBuilder();
+        int braceDepth = 0; // tracks whether cursor is inside a rule block { }
         for (int i = 0; i < code.length(); i++) {
             char c = code.charAt(i);
 
@@ -76,17 +77,18 @@ public class CssFormatter extends BaseFormatter {
             // Collapse multiple spaces to one
             if (c == ' ' && norm.length() > 0 && norm.charAt(norm.length() - 1) == ' ') continue;
 
-            // Ensure space before '{' and after ','
+            // Track brace depth so we know if we're inside a rule block
             if (c == '{') {
-                // trim trailing space before brace
                 while (norm.length() > 0 && norm.charAt(norm.length() - 1) == ' ') {
                     norm.deleteCharAt(norm.length() - 1);
                 }
                 norm.append(" {\n");
+                braceDepth++;
                 continue;
             }
             if (c == '}') {
-                norm.append("\n}\n\n"); // blank line after each rule block
+                norm.append("\n}\n\n");
+                if (braceDepth > 0) braceDepth--;
                 continue;
             }
             if (c == ';') {
@@ -94,11 +96,20 @@ public class CssFormatter extends BaseFormatter {
                 continue;
             }
             if (c == ':') {
-                // only add space after colon that is a property-value separator (not pseudo-selectors)
-                // heuristic: if we're inside braces depth will be > 0 after pass 2 — for now just emit
-                norm.append(": ");
-                // skip any following space
-                while (i + 1 < code.length() && code.charAt(i + 1) == ' ') i++;
+                // Double colon pseudo-element (::before, ::after, ::root, etc.) — emit as-is
+                if (i + 1 < code.length() && code.charAt(i + 1) == ':') {
+                    norm.append("::");
+                    i++;
+                    continue;
+                }
+                // Single colon: only add space when inside a rule block (property: value)
+                // Outside a block it's a pseudo-class selector (:hover, :nth-child, etc.)
+                if (braceDepth > 0) {
+                    norm.append(": ");
+                    while (i + 1 < code.length() && code.charAt(i + 1) == ' ') i++;
+                } else {
+                    norm.append(':');
+                }
                 continue;
             }
             if (c == ',') {

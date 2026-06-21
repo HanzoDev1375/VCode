@@ -7,6 +7,7 @@ import android.util.Log;
 import androidx.appcompat.app.AppCompatDelegate;
 
 import com.cocode.vcode.ide.core.diagnostic.util.KnownElements;
+import com.cocode.vcode.ide.core.parser.HtmlTagCache;
 import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.repository.SettingsRepository;
 import com.cocode.vcode.ide.ui.debug.DebugActivity;
@@ -19,6 +20,7 @@ public class VCodeApplication extends Application {
     public void onCreate() {
         super.onCreate();
         KnownElements.init(this);
+        HtmlTagCache.load(this);
 
         // Setup custom crash handler
         Thread.setDefaultUncaughtExceptionHandler((thread, throwable) -> {

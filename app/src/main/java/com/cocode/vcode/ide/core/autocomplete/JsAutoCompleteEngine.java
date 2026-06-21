@@ -49,6 +49,12 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
     private static final Pattern PAT_GET_ELEMENT_BY_ID = Pattern.compile("getElementById\\s*\\(\\s*['\"]([^'\"]*?)$");
     private static final Pattern PAT_QUERY_SELECTOR = Pattern.compile("querySelector(?:All)?\\s*\\(\\s*['\"]([^'\"]*?)$");
     private static final Pattern PAT_JSDOC_TYPE = Pattern.compile("@(?:type|returns?|param)\\s*\\{([^}]+)\\}");
+    private static final Pattern PAT_CLASS_IN_SCOPE = Pattern.compile(
+            "class\\s+([a-zA-Z_$][\\w$]*)(?:\\s+extends\\s+[\\w$]+)?\\s*\\{");
+    private static final Pattern PAT_NEW_INSTANCE = Pattern.compile(
+            "(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*)\\s*=\\s*new\\s+([a-zA-Z_$][\\w$]*)\\s*\\(");
+    private static final Pattern PAT_IMPORT_AS = Pattern.compile(
+            "\\bimport\\s+\\{[^{}]*\\bas\\s+\\w*$");
     private static final Pattern PAT_IMPORT_STAR = Pattern.compile("import\\s+\\*\\s+as\\s+([a-zA-Z_$][\\w$]*)\\s+from\\s+['\"]([^'\"]+)['\"]");
 
     // ─── Static namespace → comma-separated method list ────────────────────────
@@ -481,17 +487,44 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
 
     private List<CompletionItem> getImportExportSuggestions(String fullText, int cursorPos, String word) {
         String before = fullText.substring(0, cursorPos);
+
+        // Detect `import { ... as ` — user is typing an alias name → no autocomplete restriction
+        if (PAT_IMPORT_AS.matcher(before).find()) {
+            // Alias is a free identifier; suggest nothing (let them type freely)
+            return new ArrayList<>();
+        }
+
+        // Detect cursor inside `import { ... }` block (including after commas)
+        // Pattern: import { [already typed names,] [currentWord]
         Matcher mBefore = Pattern.compile("import\\s+\\{[^{}]*$").matcher(before);
         if (!mBefore.find()) return null;
 
+        // Find the closing `} from 'path'` after the cursor
         String after = fullText.substring(cursorPos);
         Matcher mAfter = Pattern.compile("^[^{}]*\\}\\s*from\\s*['\"]([^'\"]+)['\"]").matcher(after);
-        if (mAfter.find()) {
-            String path = mAfter.group(1);
-            List<CompletionItem> exports = ProjectSymbolIndex.getInstance().getExportsForPath(currentFile, path);
-            if (!exports.isEmpty()) return fuzzyFilter(exports, word);
+        if (!mAfter.find()) return null;
+
+        String path = mAfter.group(1);
+        List<CompletionItem> exports = ProjectSymbolIndex.getInstance().getExportsForPath(currentFile, path);
+        if (exports.isEmpty()) return null;
+
+        // Collect names already imported in this block so we don't re-suggest them
+        String insideBlock = mBefore.group();
+        int braceOpen = insideBlock.indexOf('{');
+        String alreadyImported = braceOpen >= 0 ? insideBlock.substring(braceOpen + 1) : "";
+        Set<String> used = new HashSet<>();
+        for (String part : alreadyImported.split(",")) {
+            String clean = part.trim();
+            // Strip `name as alias` — the original name is what's used
+            if (clean.contains(" as ")) clean = clean.split("\\s+as\\s+")[0].trim();
+            if (!clean.isEmpty()) used.add(clean);
         }
-        return null;
+
+        List<CompletionItem> filtered = new ArrayList<>();
+        for (CompletionItem e : exports) {
+            if (!used.contains(e.getEffectiveInsertText())) filtered.add(e);
+        }
+        return fuzzyFilter(filtered, word);
     }
 
     /**
@@ -582,6 +615,12 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         String objectToken = extractObjectBeforeDot(text, dotPos);
         if (objectToken == null || objectToken.isEmpty()) return new ArrayList<>();
 
+        // ── this. → current class member completions ─────────────────────────
+        if (objectToken.equals("this")) {
+            List<CompletionItem> thisMembers = getCurrentClassMembers(text, dotPos);
+            if (!thisMembers.isEmpty()) return fuzzyFilter(thisMembers, word);
+        }
+
         // ── a. Check known static namespaces ─────────────────────────────────
         for (String[] pair : DOT_METHODS) {
             if (pair[0].equalsIgnoreCase(objectToken) || objectToken.endsWith(pair[0])) {
@@ -622,6 +661,24 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                 if (pair[0].equals(inferredType)) {
                     return buildMemberList(pair[0], pair[1].split(","), word, CompletionItem.Type.BUILTIN);
                 }
+            }
+
+            // Check if it's a class name — return class members
+            List<CompletionItem> classMembers = ProjectSymbolIndex.getInstance().getClassMembers(inferredType);
+            if (!classMembers.isEmpty()) return fuzzyFilter(classMembers, word);
+        }
+
+        // ── d2. Check if objectToken is a class instance (new ClassName = varName) ─
+        // Scan document for `const objectToken = new ClassName(`
+        Matcher mNew = PAT_NEW_INSTANCE.matcher(text);
+        while (mNew.find()) {
+            if (mNew.group(1).equals(objectToken)) {
+                String className = mNew.group(2);
+                List<CompletionItem> classMembers = ProjectSymbolIndex.getInstance().getClassMembers(className);
+                if (!classMembers.isEmpty()) return fuzzyFilter(classMembers, word);
+                // Also try local class members from this document
+                classMembers = getLocalClassMembers(text, className);
+                if (!classMembers.isEmpty()) return fuzzyFilter(classMembers, word);
             }
         }
 
@@ -717,6 +774,66 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
         return text.substring(i, end);
     }
 
+    // ─── Class member helpers ─────────────────────────────────────────────────
+
+    /**
+     * Returns class members for `this.` by finding which class body the cursor is inside.
+     */
+    private List<CompletionItem> getCurrentClassMembers(String text, int dotPos) {
+        // Walk backwards to find the nearest enclosing `class Name {`
+        Matcher m = PAT_CLASS_IN_SCOPE.matcher(text);
+        String enclosingClass = null;
+        int classBodyStart = -1;
+        while (m.find() && m.end() < dotPos) {
+            enclosingClass = m.group(1);
+            classBodyStart = text.indexOf('{', m.end() - 1);
+        }
+        if (enclosingClass == null || classBodyStart < 0) return new ArrayList<>();
+        return getLocalClassMembers(text, enclosingClass);
+    }
+
+    /**
+     * Parses class members (methods + this.prop assignments) directly from the document text.
+     */
+    private List<CompletionItem> getLocalClassMembers(String text, String className) {
+        List<CompletionItem> members = new ArrayList<>();
+        Matcher mClass = PAT_CLASS_IN_SCOPE.matcher(text);
+        while (mClass.find()) {
+            if (!mClass.group(1).equals(className)) continue;
+            int bodyStart = text.indexOf('{', mClass.end() - 1);
+            if (bodyStart < 0) continue;
+            int depth = 1, pos = bodyStart + 1;
+            while (pos < text.length() && depth > 0) {
+                char c = text.charAt(pos);
+                if (c == '{') depth++; else if (c == '}') depth--;
+                pos++;
+            }
+            String body = text.substring(bodyStart + 1, pos - 1);
+            Set<String> seen = new HashSet<>();
+
+            // Methods: name(...) {
+            Matcher mMethod = Pattern.compile("(?:(?:static|async|get|set)\\s+)?([a-zA-Z_$][\\w$]*)\\s*\\(([^)]*)\\)\\s*\\{")
+                    .matcher(body);
+            while (mMethod.find()) {
+                String name = mMethod.group(1);
+                if (name.equals("constructor") || seen.contains(name)) { seen.add(name); continue; }
+                seen.add(name);
+                members.add(new CompletionItem(name + "(|)", name, className + " method", CompletionItem.Type.FUNCTION, 0));
+            }
+
+            // this.prop = ... assignments in constructor/methods
+            Matcher mThis = Pattern.compile("this\\.([a-zA-Z_$][\\w$]*)\\s*=(?!=)").matcher(body);
+            while (mThis.find()) {
+                String name = mThis.group(1);
+                if (seen.add(name)) {
+                    members.add(new CompletionItem(name, name, className + " property", CompletionItem.Type.VALUE, 0));
+                }
+            }
+            return members;
+        }
+        return members;
+    }
+
     // ─── Document symbol indexing ──────────────────────────────────────────────
 
     private void ensureDocumentIndexed(String text) {
@@ -779,6 +896,12 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
             varTypeMap.put(name, "module:" + path);
             declNames.add(name);
             cachedUserSymbols.add(new JsSymbol(new CompletionItem(name, name, "Module", CompletionItem.Type.KEYWORD, 0), rootScope));
+        }
+
+        // Track `const x = new ClassName()` → varTypeMap["x"] = "ClassName"
+        Matcher mNew = PAT_NEW_INSTANCE.matcher(text);
+        while (mNew.find() && mNew.start() < scanLimit) {
+            varTypeMap.put(mNew.group(1), mNew.group(2));
         }
 
         Set<String> wordSeen = new HashSet<>(declNames);

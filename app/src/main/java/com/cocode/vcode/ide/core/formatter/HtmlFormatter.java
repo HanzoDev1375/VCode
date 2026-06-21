@@ -20,10 +20,12 @@ public class HtmlFormatter extends BaseFormatter {
             "img", "input", "kbd", "label", "map", "object", "output", "q", "s", "samp", "select", "small",
             "span", "strong", "sub", "sup", "textarea", "time", "tt", "u", "var"
     ));
-    // Block elements that get a blank line before them (top-level sectioning)
+    // Body-level block elements that get a blank line before/after for readability.
+    // head, html, body, style, script deliberately excluded — they must not generate blank lines.
     private static final Set<String> SECTION = new HashSet<>(Arrays.asList(
-            "html", "head", "body", "header", "footer", "main", "nav", "section", "article", "aside",
-            "div", "ul", "ol", "table", "form", "script", "style", "figure", "details"
+            "header", "footer", "main", "nav", "section", "article", "aside",
+            "div", "ul", "ol", "table", "form", "figure", "details",
+            "h1", "h2", "h3", "h4", "h5", "h6", "p", "pre", "blockquote"
     ));
 
     private static final Pattern MULTI_NL = Pattern.compile("\\n{3,}");
@@ -121,8 +123,10 @@ public class HtmlFormatter extends BaseFormatter {
             // Decrease depth before printing close tag
             if (isClose) depth = Math.max(0, depth - 1);
 
-            // Blank line before section-level elements
-            if (isOpen && SECTION.contains(tagName) && out.length() > 0 && !endsWithBlankLine(out)) {
+            // Blank line before section-level elements, but only inside <body> (depth >= 2)
+            // Never add blank lines at document root level (DOCTYPE, html, head, body themselves)
+            if (isOpen && depth >= 2 && SECTION.contains(tagName)
+                    && out.length() > 0 && !endsWithBlankLine(out)) {
                 out.append("\n");
             }
 
@@ -140,8 +144,8 @@ public class HtmlFormatter extends BaseFormatter {
                 }
             } else if (isClose) {
                 out.append(pad).append(trimmed).append("\n");
-                // Blank line after closing section-level elements
-                if (SECTION.contains(tagName) && ti < tokens.size() - 1) {
+                // Blank line after closing section-level elements, only inside body
+                if (depth >= 1 && SECTION.contains(tagName) && ti < tokens.size() - 1) {
                     out.append("\n");
                 }
             } else {

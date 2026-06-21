@@ -22,6 +22,8 @@ import com.cocode.vcode.ide.databinding.FragmentGitRemoteBinding;
 import com.cocode.vcode.ide.git.core.GitCredentialStore;
 import com.cocode.vcode.ide.git.github.GitHubApiClient;
 import com.cocode.vcode.ide.git.model.BranchItem;
+import com.cocode.vcode.ide.git.repository.GitRepository;
+import com.cocode.vcode.ide.ui.sheets.GitConflictBottomSheet;
 import com.cocode.vcode.ide.ui.git.GitViewModel;
 import com.cocode.vcode.ide.ui.sheets.GitHubLoginBottomSheet;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
@@ -297,23 +299,40 @@ public class GitRemoteFragment extends Fragment {
         final String finalToken = globalPatToken;
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
+                final String resultSummary;
                 if (operation.equals("push")) {
                     viewModel.getRepository().push(url, finalToken, branch);
+                    resultSummary = "Push completed successfully.";
                 } else if (operation.equals("pull")) {
-                    viewModel.getRepository().pull(url, finalToken, branch);
-                } else if (operation.equals("fetch")) {
-                    viewModel.getRepository().fetch(url, finalToken);
+                    resultSummary = viewModel.getRepository().pull(url, finalToken, branch);
+                } else {
+                    resultSummary = viewModel.getRepository().fetch(url, finalToken);
                 }
 
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (binding != null) {
                         binding.progressIndicator.setVisibility(View.GONE);
-                        setHUDStatus(Character.toUpperCase(operation.charAt(0)) + operation.substring(1) + " operations completed successfully.", R.color.vcode_accent_primary);
+                        setHUDStatus(resultSummary, R.color.vcode_accent_primary);
                         toggleFormInputState(true);
-                        viewModel.refreshAll(); // Refresh local state to reflect remote tracking
+                        viewModel.refreshAll();
                     }
                 });
 
+            } catch (GitRepository.GitConflictException e) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (binding == null || !isAdded()) return;
+                    binding.progressIndicator.setVisibility(View.GONE);
+                    setHUDStatus("Merge conflicts detected — resolve them to complete the pull.", R.color.vcode_accent_warning);
+                    toggleFormInputState(true);
+                    GitConflictBottomSheet.show(getChildFragmentManager(),
+                            viewModel.getRepository(),
+                            e.getConflictingFiles(),
+                            () -> {
+                                if (binding != null)
+                                    setHUDStatus("Conflicts resolved. Stage and commit the changes.", R.color.vcode_accent_primary);
+                                viewModel.refreshAll();
+                            });
+                });
             } catch (Exception e) {
                 final String errorMessage = e.getMessage() != null ? e.getMessage() : "Unknown JGit core connection runtime failure context.";
                 ExecutorProvider.getInstance().runOnMain(() -> {
