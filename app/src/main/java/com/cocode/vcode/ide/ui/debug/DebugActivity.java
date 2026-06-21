@@ -62,7 +62,8 @@ public class DebugActivity extends AppCompatActivity {
             String versionName = "unknown";
             try {
                 versionName = getPackageManager().getPackageInfo(getPackageName(), 0).versionName;
-            } catch (Exception ignored) {}
+            } catch (Exception ignored) {
+            }
 
             String issueBody = "## Bug Report\n\n"
                     + "**App version:** " + versionName + "\n"

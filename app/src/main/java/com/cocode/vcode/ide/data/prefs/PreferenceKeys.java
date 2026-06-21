@@ -12,7 +12,6 @@ public final class PreferenceKeys {
     public static final String AUTO_INDENT = "vcode_pref_auto_indent";
     public static final String MATCH_BRACKETS = "vcode_pref_match_brackets";
     public static final String JSON_FORMAT_ON_SAVE = "vcode_pref_json_format_on_save";
-    public static final String JSON_VALIDATE_REALTIME = "vcode_pref_json_validate_realtime";
     // --- Git ---
     public static final String GIT_AUTHOR_NAME = "vcode_pref_git_author_name";
     public static final String GIT_AUTHOR_EMAIL = "vcode_pref_git_author_email";

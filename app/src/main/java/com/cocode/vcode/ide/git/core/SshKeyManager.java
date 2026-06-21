@@ -8,6 +8,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
+import java.nio.charset.StandardCharsets;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPublicKey;
@@ -15,7 +16,7 @@ import java.security.interfaces.RSAPublicKey;
 /**
  * Manages SSH keypair generation for Git operations.
  * Uses only java.security — no external JSch or SSHD dependency needed.
- *
+ * <p>
  * Note: JGit SSH transport registration (configureJGit) requires the optional
  * org.eclipse.jgit:org.eclipse.jgit.ssh.apache artifact. Until that dependency
  * is added to build.gradle, SSH remotes must use HTTPS + PAT instead.
@@ -53,7 +54,7 @@ public class SshKeyManager {
         String privPem = "-----BEGIN PRIVATE KEY-----\n"
                 + android.util.Base64.encodeToString(privBytes, android.util.Base64.NO_WRAP | android.util.Base64.NO_PADDING)
                 + "\n-----END PRIVATE KEY-----\n";
-        try (OutputStreamWriter w = new OutputStreamWriter(new FileOutputStream(getPrivateKeyFile(context)), "UTF-8")) {
+        try (OutputStreamWriter w = new OutputStreamWriter(new FileOutputStream(getPrivateKeyFile(context)), StandardCharsets.UTF_8)) {
             w.write(privPem);
         }
 
@@ -61,16 +62,18 @@ public class SshKeyManager {
         RSAPublicKey pub = (RSAPublicKey) kp.getPublic();
         byte[] pubEncoded = buildOpenSshPublicKey(pub);
         String pubLine = "ssh-rsa " + android.util.Base64.encodeToString(pubEncoded, android.util.Base64.NO_WRAP) + " vcode@vcode\n";
-        try (OutputStreamWriter w = new OutputStreamWriter(new FileOutputStream(getPublicKeyFile(context)), "UTF-8")) {
+        try (OutputStreamWriter w = new OutputStreamWriter(new FileOutputStream(getPublicKeyFile(context)), StandardCharsets.UTF_8)) {
             w.write(pubLine);
         }
     }
 
-    /** Reads the stored public key string for display/copy to GitHub. */
+    /**
+     * Reads the stored public key string for display/copy to GitHub.
+     */
     public static String readPublicKey(Context context) throws Exception {
         StringBuilder sb = new StringBuilder();
         try (BufferedReader r = new BufferedReader(
-                new InputStreamReader(new FileInputStream(getPublicKeyFile(context)), "UTF-8"))) {
+                new InputStreamReader(new FileInputStream(getPublicKeyFile(context)), StandardCharsets.UTF_8))) {
             String line;
             while ((line = r.readLine()) != null) sb.append(line).append("\n");
         }
@@ -80,26 +83,28 @@ public class SshKeyManager {
     // ── SSH wire-format helpers ───────────────────────────────────────────────
 
     private static byte[] buildOpenSshPublicKey(RSAPublicKey pub) throws Exception {
-        byte[] type = "ssh-rsa".getBytes("UTF-8");
+        byte[] type = "ssh-rsa".getBytes(StandardCharsets.UTF_8);
         byte[] e = pub.getPublicExponent().toByteArray();
         byte[] n = pub.getModulus().toByteArray();
         int totalLen = 4 + type.length + 4 + e.length + 4 + n.length;
         byte[] buf = new byte[totalLen];
         int pos = 0;
         pos = writeInt(buf, pos, type.length);
-        System.arraycopy(type, 0, buf, pos, type.length); pos += type.length;
+        System.arraycopy(type, 0, buf, pos, type.length);
+        pos += type.length;
         pos = writeInt(buf, pos, e.length);
-        System.arraycopy(e, 0, buf, pos, e.length); pos += e.length;
+        System.arraycopy(e, 0, buf, pos, e.length);
+        pos += e.length;
         pos = writeInt(buf, pos, n.length);
         System.arraycopy(n, 0, buf, pos, n.length);
         return buf;
     }
 
     private static int writeInt(byte[] buf, int pos, int val) {
-        buf[pos]     = (byte) (val >> 24);
+        buf[pos] = (byte) (val >> 24);
         buf[pos + 1] = (byte) (val >> 16);
         buf[pos + 2] = (byte) (val >> 8);
-        buf[pos + 3] = (byte)  val;
+        buf[pos + 3] = (byte) val;
         return pos + 4;
     }
 }

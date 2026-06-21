@@ -35,48 +35,48 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
 
     static {
         VALUE_ITEMS = new ArrayList<>();
-        VALUE_ITEMS.add(new CompletionItem("\"\"",   "\"\"",        "String value",  CompletionItem.Type.JSON_KEY, -1));
-        VALUE_ITEMS.add(new CompletionItem("0",      "0",           "Number",        CompletionItem.Type.VALUE,    0));
-        VALUE_ITEMS.add(new CompletionItem("true",   "true",        "Boolean",       CompletionItem.Type.VALUE,    0));
-        VALUE_ITEMS.add(new CompletionItem("false",  "false",       "Boolean",       CompletionItem.Type.VALUE,    0));
-        VALUE_ITEMS.add(new CompletionItem("null",   "null",        "Null",          CompletionItem.Type.VALUE,    0));
-        VALUE_ITEMS.add(new CompletionItem("{}",     "{\n  |\n}",   "Object",        CompletionItem.Type.SNIPPET,  0));
-        VALUE_ITEMS.add(new CompletionItem("[]",     "[\n  |\n]",   "Array",         CompletionItem.Type.SNIPPET,  0));
+        VALUE_ITEMS.add(new CompletionItem("\"\"", "\"\"", "String value", CompletionItem.Type.JSON_KEY, -1));
+        VALUE_ITEMS.add(new CompletionItem("0", "0", "Number", CompletionItem.Type.VALUE, 0));
+        VALUE_ITEMS.add(new CompletionItem("true", "true", "Boolean", CompletionItem.Type.VALUE, 0));
+        VALUE_ITEMS.add(new CompletionItem("false", "false", "Boolean", CompletionItem.Type.VALUE, 0));
+        VALUE_ITEMS.add(new CompletionItem("null", "null", "Null", CompletionItem.Type.VALUE, 0));
+        VALUE_ITEMS.add(new CompletionItem("{}", "{\n  |\n}", "Object", CompletionItem.Type.SNIPPET, 0));
+        VALUE_ITEMS.add(new CompletionItem("[]", "[\n  |\n]", "Array", CompletionItem.Type.SNIPPET, 0));
 
         BOOL_NULL_ITEMS = new ArrayList<>();
-        BOOL_NULL_ITEMS.add(new CompletionItem("true",  "true",  "Boolean", CompletionItem.Type.VALUE, 0));
+        BOOL_NULL_ITEMS.add(new CompletionItem("true", "true", "Boolean", CompletionItem.Type.VALUE, 0));
         BOOL_NULL_ITEMS.add(new CompletionItem("false", "false", "Boolean", CompletionItem.Type.VALUE, 0));
-        BOOL_NULL_ITEMS.add(new CompletionItem("null",  "null",  "Null",    CompletionItem.Type.VALUE, 0));
+        BOOL_NULL_ITEMS.add(new CompletionItem("null", "null", "Null", CompletionItem.Type.VALUE, 0));
 
         // ── package.json keys ────────────────────────────────────────────
         List<CompletionItem> pkgKeys = new ArrayList<>();
         String[][] pkgEntries = {
-                {"name",             "\"name\": \"|\"",                       "Package name"},
-                {"version",          "\"version\": \"|1.0.0\"",              "Semver version"},
-                {"description",      "\"description\": \"|\"",               "Package description"},
-                {"main",             "\"main\": \"|index.js\"",              "Entry point"},
-                {"module",           "\"module\": \"|index.mjs\"",           "ES module entry"},
-                {"type",             "\"type\": \"|module\"",                "Package type"},
-                {"types",            "\"types\": \"|index.d.ts\"",           "TypeScript types"},
-                {"exports",          "\"exports\": {\n  \".\": \"|\" \n}",   "Package exports"},
-                {"scripts",          "\"scripts\": {\n  |\n}",               "NPM scripts"},
-                {"dependencies",     "\"dependencies\": {\n  |\n}",          "Runtime dependencies"},
-                {"devDependencies",  "\"devDependencies\": {\n  |\n}",       "Dev dependencies"},
-                {"peerDependencies", "\"peerDependencies\": {\n  |\n}",      "Peer dependencies"},
-                {"keywords",         "\"keywords\": [|\"\"]",                "Search keywords"},
-                {"author",           "\"author\": \"|\"",                     "Package author"},
-                {"license",          "\"license\": \"|MIT\"",                "License identifier"},
-                {"repository",       "\"repository\": {\n  \"type\": \"git\",\n  \"url\": \"|\"\n}",  "Source repository"},
-                {"bugs",             "\"bugs\": {\n  \"url\": \"|\"\n}",     "Bug tracker URL"},
-                {"homepage",         "\"homepage\": \"|\"",                   "Project homepage"},
-                {"private",          "\"private\": |true",                    "Prevent publishing"},
-                {"engines",          "\"engines\": {\n  \"node\": \"|>=18\"\n}",  "Engine constraints"},
-                {"files",            "\"files\": [|\"\"]",                    "Files to publish"},
-                {"bin",              "\"bin\": {\n  |\n}",                    "CLI executables"},
-                {"browserslist",     "\"browserslist\": [\"|> 0.5%\", \"not dead\"]",  "Browser targets"},
-                {"workspaces",       "\"workspaces\": [|\"packages/*\"]",    "Monorepo workspaces"},
-                {"sideEffects",      "\"sideEffects\": |false",              "Tree-shaking hint"},
-                {"publishConfig",    "\"publishConfig\": {\n  \"access\": \"|public\"\n}",  "Publish settings"},
+                {"name", "\"name\": \"|\"", "Package name"},
+                {"version", "\"version\": \"|1.0.0\"", "Semver version"},
+                {"description", "\"description\": \"|\"", "Package description"},
+                {"main", "\"main\": \"|index.js\"", "Entry point"},
+                {"module", "\"module\": \"|index.mjs\"", "ES module entry"},
+                {"type", "\"type\": \"|module\"", "Package type"},
+                {"types", "\"types\": \"|index.d.ts\"", "TypeScript types"},
+                {"exports", "\"exports\": {\n  \".\": \"|\" \n}", "Package exports"},
+                {"scripts", "\"scripts\": {\n  |\n}", "NPM scripts"},
+                {"dependencies", "\"dependencies\": {\n  |\n}", "Runtime dependencies"},
+                {"devDependencies", "\"devDependencies\": {\n  |\n}", "Dev dependencies"},
+                {"peerDependencies", "\"peerDependencies\": {\n  |\n}", "Peer dependencies"},
+                {"keywords", "\"keywords\": [|\"\"]", "Search keywords"},
+                {"author", "\"author\": \"|\"", "Package author"},
+                {"license", "\"license\": \"|MIT\"", "License identifier"},
+                {"repository", "\"repository\": {\n  \"type\": \"git\",\n  \"url\": \"|\"\n}", "Source repository"},
+                {"bugs", "\"bugs\": {\n  \"url\": \"|\"\n}", "Bug tracker URL"},
+                {"homepage", "\"homepage\": \"|\"", "Project homepage"},
+                {"private", "\"private\": |true", "Prevent publishing"},
+                {"engines", "\"engines\": {\n  \"node\": \"|>=18\"\n}", "Engine constraints"},
+                {"files", "\"files\": [|\"\"]", "Files to publish"},
+                {"bin", "\"bin\": {\n  |\n}", "CLI executables"},
+                {"browserslist", "\"browserslist\": [\"|> 0.5%\", \"not dead\"]", "Browser targets"},
+                {"workspaces", "\"workspaces\": [|\"packages/*\"]", "Monorepo workspaces"},
+                {"sideEffects", "\"sideEffects\": |false", "Tree-shaking hint"},
+                {"publishConfig", "\"publishConfig\": {\n  \"access\": \"|public\"\n}", "Publish settings"},
         };
         for (String[] e : pkgEntries) {
             pkgKeys.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.JSON_KEY, 0));
@@ -86,12 +86,12 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         // ── tsconfig.json keys ───────────────────────────────────────────
         List<CompletionItem> tsKeys = new ArrayList<>();
         String[][] tsEntries = {
-                {"compilerOptions",  "\"compilerOptions\": {\n  |\n}",       "Compiler settings"},
-                {"include",          "\"include\": [|\"src\"]",              "Files to include"},
-                {"exclude",          "\"exclude\": [|\"node_modules\"]",     "Files to exclude"},
-                {"extends",          "\"extends\": \"|\"",                    "Extends base config"},
-                {"files",            "\"files\": [|\"\"]",                    "Explicit file list"},
-                {"references",       "\"references\": [{\n  \"path\": \"|\"\n}]",  "Project references"},
+                {"compilerOptions", "\"compilerOptions\": {\n  |\n}", "Compiler settings"},
+                {"include", "\"include\": [|\"src\"]", "Files to include"},
+                {"exclude", "\"exclude\": [|\"node_modules\"]", "Files to exclude"},
+                {"extends", "\"extends\": \"|\"", "Extends base config"},
+                {"files", "\"files\": [|\"\"]", "Explicit file list"},
+                {"references", "\"references\": [{\n  \"path\": \"|\"\n}]", "Project references"},
         };
         for (String[] e : tsEntries) {
             tsKeys.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.JSON_KEY, 0));
@@ -101,28 +101,28 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         // ── tsconfig compilerOptions keys ────────────────────────────────
         List<CompletionItem> tsCompilerKeys = new ArrayList<>();
         String[][] tsCompilerEntries = {
-                {"target",           "\"target\": \"|ES2020\"",              "ECMAScript target"},
-                {"module",           "\"module\": \"|ESNext\"",              "Module system"},
-                {"moduleResolution", "\"moduleResolution\": \"|bundler\"",   "Resolution strategy"},
-                {"lib",              "\"lib\": [|\"ES2020\", \"DOM\"]",      "Library files"},
-                {"strict",           "\"strict\": |true",                     "Enable strict mode"},
-                {"esModuleInterop",  "\"esModuleInterop\": |true",           "ES module compat"},
-                {"skipLibCheck",     "\"skipLibCheck\": |true",              "Skip .d.ts checking"},
-                {"outDir",           "\"outDir\": \"|./dist\"",              "Output directory"},
-                {"rootDir",          "\"rootDir\": \"|./src\"",              "Root directory"},
-                {"declaration",      "\"declaration\": |true",               "Generate .d.ts"},
-                {"sourceMap",        "\"sourceMap\": |true",                  "Generate source maps"},
-                {"jsx",              "\"jsx\": \"|react-jsx\"",              "JSX handling"},
-                {"baseUrl",          "\"baseUrl\": \".|\"",                   "Base path for modules"},
-                {"paths",            "\"paths\": {\n  \"|@/*\": [\"./src/*\"]\n}",  "Path aliases"},
-                {"resolveJsonModule","\"resolveJsonModule\": |true",          "Import .json files"},
-                {"allowJs",          "\"allowJs\": |true",                    "Allow JavaScript"},
-                {"noEmit",           "\"noEmit\": |true",                     "Don't emit output"},
-                {"isolatedModules",  "\"isolatedModules\": |true",           "Single-file transpile"},
-                {"forceConsistentCasingInFileNames","\"forceConsistentCasingInFileNames\": |true", "Case sensitivity"},
-                {"noUnusedLocals",   "\"noUnusedLocals\": |true",            "Warn unused locals"},
-                {"noUnusedParameters","\"noUnusedParameters\": |true",       "Warn unused params"},
-                {"noFallthroughCasesInSwitch","\"noFallthroughCasesInSwitch\": |true", "Switch fallthrough"},
+                {"target", "\"target\": \"|ES2020\"", "ECMAScript target"},
+                {"module", "\"module\": \"|ESNext\"", "Module system"},
+                {"moduleResolution", "\"moduleResolution\": \"|bundler\"", "Resolution strategy"},
+                {"lib", "\"lib\": [|\"ES2020\", \"DOM\"]", "Library files"},
+                {"strict", "\"strict\": |true", "Enable strict mode"},
+                {"esModuleInterop", "\"esModuleInterop\": |true", "ES module compat"},
+                {"skipLibCheck", "\"skipLibCheck\": |true", "Skip .d.ts checking"},
+                {"outDir", "\"outDir\": \"|./dist\"", "Output directory"},
+                {"rootDir", "\"rootDir\": \"|./src\"", "Root directory"},
+                {"declaration", "\"declaration\": |true", "Generate .d.ts"},
+                {"sourceMap", "\"sourceMap\": |true", "Generate source maps"},
+                {"jsx", "\"jsx\": \"|react-jsx\"", "JSX handling"},
+                {"baseUrl", "\"baseUrl\": \".|\"", "Base path for modules"},
+                {"paths", "\"paths\": {\n  \"|@/*\": [\"./src/*\"]\n}", "Path aliases"},
+                {"resolveJsonModule", "\"resolveJsonModule\": |true", "Import .json files"},
+                {"allowJs", "\"allowJs\": |true", "Allow JavaScript"},
+                {"noEmit", "\"noEmit\": |true", "Don't emit output"},
+                {"isolatedModules", "\"isolatedModules\": |true", "Single-file transpile"},
+                {"forceConsistentCasingInFileNames", "\"forceConsistentCasingInFileNames\": |true", "Case sensitivity"},
+                {"noUnusedLocals", "\"noUnusedLocals\": |true", "Warn unused locals"},
+                {"noUnusedParameters", "\"noUnusedParameters\": |true", "Warn unused params"},
+                {"noFallthroughCasesInSwitch", "\"noFallthroughCasesInSwitch\": |true", "Switch fallthrough"},
         };
         for (String[] e : tsCompilerEntries) {
             tsCompilerKeys.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.JSON_KEY, 0));
@@ -132,16 +132,16 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         // ── .eslintrc.json keys ──────────────────────────────────────────
         List<CompletionItem> eslintKeys = new ArrayList<>();
         String[][] eslintEntries = {
-                {"env",              "\"env\": {\n  \"browser\": true,\n  \"es2021\": true,\n  \"node\": true\n}|",  "Environments"},
-                {"extends",          "\"extends\": [|\"eslint:recommended\"]",  "Base configs"},
-                {"plugins",          "\"plugins\": [|\"\"]",                    "Plugins"},
-                {"rules",            "\"rules\": {\n  |\n}",                    "Rule overrides"},
-                {"parserOptions",    "\"parserOptions\": {\n  \"ecmaVersion\": \"latest\",\n  \"sourceType\": \"|module\"\n}",  "Parser settings"},
-                {"parser",           "\"parser\": \"|\"",                        "Custom parser"},
-                {"globals",          "\"globals\": {\n  |\n}",                  "Global variables"},
-                {"overrides",        "\"overrides\": [{\n  \"files\": [\"|\"],\n  \"rules\": {}\n}]",  "File-specific rules"},
-                {"ignorePatterns",   "\"ignorePatterns\": [|\"node_modules\"]", "Ignored files"},
-                {"root",             "\"root\": |true",                          "Root config marker"},
+                {"env", "\"env\": {\n  \"browser\": true,\n  \"es2021\": true,\n  \"node\": true\n}|", "Environments"},
+                {"extends", "\"extends\": [|\"eslint:recommended\"]", "Base configs"},
+                {"plugins", "\"plugins\": [|\"\"]", "Plugins"},
+                {"rules", "\"rules\": {\n  |\n}", "Rule overrides"},
+                {"parserOptions", "\"parserOptions\": {\n  \"ecmaVersion\": \"latest\",\n  \"sourceType\": \"|module\"\n}", "Parser settings"},
+                {"parser", "\"parser\": \"|\"", "Custom parser"},
+                {"globals", "\"globals\": {\n  |\n}", "Global variables"},
+                {"overrides", "\"overrides\": [{\n  \"files\": [\"|\"],\n  \"rules\": {}\n}]", "File-specific rules"},
+                {"ignorePatterns", "\"ignorePatterns\": [|\"node_modules\"]", "Ignored files"},
+                {"root", "\"root\": |true", "Root config marker"},
         };
         for (String[] e : eslintEntries) {
             eslintKeys.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.JSON_KEY, 0));
@@ -151,18 +151,18 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
         // ── manifest.json (PWA) keys ─────────────────────────────────────
         List<CompletionItem> manifestKeys = new ArrayList<>();
         String[][] manifestEntries = {
-                {"name",             "\"name\": \"|\"",                       "App name"},
-                {"short_name",       "\"short_name\": \"|\"",                "Short name"},
-                {"description",      "\"description\": \"|\"",               "Description"},
-                {"start_url",        "\"start_url\": \"|\"/\"",              "Start URL"},
-                {"display",          "\"display\": \"|standalone\"",          "Display mode"},
-                {"background_color", "\"background_color\": \"|#ffffff\"",   "Background color"},
-                {"theme_color",      "\"theme_color\": \"|#000000\"",        "Theme color"},
-                {"icons",            "\"icons\": [{\n  \"src\": \"|\",\n  \"sizes\": \"192x192\",\n  \"type\": \"image/png\"\n}]",  "App icons"},
-                {"scope",            "\"scope\": \"|\"/\"",                   "Navigation scope"},
-                {"orientation",      "\"orientation\": \"|portrait\"",        "Orientation"},
-                {"lang",             "\"lang\": \"|en\"",                     "Language"},
-                {"categories",       "\"categories\": [|\"\"]",              "App categories"},
+                {"name", "\"name\": \"|\"", "App name"},
+                {"short_name", "\"short_name\": \"|\"", "Short name"},
+                {"description", "\"description\": \"|\"", "Description"},
+                {"start_url", "\"start_url\": \"|\"/\"", "Start URL"},
+                {"display", "\"display\": \"|standalone\"", "Display mode"},
+                {"background_color", "\"background_color\": \"|#ffffff\"", "Background color"},
+                {"theme_color", "\"theme_color\": \"|#000000\"", "Theme color"},
+                {"icons", "\"icons\": [{\n  \"src\": \"|\",\n  \"sizes\": \"192x192\",\n  \"type\": \"image/png\"\n}]", "App icons"},
+                {"scope", "\"scope\": \"|\"/\"", "Navigation scope"},
+                {"orientation", "\"orientation\": \"|portrait\"", "Orientation"},
+                {"lang", "\"lang\": \"|en\"", "Language"},
+                {"categories", "\"categories\": [|\"\"]", "App categories"},
         };
         for (String[] e : manifestEntries) {
             manifestKeys.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.JSON_KEY, 0));
@@ -171,11 +171,12 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
     }
 
     private final List<CompletionItem> snippetItems = new ArrayList<>();
-
-    /** Cache for keys extracted from the document itself. */
-    private int lastTextHash = 0;
     private final List<CompletionItem> cachedDocKeys = new ArrayList<>();
     private final FastTrie docKeysTrie = new FastTrie();
+    /**
+     * Cache for keys extracted from the document itself.
+     */
+    private int lastTextHash = 0;
     private File currentFile;
 
     public JsonAutoCompleteEngine(Context context) {
@@ -206,9 +207,9 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
             JSONArray arr = new JSONArray(json);
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
-                String label   = obj.optString("label");
+                String label = obj.optString("label");
                 String snippet = obj.optString("snippet", label);
-                String detail  = obj.optString("detail", "");
+                String detail = obj.optString("detail", "");
                 int offset = 0;
 
                 if (snippet.contains("|")) {
@@ -267,9 +268,9 @@ public class JsonAutoCompleteEngine extends AutoCompleteEngine {
 
         ensureDocKeysIndexed(fullText);
 
-        String line    = getLineBeforeCursor(fullText, cursorPos);
+        String line = getLineBeforeCursor(fullText, cursorPos);
         String trimmed = line.trim();
-        String word    = getWordBeforeCursor(fullText, cursorPos);
+        String word = getWordBeforeCursor(fullText, cursorPos);
 
         // Prevent showing all suggestions immediately after typing { or }
         // We only want to show suggestions when the user hits Enter (trimmed will be empty)

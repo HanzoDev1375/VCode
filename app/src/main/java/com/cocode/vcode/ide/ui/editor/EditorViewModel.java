@@ -53,6 +53,7 @@ public class EditorViewModel extends ViewModel {
     private final MutableLiveData<Map<String, FileStatus.Type>> gitStatusesLiveData = new MutableLiveData<>(new HashMap<>());
     private final MutableLiveData<List<com.cocode.vcode.ide.data.model.Problem>> problemsLiveData = new MutableLiveData<>(new ArrayList<>());
     private final Map<String, List<com.cocode.vcode.ide.data.model.Problem>> fileProblemsMap = new HashMap<>();
+    private final MutableLiveData<int[]> activeFileDiagnostics = new MutableLiveData<>();
 
     private File projectRoot;
     private String projectId;
@@ -104,6 +105,10 @@ public class EditorViewModel extends ViewModel {
         return problemsLiveData;
     }
 
+    public LiveData<int[]> getActiveFileDiagnostics() {
+        return activeFileDiagnostics;
+    }
+
     public void reportProblems(File file, List<com.cocode.vcode.ide.data.model.Problem> problems) {
         if (file == null) return;
         String path = file.getAbsolutePath();
@@ -112,12 +117,41 @@ public class EditorViewModel extends ViewModel {
         } else {
             fileProblemsMap.put(path, problems);
         }
-        
+
         List<com.cocode.vcode.ide.data.model.Problem> allProblems = new ArrayList<>();
         for (List<com.cocode.vcode.ide.data.model.Problem> list : fileProblemsMap.values()) {
             allProblems.addAll(list);
         }
         problemsLiveData.postValue(allProblems);
+
+        int activeIndex = getActiveTabIndexValue();
+        if (activeIndex >= 0 && activeIndex < getOpenFilesList().size()) {
+            EditorFile activeFile = getOpenFilesList().get(activeIndex);
+            if (activeFile.getFile().getAbsolutePath().equals(path)) {
+                recalculateActiveDiagnostics(path);
+            }
+        }
+    }
+
+    private void recalculateActiveDiagnostics(String path) {
+        List<com.cocode.vcode.ide.data.model.Problem> problems = fileProblemsMap.get(path);
+        int[] counts = new int[]{0, 0, 0};
+        if (problems != null) {
+            for (com.cocode.vcode.ide.data.model.Problem p : problems) {
+                if (p.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.ERROR) {
+                    counts[0]++;
+                } else if (p.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.WARNING) {
+                    counts[1]++;
+                } else {
+                    counts[2]++;
+                }
+            }
+        }
+        activeFileDiagnostics.postValue(counts);
+    }
+
+    public void setDiagnosticLoading() {
+        activeFileDiagnostics.postValue(null);
     }
 
     public LiveData<AppSettings> getSettingsLiveData() {
@@ -484,11 +518,11 @@ public class EditorViewModel extends ViewModel {
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 FileUtils.renameFile(file, newName);
-                
+
                 File renamedFile = new File(file.getParentFile(), newName);
                 List<EditorFile> currentDocs = getOpenFilesList();
                 boolean changed = false;
-                
+
                 for (EditorFile doc : currentDocs) {
                     if (doc.getFile().getAbsolutePath().equals(file.getAbsolutePath())) {
                         doc.setFile(renamedFile);
@@ -503,7 +537,7 @@ public class EditorViewModel extends ViewModel {
                         changed = true;
                     }
                 }
-                
+
                 if (changed) {
                     // Update tabs with a fresh list to trigger RecyclerView/DiffUtil correctly
                     openFilesLiveData.postValue(new java.util.ArrayList<>(currentDocs));
@@ -629,11 +663,13 @@ public class EditorViewModel extends ViewModel {
                         activeTabIndexLiveData.setValue(index);
                         isEditorLoadingLiveData.setValue(false);
                         persistStateAsync();
+                        recalculateActiveDiagnostics(target.getFile().getAbsolutePath());
                     });
                 });
             } else {
                 activeTabIndexLiveData.setValue(index);
                 persistStateAsync();
+                recalculateActiveDiagnostics(target.getFile().getAbsolutePath());
             }
         }
     }
@@ -784,7 +820,6 @@ public class EditorViewModel extends ViewModel {
         if (cursor >= 0) file.setCursorPosition(cursor);
         if (scrollY >= 0) file.setScrollY(scrollY);
     }
-
 
 
     /**

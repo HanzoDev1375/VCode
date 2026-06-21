@@ -165,7 +165,7 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
                 String addedLine = lines[i + 1];
 
                 CharSequence[] spans = computeWordDiff(removedLine.substring(1), addedLine.substring(1));
-                
+
                 // Render removed line
                 View removedView = getLayoutInflater().inflate(R.layout.item_diff_line, binding.layoutDiffLines, false);
                 TextView tvRemovedContent = removedView.findViewById(R.id.root_view).findViewById(R.id.tv_line_content);
@@ -227,8 +227,8 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
             suffixLength++;
         }
 
-        String removedDiff   = removed.substring(prefixLength, removed.length() - suffixLength);
-        String addedDiff     = added.substring(prefixLength,   added.length()   - suffixLength);
+        String removedDiff = removed.substring(prefixLength, removed.length() - suffixLength);
+        String addedDiff = added.substring(prefixLength, added.length() - suffixLength);
 
         android.text.SpannableString spanRemoved = new android.text.SpannableString(removed);
         if (!removedDiff.isEmpty()) {

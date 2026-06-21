@@ -39,9 +39,9 @@ public abstract class SyntaxHighlighter {
      * Highlights only a range of the document, returning spans with offsets relative to the full text.
      * The range is expanded to line boundaries for correctness.
      *
-     * @param fullCode The full document text.
+     * @param fullCode   The full document text.
      * @param rangeStart Start character offset of the visible region.
-     * @param rangeEnd End character offset of the visible region.
+     * @param rangeEnd   End character offset of the visible region.
      * @return A SpannableStringBuilder of the substring with spans positioned relative to rangeStart.
      */
     public SpannableStringBuilder highlightRange(String fullCode, int rangeStart, int rangeEnd) {

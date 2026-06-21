@@ -6,19 +6,21 @@ public class Problem {
     private final File file;
     private final int line;
     private final int column;
+    private final int length;
     private final String message;
     private final Severity severity;
 
-    public enum Severity {
-        ERROR, WARNING, INFO
-    }
-
-    public Problem(File file, int line, int column, String message, Severity severity) {
+    public Problem(File file, int line, int column, int length, String message, Severity severity) {
         this.file = file;
         this.line = line;
         this.column = column;
+        this.length = length;
         this.message = message;
         this.severity = severity;
+    }
+
+    public Problem(File file, int line, int column, String message, Severity severity) {
+        this(file, line, column, 1, message, severity);
     }
 
     public File getFile() {
@@ -33,11 +35,19 @@ public class Problem {
         return column;
     }
 
+    public int getLength() {
+        return length;
+    }
+
     public String getMessage() {
         return message;
     }
 
     public Severity getSeverity() {
         return severity;
+    }
+
+    public enum Severity {
+        ERROR, WARNING, INFO
     }
 }

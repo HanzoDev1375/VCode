@@ -41,71 +41,71 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         // Format: { label (displayed), insertText (what is typed after ":"), detail }
         // insertText does NOT include the leading ":" — the user already typed it.
         String[][] pseudos = {
-                {":hover",              "hover",              "Pseudo-class — mouse hover"},
-                {":focus",              "focus",              "Pseudo-class — keyboard focus"},
-                {":focus-within",       "focus-within",       "Pseudo-class — child has focus"},
-                {":focus-visible",      "focus-visible",      "Pseudo-class — keyboard focus ring"},
-                {":active",             "active",             "Pseudo-class — being clicked"},
-                {":visited",            "visited",            "Pseudo-class — visited link"},
-                {":link",               "link",               "Pseudo-class — unvisited link"},
-                {":checked",            "checked",            "Pseudo-class — checked input"},
-                {":disabled",           "disabled",           "Pseudo-class — disabled element"},
-                {":enabled",            "enabled",            "Pseudo-class — enabled element"},
-                {":placeholder-shown",  "placeholder-shown",  "Pseudo-class — placeholder visible"},
-                {":required",           "required",           "Pseudo-class — required input"},
-                {":optional",           "optional",           "Pseudo-class — optional input"},
-                {":valid",              "valid",              "Pseudo-class — valid input value"},
-                {":invalid",            "invalid",            "Pseudo-class — invalid input value"},
-                {":read-only",          "read-only",          "Pseudo-class — read-only element"},
-                {":read-write",         "read-write",         "Pseudo-class — editable element"},
-                {":empty",              "empty",              "Pseudo-class — no children/text"},
-                {":root",               "root",               "Pseudo-class — document root element"},
-                {":first-child",        "first-child",        "Pseudo-class — first child"},
-                {":last-child",         "last-child",         "Pseudo-class — last child"},
-                {":first-of-type",      "first-of-type",      "Pseudo-class — first of its type"},
-                {":last-of-type",       "last-of-type",       "Pseudo-class — last of its type"},
-                {":only-child",         "only-child",         "Pseudo-class — only child"},
-                {":only-of-type",       "only-of-type",       "Pseudo-class — only of its type"},
-                {":nth-child()",        "nth-child(|)",       "Pseudo-class — nth child"},
-                {":nth-last-child()",   "nth-last-child(|)",  "Pseudo-class — nth last child"},
-                {":nth-of-type()",      "nth-of-type(|)",     "Pseudo-class — nth of type"},
-                {":nth-last-of-type()", "nth-last-of-type(|)","Pseudo-class — nth last of type"},
-                {":not()",              "not(|)",             "Pseudo-class — negation selector"},
-                {":is()",               "is(|)",              "Pseudo-class — matches any selector"},
-                {":where()",            "where(|)",           "Pseudo-class — zero-specificity match"},
-                {":has()",              "has(|)",             "Pseudo-class — relational (parent) selector"},
+                {":hover", "hover", "Pseudo-class — mouse hover"},
+                {":focus", "focus", "Pseudo-class — keyboard focus"},
+                {":focus-within", "focus-within", "Pseudo-class — child has focus"},
+                {":focus-visible", "focus-visible", "Pseudo-class — keyboard focus ring"},
+                {":active", "active", "Pseudo-class — being clicked"},
+                {":visited", "visited", "Pseudo-class — visited link"},
+                {":link", "link", "Pseudo-class — unvisited link"},
+                {":checked", "checked", "Pseudo-class — checked input"},
+                {":disabled", "disabled", "Pseudo-class — disabled element"},
+                {":enabled", "enabled", "Pseudo-class — enabled element"},
+                {":placeholder-shown", "placeholder-shown", "Pseudo-class — placeholder visible"},
+                {":required", "required", "Pseudo-class — required input"},
+                {":optional", "optional", "Pseudo-class — optional input"},
+                {":valid", "valid", "Pseudo-class — valid input value"},
+                {":invalid", "invalid", "Pseudo-class — invalid input value"},
+                {":read-only", "read-only", "Pseudo-class — read-only element"},
+                {":read-write", "read-write", "Pseudo-class — editable element"},
+                {":empty", "empty", "Pseudo-class — no children/text"},
+                {":root", "root", "Pseudo-class — document root element"},
+                {":first-child", "first-child", "Pseudo-class — first child"},
+                {":last-child", "last-child", "Pseudo-class — last child"},
+                {":first-of-type", "first-of-type", "Pseudo-class — first of its type"},
+                {":last-of-type", "last-of-type", "Pseudo-class — last of its type"},
+                {":only-child", "only-child", "Pseudo-class — only child"},
+                {":only-of-type", "only-of-type", "Pseudo-class — only of its type"},
+                {":nth-child()", "nth-child(|)", "Pseudo-class — nth child"},
+                {":nth-last-child()", "nth-last-child(|)", "Pseudo-class — nth last child"},
+                {":nth-of-type()", "nth-of-type(|)", "Pseudo-class — nth of type"},
+                {":nth-last-of-type()", "nth-last-of-type(|)", "Pseudo-class — nth last of type"},
+                {":not()", "not(|)", "Pseudo-class — negation selector"},
+                {":is()", "is(|)", "Pseudo-class — matches any selector"},
+                {":where()", "where(|)", "Pseudo-class — zero-specificity match"},
+                {":has()", "has(|)", "Pseudo-class — relational (parent) selector"},
                 // Pseudo-elements — label uses "::" but insertText is ":" + name so only one extra colon needed
                 // We detect "::" context separately via the double-colon check
-                {"::before",            ":before",            "Pseudo-element — generated before content"},
-                {"::after",             ":after",             "Pseudo-element — generated after content"},
-                {"::placeholder",       ":placeholder",       "Pseudo-element — input placeholder"},
-                {"::selection",         ":selection",         "Pseudo-element — user text selection"},
-                {"::first-line",        ":first-line",        "Pseudo-element — first line of block"},
-                {"::first-letter",      ":first-letter",      "Pseudo-element — first letter of block"},
-                {"::marker",            ":marker",            "Pseudo-element — list item marker"},
-                {"::backdrop",          ":backdrop",          "Pseudo-element — fullscreen backdrop"},
+                {"::before", ":before", "Pseudo-element — generated before content"},
+                {"::after", ":after", "Pseudo-element — generated after content"},
+                {"::placeholder", ":placeholder", "Pseudo-element — input placeholder"},
+                {"::selection", ":selection", "Pseudo-element — user text selection"},
+                {"::first-line", ":first-line", "Pseudo-element — first line of block"},
+                {"::first-letter", ":first-letter", "Pseudo-element — first letter of block"},
+                {"::marker", ":marker", "Pseudo-element — list item marker"},
+                {"::backdrop", ":backdrop", "Pseudo-element — fullscreen backdrop"},
         };
         PSEUDO_ITEMS = new ArrayList<>();
         for (String[] p : pseudos) {
-            String label      = p[0];
+            String label = p[0];
             String insertText = p[1]; // Without leading ":" — user typed it already
-            String detail     = p[2];
+            String detail = p[2];
             // Cursor inside () for parameterised pseudos (handled by pipe in insertText)
             PSEUDO_ITEMS.add(new CompletionItem(label, insertText, detail, CompletionItem.Type.CSS_VALUE, 0));
         }
 
         // At-rules — shown when line starts with "@" and we're NOT inside @media()
         String[][] atRules = {
-                {"@media",        "@media "},
-                {"@keyframes",    "@keyframes "},
-                {"@import",       "@import '"},
-                {"@font-face",    "@font-face "},
-                {"@supports",     "@supports "},
-                {"@charset",      "@charset '"},
-                {"@layer",        "@layer "},
-                {"@container",    "@container "},
-                {"@property",     "@property --"},
-                {"@counter-style","@counter-style "},
+                {"@media", "@media "},
+                {"@keyframes", "@keyframes "},
+                {"@import", "@import '"},
+                {"@font-face", "@font-face "},
+                {"@supports", "@supports "},
+                {"@charset", "@charset '"},
+                {"@layer", "@layer "},
+                {"@container", "@container "},
+                {"@property", "@property --"},
+                {"@counter-style", "@counter-style "},
         };
         AT_RULE_ITEMS = new ArrayList<>();
         for (String[] r : atRules) {
@@ -115,15 +115,14 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
     }
 
     // ─── Instance state ─────────────────────────────────────────────────────────
-    private final List<CompletionItem> propertyItems   = new ArrayList<>();
-    private final Map<String, List<String>> valueMap   = new HashMap<>();
-    private final List<CompletionItem> htmlTagItems     = new ArrayList<>();
-    private final List<CompletionItem> colorItems       = new ArrayList<>();
+    private final List<CompletionItem> propertyItems = new ArrayList<>();
+    private final Map<String, List<String>> valueMap = new HashMap<>();
+    private final List<CompletionItem> htmlTagItems = new ArrayList<>();
+    private final List<CompletionItem> colorItems = new ArrayList<>();
     private final List<CompletionItem> globalValueItems = new ArrayList<>();
-
-    private int lastTextHash = 0;
     private final List<CompletionItem> cachedCustomProps = new ArrayList<>();
     private final FastTrie propertyTrie = new FastTrie();
+    private int lastTextHash = 0;
 
     public CssAutoCompleteEngine(Context context) {
         super(context);
@@ -189,7 +188,7 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
                 String property = obj.optString("property");
-                String detail   = obj.optString("detail", "");
+                String detail = obj.optString("detail", "");
                 JSONArray values = obj.optJSONArray("values");
 
                 // Cursor between colon and semicolon after selection
@@ -243,9 +242,9 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
 
         ensureCustomPropsIndexed(fullText);
 
-        String line    = getLineBeforeCursor(fullText, cursorPos);
+        String line = getLineBeforeCursor(fullText, cursorPos);
         String trimmed = line.trim();
-        String word    = getWordBeforeCursor(fullText, cursorPos);
+        String word = getWordBeforeCursor(fullText, cursorPos);
 
         // Prevent showing all suggestions immediately after typing { or }
         // We only want to show suggestions when the user hits Enter (trimmed will be empty)
@@ -297,13 +296,6 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
     }
 
     // ─── Context detection ─────────────────────────────────────────────────────
-
-    private enum Zone { SELECTOR, PROPERTY, VALUE, NESTED_SELECTOR }
-
-    private static class CssContext {
-        Zone zone = Zone.SELECTOR;
-        String propertyName = "";
-    }
 
     /**
      * Detects context with full nesting depth awareness.
@@ -427,7 +419,10 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             char c = currentDecl.charAt(j);
             if (c == '(') parenDepth++;
             else if (c == ')') parenDepth--;
-            else if (c == ':' && parenDepth == 0) { colonIdx = j; break; }
+            else if (c == ':' && parenDepth == 0) {
+                colonIdx = j;
+                break;
+            }
         }
         return colonIdx >= 0 ? Zone.VALUE : Zone.PROPERTY;
     }
@@ -437,7 +432,10 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         int blockStart = -1;
         for (int i = line.length() - 1; i >= 0; i--) {
             char c = line.charAt(i);
-            if (c == ';' || c == '{') { blockStart = i; break; }
+            if (c == ';' || c == '{') {
+                blockStart = i;
+                break;
+            }
         }
         String decl = blockStart >= 0 ? line.substring(blockStart + 1) : line;
         int colon = -1;
@@ -446,12 +444,13 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             char c = decl.charAt(i);
             if (c == '(') parenDepth++;
             else if (c == ')') parenDepth--;
-            else if (c == ':' && parenDepth == 0) { colon = i; break; }
+            else if (c == ':' && parenDepth == 0) {
+                colon = i;
+                break;
+            }
         }
         return colon < 0 ? "" : decl.substring(0, colon).trim();
     }
-
-    // ─── Zone-specific suggestion builders ────────────────────────────────────
 
     private List<CompletionItem> getValueSuggestions(String propertyName, String word, String fullText) {
         // Emmet CSS shorthand in value position
@@ -491,7 +490,7 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
     private List<CompletionItem> getPropertySuggestions(String word, String fullText, int cursorPos) {
         // Emmet CSS shorthand (e.g. "m10" → "margin: 10px;")
         String emmetAbbr = getEmmetAbbreviationBeforeCursor(fullText, cursorPos);
-        String expanded  = EmmetParser.expandCss(emmetAbbr);
+        String expanded = EmmetParser.expandCss(emmetAbbr);
         if (expanded != null) {
             List<CompletionItem> res = new ArrayList<>();
             CompletionItem emmetItem = new CompletionItem(emmetAbbr, expanded, "Emmet", CompletionItem.Type.SNIPPET, 0);
@@ -512,6 +511,8 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             return fuzzyFilter(fallback, word);
         }
     }
+
+    // ─── Zone-specific suggestion builders ────────────────────────────────────
 
     /**
      * Suggestions for nested selector context (inside a rule block with CSS nesting support).
@@ -561,8 +562,6 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         }
         return fuzzyFilter(all, word);
     }
-
-    // ─── Helpers ───────────────────────────────────────────────────────────────
 
     private boolean isColorProperty(String prop) {
         if (prop == null) return false;
@@ -642,6 +641,8 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
         return fuzzyFilter(items, word);
     }
 
+    // ─── Helpers ───────────────────────────────────────────────────────────────
+
     /**
      * Determines if the cursor is inside an at-rule CONDITION (before the opening brace).
      * e.g. "@media screen and (|)" or "@supports (display: grid|)"
@@ -671,5 +672,12 @@ public class CssAutoCompleteEngine extends AutoCompleteEngine {
             if (text.charAt(i) == '}') depth--;
         }
         return depth > 0;
+    }
+
+    private enum Zone {SELECTOR, PROPERTY, VALUE, NESTED_SELECTOR}
+
+    private static class CssContext {
+        Zone zone = Zone.SELECTOR;
+        String propertyName = "";
     }
 }

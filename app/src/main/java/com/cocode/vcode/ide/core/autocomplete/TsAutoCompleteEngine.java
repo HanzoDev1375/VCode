@@ -13,12 +13,12 @@ import java.util.List;
 public class TsAutoCompleteEngine extends JsAutoCompleteEngine {
 
     private static final String[] TS_KEYWORDS = {
-        "interface", "type", "enum", "namespace", "module", "declare", "abstract",
-        "implements", "readonly", "override", "as", "satisfies", "asserts",
-        "any", "unknown", "never", "void", "string", "number", "boolean",
-        "bigint", "symbol", "object", "undefined", "null",
-        "public", "private", "protected", "static",
-        "keyof", "typeof", "infer", "extends", "is"
+            "interface", "type", "enum", "namespace", "module", "declare", "abstract",
+            "implements", "readonly", "override", "as", "satisfies", "asserts",
+            "any", "unknown", "never", "void", "string", "number", "boolean",
+            "bigint", "symbol", "object", "undefined", "null",
+            "public", "private", "protected", "static",
+            "keyof", "typeof", "infer", "extends", "is"
     };
 
     public TsAutoCompleteEngine(Context context) {

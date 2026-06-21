@@ -32,7 +32,7 @@ public class ColorPreviewSpan extends ReplacementSpan {
         float textSize = paint.getTextSize();
         int circleRadius = (int) (textSize * 0.35f);
         int padding = (int) (textSize * 0.25f);
-        
+
         this.width = (int) (circleRadius * 2 + padding + charWidth);
         return this.width;
     }
@@ -42,30 +42,30 @@ public class ColorPreviewSpan extends ReplacementSpan {
         float textSize = paint.getTextSize();
         float circleRadius = textSize * 0.35f;
         float padding = textSize * 0.25f;
-        
+
         float circleX = x + circleRadius;
         // Vertically center the circle based on the text baseline and ascent/descent
         float circleY = y + (paint.ascent() + paint.descent()) / 2f;
-        
+
         int oldColor = paint.getColor();
         Paint.Style oldStyle = paint.getStyle();
-        
+
         // Draw the color circle
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(previewColor);
         canvas.drawCircle(circleX, circleY, circleRadius, paint);
-        
+
         // Draw a subtle border for contrast (e.g. if color is white)
         paint.setStyle(Paint.Style.STROKE);
         paint.setColor(Color.argb(50, 128, 128, 128)); // Light gray border
         paint.setStrokeWidth(textSize * 0.05f);
         canvas.drawCircle(circleX, circleY, circleRadius, paint);
-        
+
         // Draw the text (the character we replaced, e.g. '#')
         paint.setStyle(oldStyle);
         paint.setColor(textColor);
         canvas.drawText(text, start, end, x + circleRadius * 2 + padding, y, paint);
-        
+
         // Restore old color just in case
         paint.setColor(oldColor);
     }

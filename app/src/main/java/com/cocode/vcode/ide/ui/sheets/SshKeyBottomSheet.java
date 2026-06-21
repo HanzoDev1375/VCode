@@ -20,7 +20,6 @@ import com.cocode.vcode.ide.utils.FontManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 
-
 public class SshKeyBottomSheet extends BottomSheetDialogFragment {
 
     private TextView tvPublicKey;

@@ -1,9 +1,10 @@
 package com.cocode.vcode.ide.core.autocomplete;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
-import java.io.BufferedReader;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -20,22 +21,12 @@ import java.util.regex.Pattern;
  * for cross-file intellisense.
  */
 public class ProjectSymbolIndex {
-    private static ProjectSymbolIndex instance;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    
-    private final List<CompletionItem> cssClassItems = new ArrayList<>();
-    private final List<CompletionItem> cssIdItems = new ArrayList<>();
-    private final List<CompletionItem> htmlIdItems = new ArrayList<>();
-    
-    private String projectRoot = null;
-    
     // CSS class regex: .my-class
     private static final Pattern PAT_CSS_CLASS = Pattern.compile("\\.([a-zA-Z_][a-zA-Z0-9_-]*)");
     // CSS ID regex: #my-id
     private static final Pattern PAT_CSS_ID = Pattern.compile("#([a-zA-Z_][a-zA-Z0-9_-]*)");
     // HTML ID regex: id="my-id" or id='my-id'
     private static final Pattern PAT_HTML_ID = Pattern.compile("id\\s*=\\s*[\"']([a-zA-Z0-9_-]+)[\"']");
-
     // JS Exports
     private static final Pattern PAT_JS_EXPORT_DECL = Pattern.compile("export\\s+(?:const|let|var|function|class|interface|type)\\s+([a-zA-Z_$][\\w$]*)");
     private static final Pattern PAT_JS_EXPORT_DEFAULT = Pattern.compile("export\\s+default\\s+(?:class\\s+|function\\s+)?([a-zA-Z_$][\\w$]*)?");
@@ -44,11 +35,17 @@ public class ProjectSymbolIndex {
     private static final Pattern PAT_MODULE_EXPORTS = Pattern.compile("module\\.exports\\s*=\\s*(?:[a-zA-Z_$][\\w$]*|\\{([^}]+)\\})");
     private static final Pattern PAT_FUNC_SIG = Pattern.compile("(?:export\\s+)?(?:default\\s+)?function\\s+([a-zA-Z_$][\\w$]*)\\s*(\\([^)]*\\))");
     private static final Pattern PAT_ARROW_FUNC = Pattern.compile("(?:export\\s+)?(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*)\\s*=\\s*(\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>");
-
+    private static ProjectSymbolIndex instance;
+    private final ExecutorService executor = Executors.newSingleThreadExecutor();
+    private final List<CompletionItem> cssClassItems = new ArrayList<>();
+    private final List<CompletionItem> cssIdItems = new ArrayList<>();
+    private final List<CompletionItem> htmlIdItems = new ArrayList<>();
     // Maps absolute file path to its exported CompletionItems
     private final Map<String, List<CompletionItem>> jsFileExports = new HashMap<>();
+    private String projectRoot = null;
 
-    private ProjectSymbolIndex() {}
+    private ProjectSymbolIndex() {
+    }
 
     public static synchronized ProjectSymbolIndex getInstance() {
         if (instance == null) {
@@ -57,20 +54,30 @@ public class ProjectSymbolIndex {
         return instance;
     }
 
+    public static File getProjectRoot(File file) {
+        if (file == null) return null;
+        File dir = file.isDirectory() ? file : file.getParentFile();
+        while (dir != null) {
+            if (new File(dir, "project_meta.json").exists()) return dir;
+            dir = dir.getParentFile();
+        }
+        return null;
+    }
+
     public void buildIndex(File rootDir) {
         if (rootDir == null) return;
         String rootPath = rootDir.getAbsolutePath();
         if (rootPath.equals(projectRoot)) return;
-        
+
         projectRoot = rootPath;
         executor.execute(() -> {
             Set<String> classNames = new HashSet<>();
             Set<String> cssIds = new HashSet<>();
             Set<String> htmlIds = new HashSet<>();
-            
+
             indexDirectoryRecursively(rootDir, classNames, cssIds, htmlIds);
-            
-            synchronized(this) {
+
+            synchronized (this) {
                 cssClassItems.clear();
                 for (String c : classNames) {
                     cssClassItems.add(new CompletionItem(c, c, "CSS Class", CompletionItem.Type.CSS_VALUE, 0));
@@ -100,7 +107,7 @@ public class ProjectSymbolIndex {
                 }
             }
         }
-        
+
         for (File f : files) {
             if (f.isDirectory()) {
                 indexDirectoryRecursively(f, classNames, cssIds, htmlIds);
@@ -120,12 +127,12 @@ public class ProjectSymbolIndex {
     private void indexCssFile(File file, Set<String> classNames, Set<String> cssIds) {
         String content = readFile(file);
         if (content == null) return;
-        
+
         Matcher mClass = PAT_CSS_CLASS.matcher(content);
         while (mClass.find()) {
             classNames.add(mClass.group(1));
         }
-        
+
         Matcher mId = PAT_CSS_ID.matcher(content);
         while (mId.find()) {
             String id = mId.group(1);
@@ -140,7 +147,7 @@ public class ProjectSymbolIndex {
     private void indexHtmlFile(File file, Set<String> classNames, Set<String> htmlIds) {
         String content = readFile(file);
         if (content == null) return;
-        
+
         Matcher m = PAT_HTML_ID.matcher(content);
         while (m.find()) {
             htmlIds.add(m.group(1));
@@ -249,8 +256,8 @@ public class ProjectSymbolIndex {
                 exports.add(new CompletionItem(fileName, fileName, "module.exports", CompletionItem.Type.VALUE, 0));
             }
         }
-        
-        synchronized(this) {
+
+        synchronized (this) {
             try {
                 jsFileExports.put(file.getCanonicalPath(), exports);
             } catch (Exception e) {
@@ -263,7 +270,7 @@ public class ProjectSymbolIndex {
         try {
             if (file.length() > 500 * 1024) return null; // Skip files > 500KB
             StringBuilder sb = new StringBuilder();
-            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), "UTF-8"))) {
+            try (BufferedReader br = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
                 char[] buffer = new char[4096];
                 int read;
                 while ((read = br.read(buffer)) != -1) {
@@ -290,10 +297,10 @@ public class ProjectSymbolIndex {
 
     public synchronized List<CompletionItem> getExportsForPath(File currentFile, String importPath) {
         if (currentFile == null || importPath == null) return new ArrayList<>();
-        
+
         File parent = currentFile.getParentFile();
         if (parent == null) return new ArrayList<>();
-        
+
         File targetFile = new File(parent, importPath);
         if (!targetFile.exists() && !importPath.endsWith(".js") && !importPath.endsWith(".ts")) {
             targetFile = new File(parent, importPath + ".js");
@@ -301,7 +308,7 @@ public class ProjectSymbolIndex {
                 targetFile = new File(parent, importPath + ".ts");
             }
         }
-        
+
         List<CompletionItem> exports = null;
         try {
             exports = jsFileExports.get(targetFile.getCanonicalPath());
@@ -309,15 +316,5 @@ public class ProjectSymbolIndex {
             exports = jsFileExports.get(targetFile.getAbsolutePath());
         }
         return exports != null ? new ArrayList<>(exports) : new ArrayList<>();
-    }
-
-    public static File getProjectRoot(File file) {
-        if (file == null) return null;
-        File dir = file.isDirectory() ? file : file.getParentFile();
-        while (dir != null) {
-            if (new File(dir, "project_meta.json").exists()) return dir;
-            dir = dir.getParentFile();
-        }
-        return null;
     }
 }

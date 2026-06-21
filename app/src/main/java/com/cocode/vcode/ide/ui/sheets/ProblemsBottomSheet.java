@@ -5,8 +5,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -16,35 +14,36 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.data.model.Problem;
+import com.cocode.vcode.ide.databinding.BottomSheetProblemsBinding;
 import com.cocode.vcode.ide.ui.editor.EditorViewModel;
 import com.cocode.vcode.ide.ui.editor.EditorViewModelFactory;
+import com.cocode.vcode.ide.utils.FontManager;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import java.util.ArrayList;
 import java.util.List;
-
-import com.cocode.vcode.ide.databinding.VcodeBottomSheetProblemsBinding;
-import com.cocode.vcode.ide.utils.FontManager;
 
 public class ProblemsBottomSheet extends BottomSheetDialogFragment {
 
     private ProblemsAdapter adapter;
     private ProblemListener listener;
     private EditorViewModel viewModel;
-    private VcodeBottomSheetProblemsBinding binding;
+    private BottomSheetProblemsBinding binding;
 
-    public interface ProblemListener {
-        void onProblemSelected(int lineNumber);
-    }
+    private java.io.File filterFile;
 
     public void setListener(ProblemListener listener) {
         this.listener = listener;
     }
 
+    public void setFilterFile(java.io.File file) {
+        this.filterFile = file;
+    }
+
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = VcodeBottomSheetProblemsBinding.inflate(inflater, container, false);
+        binding = BottomSheetProblemsBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
@@ -63,7 +62,13 @@ public class ProblemsBottomSheet extends BottomSheetDialogFragment {
 
         viewModel.getProblems().observe(getViewLifecycleOwner(), problems -> {
             if (problems != null) {
-                adapter.setProblems(problems, viewModel.getProjectRoot() != null ? viewModel.getProjectRoot().getAbsolutePath() : "");
+                List<Problem> filtered = new ArrayList<>();
+                for (Problem p : problems) {
+                    if (filterFile == null || (p.getFile() != null && p.getFile().equals(filterFile))) {
+                        filtered.add(p);
+                    }
+                }
+                adapter.setProblems(filtered, viewModel.getProjectRoot() != null ? viewModel.getProjectRoot().getAbsolutePath() : "");
             }
         });
     }
@@ -72,6 +77,10 @@ public class ProblemsBottomSheet extends BottomSheetDialogFragment {
     public void onDestroyView() {
         super.onDestroyView();
         binding = null;
+    }
+
+    public interface ProblemListener {
+        void onProblemSelected(int lineNumber);
     }
 
     private class ProblemsAdapter extends RecyclerView.Adapter<ProblemsAdapter.ViewHolder> {
@@ -88,8 +97,8 @@ public class ProblemsBottomSheet extends BottomSheetDialogFragment {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            com.cocode.vcode.ide.databinding.VcodeItemProblemBinding itemBinding = 
-                com.cocode.vcode.ide.databinding.VcodeItemProblemBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
+            com.cocode.vcode.ide.databinding.ItemProblemBinding itemBinding =
+                    com.cocode.vcode.ide.databinding.ItemProblemBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
             return new ViewHolder(itemBinding);
         }
 
@@ -143,9 +152,9 @@ public class ProblemsBottomSheet extends BottomSheetDialogFragment {
         }
 
         class ViewHolder extends RecyclerView.ViewHolder {
-            com.cocode.vcode.ide.databinding.VcodeItemProblemBinding binding;
+            com.cocode.vcode.ide.databinding.ItemProblemBinding binding;
 
-            ViewHolder(@NonNull com.cocode.vcode.ide.databinding.VcodeItemProblemBinding binding) {
+            ViewHolder(@NonNull com.cocode.vcode.ide.databinding.ItemProblemBinding binding) {
                 super(binding.getRoot());
                 this.binding = binding;
             }

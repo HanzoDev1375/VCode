@@ -16,12 +16,13 @@ public class VFSManager {
 
     private static VFSManager instance;
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    
+
     // Maps absolute directory path -> list of child files/folders
     private final Map<String, List<File>> directoryCache = new HashMap<>();
     private String projectRoot = null;
 
-    private VFSManager() {}
+    private VFSManager() {
+    }
 
     public static synchronized VFSManager getInstance() {
         if (instance == null) {
@@ -35,7 +36,7 @@ public class VFSManager {
      */
     public void buildCache(String rootPath) {
         if (rootPath == null || rootPath.equals(projectRoot)) return;
-        
+
         projectRoot = rootPath;
         executor.execute(() -> {
             directoryCache.clear();
@@ -49,12 +50,12 @@ public class VFSManager {
     private void indexDirectoryRecursively(File dir) {
         File[] children = dir.listFiles();
         if (children == null) return;
-        
+
         List<File> cachedList = new ArrayList<>();
         for (File child : children) {
             if (child.getName().startsWith(".")) continue; // Skip hidden/git
             cachedList.add(child);
-            
+
             // Also add sub-directories to the queue
             if (child.isDirectory()) {
                 indexDirectoryRecursively(child);
@@ -68,7 +69,7 @@ public class VFSManager {
      */
     public List<File> listCachedFiles(File directory) {
         if (directory == null) return null;
-        
+
         // If not in cache, fallback to disk (and maybe add it to cache)
         if (!directoryCache.containsKey(directory.getAbsolutePath())) {
             File[] diskFiles = directory.listFiles();
@@ -82,10 +83,10 @@ public class VFSManager {
             }
             return null;
         }
-        
+
         return directoryCache.get(directory.getAbsolutePath());
     }
-    
+
     /**
      * Invalidates the cache for a specific directory (e.g. when a file is created/deleted).
      */

@@ -36,6 +36,15 @@ import java.util.Set;
  * commit building, revision log histories, diff generation, reset workflows, and branch orchestration.
  */
 public class GitRepository {
+    /**
+     * Attaches to an existing repository on disk or sets up a brand new one
+     * using the configured fallback branch configurations.
+     *
+     * @param projectDir The root folder tracking active project files.
+     */
+    // Default exclusion patterns written to .gitignore on fresh repository initialization
+    private static final String DEFAULT_GITIGNORE =
+            "node_modules/\n.DS_Store\n*.log\ndist/\nbuild/\n.env\n.env.local\n*.class\n*.jar\nsession.json\nproject_meta.json";
     private Git git;
     private String configuredDefaultBranch = "main";
     private File repoDir;
@@ -48,16 +57,6 @@ public class GitRepository {
             this.configuredDefaultBranch = branchName.trim();
         }
     }
-
-    /**
-     * Attaches to an existing repository on disk or sets up a brand new one
-     * using the configured fallback branch configurations.
-     *
-     * @param projectDir The root folder tracking active project files.
-     */
-    // Default exclusion patterns written to .gitignore on fresh repository initialization
-    private static final String DEFAULT_GITIGNORE =
-            "node_modules/\n.DS_Store\n*.log\ndist/\nbuild/\n.env\n.env.local\n*.class\n*.jar\nsession.json\nproject_meta.json";
 
     public void openRepository(File projectDir) throws Exception {
         this.repoDir = projectDir;

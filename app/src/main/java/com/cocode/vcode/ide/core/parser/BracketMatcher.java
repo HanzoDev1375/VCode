@@ -9,6 +9,91 @@ public class BracketMatcher {
     private static final String OPEN_BRACKETS = "({[";
     private static final String CLOSE_BRACKETS = ")}]";
 
+    public static void applyRainbowBrackets(android.text.SpannableStringBuilder ssb, String text, int[] colors) {
+        if (text == null || colors == null || colors.length == 0) return;
+
+        // One shared depth counter so nested (){}[] all get consistent colors
+        int depth = 0;
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            boolean isOpen = c == '(' || c == '{' || c == '[';
+            boolean isClose = c == ')' || c == '}' || c == ']';
+            if (!isOpen && !isClose) continue;
+
+            if (isOpen) {
+                int colorIdx = depth % colors.length;
+                ssb.setSpan(
+                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[colorIdx]),
+                        i, i + 1,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+                depth++;
+            } else {
+                depth = Math.max(0, depth - 1);
+                int colorIdx = depth % colors.length;
+                ssb.setSpan(
+                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[colorIdx]),
+                        i, i + 1,
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
+                );
+            }
+        }
+    }
+
+    public static java.util.List<com.cocode.vcode.ide.data.model.Problem> findMismatches(java.io.File file, String text) {
+        java.util.List<com.cocode.vcode.ide.data.model.Problem> problems = new java.util.ArrayList<>();
+        if (text == null || text.isEmpty()) return problems;
+
+        java.util.Stack<int[]> parenStack = new java.util.Stack<>();
+        java.util.Stack<int[]> bracketStack = new java.util.Stack<>();
+        java.util.Stack<int[]> braceStack = new java.util.Stack<>();
+
+        int line = 1;
+        int col = 1;
+
+        for (int i = 0; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '(') parenStack.push(new int[]{line, col});
+            else if (c == '[') bracketStack.push(new int[]{line, col});
+            else if (c == '{') braceStack.push(new int[]{line, col});
+            else if (c == ')') {
+                if (parenStack.isEmpty()) {
+                    problems.add(new com.cocode.vcode.ide.data.model.Problem(file, line, col, 1, "Unmatched closing parenthesis ')'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
+                } else parenStack.pop();
+            } else if (c == ']') {
+                if (bracketStack.isEmpty()) {
+                    problems.add(new com.cocode.vcode.ide.data.model.Problem(file, line, col, 1, "Unmatched closing bracket ']'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
+                } else bracketStack.pop();
+            } else if (c == '}') {
+                if (braceStack.isEmpty()) {
+                    problems.add(new com.cocode.vcode.ide.data.model.Problem(file, line, col, 1, "Unmatched closing brace '}'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
+                } else braceStack.pop();
+            }
+
+            if (c == '\n') {
+                line++;
+                col = 1;
+            } else {
+                col++;
+            }
+        }
+
+        while (!parenStack.isEmpty()) {
+            int[] pos = parenStack.pop();
+            problems.add(new com.cocode.vcode.ide.data.model.Problem(file, pos[0], pos[1], 1, "Unclosed parenthesis '('", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
+        }
+        while (!bracketStack.isEmpty()) {
+            int[] pos = bracketStack.pop();
+            problems.add(new com.cocode.vcode.ide.data.model.Problem(file, pos[0], pos[1], 1, "Unclosed bracket '['", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
+        }
+        while (!braceStack.isEmpty()) {
+            int[] pos = braceStack.pop();
+            problems.add(new com.cocode.vcode.ide.data.model.Problem(file, pos[0], pos[1], 1, "Unclosed brace '{'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
+        }
+
+        return problems;
+    }
+
     /**
      * Inspects the character directly under the cursor and tracks its matching sibling balance
      * by scanning either forward or backward through the document text.
@@ -60,88 +145,6 @@ public class BracketMatcher {
 
         // No matching partner token was discovered within document limits
         return new MatchResult(-1, -1, false);
-    }
-
-    public static void applyRainbowBrackets(android.text.SpannableStringBuilder ssb, String text, int[] colors) {
-        if (text == null || colors == null || colors.length == 0) return;
-
-        // One shared depth counter so nested (){}[] all get consistent colors
-        int depth = 0;
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            boolean isOpen  = c == '(' || c == '{' || c == '[';
-            boolean isClose = c == ')' || c == '}' || c == ']';
-            if (!isOpen && !isClose) continue;
-
-            if (isOpen) {
-                int colorIdx = depth % colors.length;
-                ssb.setSpan(
-                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[colorIdx]),
-                        i, i + 1,
-                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
-                depth++;
-            } else {
-                depth = Math.max(0, depth - 1);
-                int colorIdx = depth % colors.length;
-                ssb.setSpan(
-                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[colorIdx]),
-                        i, i + 1,
-                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
-            }
-        }
-    }
-
-    public static java.util.List<com.cocode.vcode.ide.data.model.Problem> findMismatches(java.io.File file, String text) {
-        java.util.List<com.cocode.vcode.ide.data.model.Problem> problems = new java.util.ArrayList<>();
-        if (text == null || text.isEmpty()) return problems;
-
-        java.util.Stack<Integer> parenStack = new java.util.Stack<>();
-        java.util.Stack<Integer> bracketStack = new java.util.Stack<>();
-        java.util.Stack<Integer> braceStack = new java.util.Stack<>();
-
-        int line = 1;
-        int col = 1;
-
-        for (int i = 0; i < text.length(); i++) {
-            char c = text.charAt(i);
-            if (c == '(') parenStack.push(line);
-            else if (c == '[') bracketStack.push(line);
-            else if (c == '{') braceStack.push(line);
-            else if (c == ')') {
-                if (parenStack.isEmpty()) {
-                    problems.add(new com.cocode.vcode.ide.data.model.Problem(file, line, col, "Unmatched closing parenthesis ')'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
-                } else parenStack.pop();
-            } else if (c == ']') {
-                if (bracketStack.isEmpty()) {
-                    problems.add(new com.cocode.vcode.ide.data.model.Problem(file, line, col, "Unmatched closing bracket ']'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
-                } else bracketStack.pop();
-            } else if (c == '}') {
-                if (braceStack.isEmpty()) {
-                    problems.add(new com.cocode.vcode.ide.data.model.Problem(file, line, col, "Unmatched closing brace '}'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
-                } else braceStack.pop();
-            }
-
-            if (c == '\n') {
-                line++;
-                col = 1;
-            } else {
-                col++;
-            }
-        }
-
-        while (!parenStack.isEmpty()) {
-            problems.add(new com.cocode.vcode.ide.data.model.Problem(file, parenStack.pop(), 0, "Unclosed parenthesis '('", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
-        }
-        while (!bracketStack.isEmpty()) {
-            problems.add(new com.cocode.vcode.ide.data.model.Problem(file, bracketStack.pop(), 0, "Unclosed bracket '['", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
-        }
-        while (!braceStack.isEmpty()) {
-            problems.add(new com.cocode.vcode.ide.data.model.Problem(file, braceStack.pop(), 0, "Unclosed brace '{'", com.cocode.vcode.ide.data.model.Problem.Severity.ERROR));
-        }
-
-        return problems;
     }
 
     /**

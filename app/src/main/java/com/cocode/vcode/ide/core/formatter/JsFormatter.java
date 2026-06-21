@@ -39,7 +39,8 @@ public class JsFormatter extends BaseFormatter {
             // String block protection: Pass internal contents forward unmodified
             if (inString) {
                 out.append(c);
-                if (c == stringChar && (i == 0 || cleanCode.charAt(i - 1) != '\\')) inString = false;
+                if (c == stringChar && (i == 0 || cleanCode.charAt(i - 1) != '\\'))
+                    inString = false;
                 continue;
             }
 

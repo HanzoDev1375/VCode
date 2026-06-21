@@ -72,24 +72,26 @@ public class PreviewActivity extends BaseActivity {
             // Filter: if we know our project path, only reload for files within it
             if (projectPath != null) {
                 try {
-                    if (!file.getCanonicalPath().startsWith(new java.io.File(projectPath).getCanonicalPath())) return;
-                } catch (Exception ignored) {}
+                    if (!file.getCanonicalPath().startsWith(new java.io.File(projectPath).getCanonicalPath()))
+                        return;
+                } catch (Exception ignored) {
+                }
             }
             String name = file.getName();
-                if (name.endsWith(".css")) {
-                    // CSS hot-swap
-                    String js = "var links = document.getElementsByTagName('link');" +
-                                "for (var i = 0; i < links.length; i++) {" +
-                                "  var link = links[i];" +
-                                "  if (link.rel === 'stylesheet' && link.href.indexOf('" + name + "') !== -1) {" +
-                                "    link.href = link.href.split('?')[0] + '?t=' + new Date().getTime();" +
-                                "  }" +
-                                "}";
-                    binding.webView.evaluateJavascript(js, null);
-                } else if (name.endsWith(".html") || name.endsWith(".js")) {
-                    // Full reload
-                    binding.webView.evaluateJavascript("location.reload();", null);
-                }
+            if (name.endsWith(".css")) {
+                // CSS hot-swap
+                String js = "var links = document.getElementsByTagName('link');" +
+                        "for (var i = 0; i < links.length; i++) {" +
+                        "  var link = links[i];" +
+                        "  if (link.rel === 'stylesheet' && link.href.indexOf('" + name + "') !== -1) {" +
+                        "    link.href = link.href.split('?')[0] + '?t=' + new Date().getTime();" +
+                        "  }" +
+                        "}";
+                binding.webView.evaluateJavascript(js, null);
+            } else if (name.endsWith(".html") || name.endsWith(".js")) {
+                // Full reload
+                binding.webView.evaluateJavascript("location.reload();", null);
+            }
         });
 
         loadUrl(currentUrl);
@@ -220,7 +222,7 @@ public class PreviewActivity extends BaseActivity {
         binding.btnVpPhone.setOnClickListener(v -> setViewport(0));
         binding.btnVpTablet.setOnClickListener(v -> setViewport(768));
         binding.btnVpDesktop.setOnClickListener(v -> setViewport(1280));
-        
+
         binding.btnToggleConsole.setOnClickListener(v -> toggleConsoleMode());
         binding.btnCloseConsole.setOnClickListener(v -> {
             if (binding.layoutConsole.getVisibility() == View.VISIBLE) {
@@ -232,7 +234,6 @@ public class PreviewActivity extends BaseActivity {
             logCount = 0;
             binding.tvConsoleCount.setVisibility(View.GONE);
         });
-
 
 
         // Attempt to open the current preview URL in an external system browser
@@ -346,8 +347,8 @@ public class PreviewActivity extends BaseActivity {
         androidx.transition.Transition transition = new androidx.transition.Slide(android.view.Gravity.BOTTOM);
         transition.setDuration(250);
         transition.setInterpolator(new androidx.interpolator.view.animation.FastOutSlowInInterpolator());
-        androidx.transition.TransitionManager.beginDelayedTransition((android.view.ViewGroup) binding.getRoot(), transition);
-        
+        androidx.transition.TransitionManager.beginDelayedTransition(binding.getRoot(), transition);
+
         if (binding.layoutConsole.getVisibility() == View.VISIBLE) {
             binding.layoutConsole.setVisibility(View.GONE);
         } else {
@@ -375,7 +376,7 @@ public class PreviewActivity extends BaseActivity {
             binding.webView.setPivotX(0);
             binding.webView.setPivotY(0);
             binding.webView.requestLayout();
-            
+
             android.webkit.WebSettings settings = binding.webView.getSettings();
             settings.setUserAgentString(null);
             settings.setUseWideViewPort(true);
@@ -384,21 +385,21 @@ public class PreviewActivity extends BaseActivity {
 
         int targetWidthPx = (int) (widthDp * density);
         float scale = (float) screenWidthPx / targetWidthPx;
-        
+
         if (scale > 1f) scale = 1f;
 
         int targetHeightPx = (int) (screenHeightPx / scale);
 
         binding.webView.getLayoutParams().width = targetWidthPx;
         binding.webView.getLayoutParams().height = targetHeightPx;
-        
+
         binding.webView.setPivotX(0);
         binding.webView.setPivotY(0);
         binding.webView.setScaleX(scale);
         binding.webView.setScaleY(scale);
-        
+
         binding.webView.requestLayout();
-        
+
         android.webkit.WebSettings settings = binding.webView.getSettings();
         if (widthDp == 1280) {
             String desktopUserAgent = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Safari/537.36";
@@ -406,7 +407,7 @@ public class PreviewActivity extends BaseActivity {
         } else {
             settings.setUserAgentString(null);
         }
-        
+
         binding.webView.evaluateJavascript("window.dispatchEvent(new Event('resize'));", null);
     }
 }

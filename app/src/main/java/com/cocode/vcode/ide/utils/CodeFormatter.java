@@ -5,6 +5,7 @@ import com.cocode.vcode.ide.core.formatter.CssFormatter;
 import com.cocode.vcode.ide.core.formatter.HtmlFormatter;
 import com.cocode.vcode.ide.core.formatter.JsFormatter;
 import com.cocode.vcode.ide.core.formatter.JsonFormatter;
+import com.cocode.vcode.ide.core.formatter.TsFormatter;
 import com.cocode.vcode.ide.core.model.FileType;
 
 import java.util.EnumMap;
@@ -25,6 +26,7 @@ public class CodeFormatter {
         FORMATTERS.put(FileType.HTML, new HtmlFormatter());
         FORMATTERS.put(FileType.CSS, new CssFormatter());
         FORMATTERS.put(FileType.JAVASCRIPT, new JsFormatter());
+        FORMATTERS.put(FileType.TYPESCRIPT, new TsFormatter());
     }
 
     public static boolean isFormatSupported(FileType language) {

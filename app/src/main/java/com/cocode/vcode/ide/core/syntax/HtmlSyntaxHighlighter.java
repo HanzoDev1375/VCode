@@ -277,7 +277,7 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
             if (styleAttrMatcher.group(1) != null) {
                 int valStart = styleAttrMatcher.start(1);
                 String valStr = styleAttrMatcher.group(1);
-                
+
                 Matcher m = Pattern.compile("(#(?:[0-9a-fA-F]{3,4}){1,2}\\b|\\b(?:rgb|hsl)a?\\([^)]+\\)|\\b(?i)(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|transparent|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)\\b)").matcher(valStr);
                 while (m.find()) {
                     int absStart = valStart + m.start();
@@ -304,7 +304,7 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
     private void mergeSpans(SpannableStringBuilder target,
                             SpannableStringBuilder source, int offset) {
         if (source == null || offset < 0) return;
-        
+
         SyntaxHighlightSpan[] spans =
                 source.getSpans(0, source.length(), SyntaxHighlightSpan.class);
         for (SyntaxHighlightSpan span : spans) {
@@ -312,7 +312,7 @@ public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
             int e = source.getSpanEnd(span) + offset;
             applySpan(target, s, e, span.getForegroundColor(), span.isUnderline());
         }
-        
+
         ColorPreviewSpan[] colorSpans =
                 source.getSpans(0, source.length(), ColorPreviewSpan.class);
         for (ColorPreviewSpan span : colorSpans) {

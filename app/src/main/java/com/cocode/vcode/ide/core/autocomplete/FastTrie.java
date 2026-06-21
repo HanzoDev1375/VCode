@@ -10,13 +10,6 @@ import java.util.List;
  */
 public class FastTrie {
 
-    private static class TrieNode {
-        // Using an array for ASCII characters (0-127) for O(1) child lookup
-        final TrieNode[] children = new TrieNode[128];
-        boolean isEndOfWord = false;
-        CompletionItem item = null;
-    }
-
     private TrieNode root = new TrieNode();
 
     /**
@@ -32,12 +25,12 @@ public class FastTrie {
     public void insert(CompletionItem item) {
         if (item == null || item.getLabel() == null) return;
         String word = item.getLabel().toLowerCase();
-        
+
         TrieNode current = root;
         for (int i = 0; i < word.length(); i++) {
             char c = word.charAt(i);
             if (c >= 128) continue; // Only index standard ASCII for speed, skip others
-            
+
             if (current.children[c] == null) {
                 current.children[c] = new TrieNode();
             }
@@ -71,7 +64,7 @@ public class FastTrie {
         for (int i = 0; i < lowerPrefix.length(); i++) {
             char c = lowerPrefix.charAt(i);
             if (c >= 128) return results; // Prefix contains non-ASCII
-            
+
             if (current.children[c] == null) {
                 return results; // Prefix not found
             }
@@ -80,7 +73,7 @@ public class FastTrie {
 
         // 2. Perform DFS to gather all end-of-word items from this node
         gatherItems(current, results, maxResults);
-        
+
         // 3. Sort by priority
         Collections.sort(results, (a, b) -> b.getTypePriority() - a.getTypePriority());
         return results;
@@ -88,15 +81,22 @@ public class FastTrie {
 
     private void gatherItems(TrieNode node, List<CompletionItem> results, int maxResults) {
         if (results.size() >= maxResults) return;
-        
+
         if (node.isEndOfWord && node.item != null) {
             results.add(node.item);
         }
-        
+
         for (int i = 0; i < 128; i++) {
             if (node.children[i] != null) {
                 gatherItems(node.children[i], results, maxResults);
             }
         }
+    }
+
+    private static class TrieNode {
+        // Using an array for ASCII characters (0-127) for O(1) child lookup
+        final TrieNode[] children = new TrieNode[128];
+        boolean isEndOfWord = false;
+        CompletionItem item = null;
     }
 }

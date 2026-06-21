@@ -31,6 +31,7 @@ Write code at the speed of thought. VCode's editor never stutters, never freezes
 - **One‑tap code formatting** for JS, CSS, HTML, and JSON — your cursor stays exactly where it was.
 - **Smart overflow menu** — text‑editing tools (Find/Replace, Go to Line, Format Code) automatically appear or hide based on the active file type and view mode.
 - Auto‑closing brackets, smart indentation, Find & Replace with regex, and real‑time JSON validation.
+- **Intelligent diagnostics** — real‑time linting for HTML, CSS, JavaScript, and TypeScript with color‑coded squiggly underlines (red errors, yellow warnings, blue hints) drawn directly in the editor at the exact token position.
 
 ---
 

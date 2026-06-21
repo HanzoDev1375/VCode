@@ -288,7 +288,7 @@ public class SnippetRepository {
         obj.put("title", item.getTitle());
         obj.put("content", item.getContent());
         obj.put("fileType", item.getFileType().name());
-        
+
         // Custom namespaces for non-code snippets
         if (item.getId() != null && item.getId().startsWith("git_template_")) {
             obj.put("namespace", "git_templates");

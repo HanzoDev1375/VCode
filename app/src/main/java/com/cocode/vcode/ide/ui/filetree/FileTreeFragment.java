@@ -128,7 +128,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         binding.btnRefresh.setOnClickListener(v -> viewModel.refreshFileTree());
         binding.btnImportFiles.setOnClickListener(v -> showImportDestinationDialog(() -> importFilesLauncher.launch("*/*")));
         binding.btnImportFolder.setOnClickListener(v -> showImportDestinationDialog(() -> importFolderLauncher.launch(null)));
-        
+
         binding.btnSearch.setOnClickListener(v -> {
             if (viewModel.getProjectRoot() != null) {
                 com.cocode.vcode.ide.ui.sheets.ProjectSearchBottomSheet bottomSheet = new com.cocode.vcode.ide.ui.sheets.ProjectSearchBottomSheet();

@@ -22,7 +22,9 @@ import java.util.List;
  */
 public abstract class AutoCompleteEngine {
 
-    /** Maximum number of suggestions shown in the popup — matches VS Code's default. */
+    /**
+     * Maximum number of suggestions shown in the popup — matches VS Code's default.
+     */
     protected static final int MAX_SUGGESTIONS = 20;
 
     protected final Context context;
@@ -84,19 +86,38 @@ public abstract class AutoCompleteEngine {
             // Inside braces/brackets/parens, allow any character
             if (braceDepth > 0 || bracketDepth > 0 || parenDepth > 0) {
                 if (c == '}') braceDepth++;
-                else if (c == '{') { braceDepth--; if (braceDepth < 0) break; }
-                else if (c == ']') bracketDepth++;
-                else if (c == '[') { bracketDepth--; if (bracketDepth < 0) break; }
-                else if (c == ')') parenDepth++;
-                else if (c == '(') { parenDepth--; if (parenDepth < 0) break; }
+                else if (c == '{') {
+                    braceDepth--;
+                    if (braceDepth < 0) break;
+                } else if (c == ']') bracketDepth++;
+                else if (c == '[') {
+                    bracketDepth--;
+                    if (bracketDepth < 0) break;
+                } else if (c == ')') parenDepth++;
+                else if (c == '(') {
+                    parenDepth--;
+                    if (parenDepth < 0) break;
+                }
                 start--;
                 continue;
             }
 
             // Opening delimiters (walking backward, these are "closing" from our perspective)
-            if (c == '}') { braceDepth++; start--; continue; }
-            if (c == ']') { bracketDepth++; start--; continue; }
-            if (c == ')') { parenDepth++; start--; continue; }
+            if (c == '}') {
+                braceDepth++;
+                start--;
+                continue;
+            }
+            if (c == ']') {
+                bracketDepth++;
+                start--;
+                continue;
+            }
+            if (c == ')') {
+                parenDepth++;
+                start--;
+                continue;
+            }
 
             // Standard Emmet characters
             if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$'
@@ -162,8 +183,7 @@ public abstract class AutoCompleteEngine {
             if (escaped) {
                 int slashes = 0;
                 for (int j = i - 1; j >= 0 && line.charAt(j) == '\\'; j--) slashes++;
-                if (slashes % 2 != 0) escaped = true;
-                else escaped = false;
+                escaped = slashes % 2 != 0;
             }
 
             if (!escaped) {
@@ -186,7 +206,7 @@ public abstract class AutoCompleteEngine {
      *   <li>Word-boundary / CamelCase hit match</li>
      *   <li>Fuzzy subsequence match with consecutive-run and boundary bonuses</li>
      * </ol>
-     *
+     * <p>
      * Results are sorted descending by (sortScore + typePriority) then returned up to MAX_SUGGESTIONS.
      */
     protected List<CompletionItem> fuzzyFilter(List<CompletionItem> all, String prefix) {

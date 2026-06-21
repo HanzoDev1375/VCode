@@ -22,9 +22,10 @@ public class LineNumberView extends View {
     private Paint numberPaint;
     private Paint bgPaint;
     private Paint dividerPaint;
-    private int currentLine = 1;
+    private final int currentLine = 1;
     private int gutterWidth = 0;
     private CodeEditText editor;
+    private int cursorOffset = 0;
 
     public LineNumberView(Context context) {
         super(context);
@@ -54,9 +55,16 @@ public class LineNumberView extends View {
         dividerPaint.setStrokeWidth(DIVIDER_WIDTH_PX);
     }
 
+    public void setCursorOffset(int cursorOffset) {
+        if (this.cursorOffset != cursorOffset) {
+            this.cursorOffset = cursorOffset;
+            invalidate();
+        }
+    }
+
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
-        if (editor == null || editor.getLayout() == null) return;
+        if (editor == null || editor.getLayout() == null || editor.getText() == null) return;
 
         // Render sidebar background sheet strip bounds
         canvas.drawRect(0, 0, getWidth(), getHeight(), bgPaint);
@@ -71,6 +79,7 @@ public class LineNumberView extends View {
         float textX = getWidth() - DIVIDER_WIDTH_PX - dpToPx(4);
 
         android.text.Layout layout = editor.getLayout();
+        String text = editor.getText().toString();
         int paddingTop = editor.getPaddingTop();
         int scrollY = editor.getScrollY();
 
@@ -78,17 +87,39 @@ public class LineNumberView extends View {
         int firstVisibleLine = layout.getLineForVertical(scrollY);
         int lastVisibleLine = layout.getLineForVertical(scrollY + getHeight());
 
+        // Calculate the active logical line
+        int activeLogicalLine = 1;
+        for (int j = 0; j < cursorOffset && j < text.length(); j++) {
+            if (text.charAt(j) == '\n') activeLogicalLine++;
+        }
+
+        int firstLineStart = layout.getLineStart(firstVisibleLine);
+        int logicalLine = 1;
+        for (int j = 0; j < firstLineStart && j < text.length(); j++) {
+            if (text.charAt(j) == '\n') logicalLine++;
+        }
+
+        int scanOffset = firstLineStart;
         for (int i = firstVisibleLine; i <= lastVisibleLine; i++) {
-            int lineNumber = i + 1;
+            int lineStart = layout.getLineStart(i);
+
+            // Advance scanOffset to lineStart, counting newlines
+            while (scanOffset < lineStart && scanOffset < text.length()) {
+                if (text.charAt(scanOffset) == '\n') logicalLine++;
+                scanOffset++;
+            }
+
+            boolean isNewLogicalLine = (lineStart == 0) || (lineStart > 0 && lineStart <= text.length() && text.charAt(lineStart - 1) == '\n');
 
             // Extract the baseline Y coordinate to position indices on target with editor code lines
             int baselineY = layout.getLineBaseline(i);
             float y = paddingTop + baselineY - scrollY;
 
-            // Emphasize text color parameters if the index matches the active editing row
-            numberPaint.setColor(lineNumber == currentLine ? colorPrimary : colorSecondary);
-
-            canvas.drawText(String.valueOf(lineNumber), textX, y, numberPaint);
+            if (isNewLogicalLine) {
+                // Emphasize text color parameters if the index matches the active editing row
+                numberPaint.setColor(logicalLine == activeLogicalLine ? colorPrimary : colorSecondary);
+                canvas.drawText(String.valueOf(logicalLine), textX, y, numberPaint);
+            }
         }
     }
 
@@ -105,13 +136,6 @@ public class LineNumberView extends View {
 
     public void setLineCount() {
         // invalidate is driven by syncComplete()
-    }
-
-    public void setCurrentLine(int currentLine) {
-        if (this.currentLine != currentLine) {
-            this.currentLine = currentLine;
-            invalidate();
-        }
     }
 
     public void setScrollY(int scrollY) {

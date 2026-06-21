@@ -38,7 +38,8 @@ public class CssFormatter extends BaseFormatter {
             if (inString) {
                 out.append(c);
                 // Exit string mode if we see the matching closing quote, unless it's escaped via backslash
-                if (c == stringChar && (i == 0 || cleanCode.charAt(i - 1) != '\\')) inString = false;
+                if (c == stringChar && (i == 0 || cleanCode.charAt(i - 1) != '\\'))
+                    inString = false;
                 continue;
             }
 

@@ -83,19 +83,32 @@ public class CompletionItem {
     public int getTypePriority() {
         if (type == null) return 0;
         switch (type) {
-            case SNIPPET:    return 10;
-            case FUNCTION:   return 6;
-            case BUILTIN:    return 5;
-            case KEYWORD:    return 4;
-            case TAG:        return 3;
-            case ATTRIBUTE:  return 3;
-            case CSS_PROPERTY: return 3;
-            case CSS_VALUE:  return 2;
-            case VALUE:      return 2;
-            case JSON_KEY:   return 2;
-            case FILE:       return 1;
-            case FOLDER:     return 1;
-            default:         return 0;
+            case SNIPPET:
+                return 10;
+            case FUNCTION:
+                return 6;
+            case BUILTIN:
+                return 5;
+            case KEYWORD:
+                return 4;
+            case TAG:
+                return 3;
+            case ATTRIBUTE:
+                return 3;
+            case CSS_PROPERTY:
+                return 3;
+            case CSS_VALUE:
+                return 2;
+            case VALUE:
+                return 2;
+            case JSON_KEY:
+                return 2;
+            case FILE:
+                return 1;
+            case FOLDER:
+                return 1;
+            default:
+                return 0;
         }
     }
 

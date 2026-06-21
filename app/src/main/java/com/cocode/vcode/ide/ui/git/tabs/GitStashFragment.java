@@ -93,7 +93,7 @@ public class GitStashFragment extends Fragment {
         @NonNull
         @Override
         public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.vcode_item_stash, parent, false);
+            View view = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_stash, parent, false);
             return new ViewHolder(view);
         }
 

@@ -10,7 +10,9 @@ import java.util.regex.Pattern;
 public class ColorParser {
 
     private static final Map<String, Integer> NAMED_COLORS = new HashMap<>();
-    
+    private static final Pattern RGB_PATTERN = Pattern.compile("rgba?\\(\\s*([\\d.]+)(%?)\\s*[, ]\\s*([\\d.]+)(%?)\\s*[, ]\\s*([\\d.]+)(%?)(?:\\s*[,/]\\s*([\\d.]+)(%?))?\\s*\\)");
+    private static final Pattern HSL_PATTERN = Pattern.compile("hsla?\\(\\s*([\\d.]+)(deg|rad|grad|turn)?\\s*[, ]\\s*([\\d.]+)%\\s*[, ]\\s*([\\d.]+)%(?:\\s*[,/]\\s*([\\d.]+)(%?))?\\s*\\)");
+
     static {
         NAMED_COLORS.put("aliceblue", 0xFFF0F8FF);
         NAMED_COLORS.put("antiquewhite", 0xFFFAEBD7);
@@ -162,30 +164,27 @@ public class ColorParser {
         NAMED_COLORS.put("yellowgreen", 0xFF9ACD32);
         NAMED_COLORS.put("transparent", 0x00000000);
     }
-    
-    private static final Pattern RGB_PATTERN = Pattern.compile("rgba?\\(\\s*([\\d.]+)(%?)\\s*[, ]\\s*([\\d.]+)(%?)\\s*[, ]\\s*([\\d.]+)(%?)(?:\\s*[,/]\\s*([\\d.]+)(%?))?\\s*\\)");
-    private static final Pattern HSL_PATTERN = Pattern.compile("hsla?\\(\\s*([\\d.]+)(deg|rad|grad|turn)?\\s*[, ]\\s*([\\d.]+)%\\s*[, ]\\s*([\\d.]+)%(?:\\s*[,/]\\s*([\\d.]+)(%?))?\\s*\\)");
 
     public static Integer parse(String colorStr) {
         if (colorStr == null) return null;
         colorStr = colorStr.trim().toLowerCase();
-        
+
         if (NAMED_COLORS.containsKey(colorStr)) {
             return NAMED_COLORS.get(colorStr);
         }
-        
+
         if (colorStr.startsWith("#")) {
             return parseHex(colorStr);
         }
-        
+
         if (colorStr.startsWith("rgb")) {
             return parseRgb(colorStr);
         }
-        
+
         if (colorStr.startsWith("hsl")) {
             return parseHsl(colorStr);
         }
-        
+
         return null;
     }
 
@@ -245,19 +244,38 @@ public class ColorParser {
                 if (matcher.group(5) != null) {
                     a = parseAlpha(matcher.group(5), "%".equals(matcher.group(6)));
                 }
-                
+
                 // Convert HSL to RGB
                 float c = (1 - Math.abs(2 * l - 1)) * s;
                 float x = c * (1 - Math.abs((h / 60) % 2 - 1));
                 float m = l - c / 2;
                 float r = 0, g = 0, b = 0;
-                if (0 <= h && h < 60) { r = c; g = x; b = 0; }
-                else if (60 <= h && h < 120) { r = x; g = c; b = 0; }
-                else if (120 <= h && h < 180) { r = 0; g = c; b = x; }
-                else if (180 <= h && h < 240) { r = 0; g = x; b = c; }
-                else if (240 <= h && h < 300) { r = x; g = 0; b = c; }
-                else if (300 <= h && h < 360) { r = c; g = 0; b = x; }
-                
+                if (0 <= h && h < 60) {
+                    r = c;
+                    g = x;
+                    b = 0;
+                } else if (60 <= h && h < 120) {
+                    r = x;
+                    g = c;
+                    b = 0;
+                } else if (120 <= h && h < 180) {
+                    r = 0;
+                    g = c;
+                    b = x;
+                } else if (180 <= h && h < 240) {
+                    r = 0;
+                    g = x;
+                    b = c;
+                } else if (240 <= h && h < 300) {
+                    r = x;
+                    g = 0;
+                    b = c;
+                } else if (300 <= h && h < 360) {
+                    r = c;
+                    g = 0;
+                    b = x;
+                }
+
                 return Color.argb((int) a, (int) ((r + m) * 255), (int) ((g + m) * 255), (int) ((b + m) * 255));
             } catch (Exception e) {
                 // Ignore
@@ -273,7 +291,7 @@ public class ColorParser {
         }
         return Math.max(0, Math.min(max, f));
     }
-    
+
     private static float parseAlpha(String val, boolean isPercent) {
         float f = Float.parseFloat(val);
         if (isPercent) {
@@ -281,7 +299,7 @@ public class ColorParser {
         }
         return Math.max(0, Math.min(255, f * 255f));
     }
-    
+
     private static float parseHue(String val, String unit) {
         float h = Float.parseFloat(val);
         if ("rad".equals(unit)) {

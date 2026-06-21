@@ -59,7 +59,6 @@ public class SettingsActivity extends BaseActivity {
         binding.opShowLineNumbers.setOnClickListener(_view -> binding.switchLineNumbers.setChecked(!binding.switchLineNumbers.isChecked()));
         binding.opAutoCloseBrackets.setOnClickListener(_view -> binding.switchAutoClose.setChecked(!binding.switchAutoClose.isChecked()));
         binding.opAutoIndent.setOnClickListener(_view -> binding.switchAutoIndent.setChecked(!binding.switchAutoIndent.isChecked()));
-        binding.opValidateJson.setOnClickListener(_view -> binding.switchValidateJson.setChecked(!binding.switchValidateJson.isChecked()));
         binding.opConfirmHardReset.setOnClickListener(_view -> binding.switchConfirmReset.setChecked(!binding.switchConfirmReset.isChecked()));
         binding.opShowInAppPreview.setOnClickListener(_view -> binding.switchInAppPreview.setChecked(!binding.switchInAppPreview.isChecked()));
         binding.opAutoSave.setOnClickListener(_view -> binding.switchAutoSave.setChecked(!binding.switchAutoSave.isChecked()));
@@ -115,9 +114,6 @@ public class SettingsActivity extends BaseActivity {
             if (!isUpdatingUi) viewModel.updateAutoIndent(isChecked);
         });
 
-        binding.switchValidateJson.setOnCheckedChangeListener((btn, isChecked) -> {
-            if (!isUpdatingUi) viewModel.updateJsonValidateRealtime(isChecked);
-        });
 
         binding.switchInAppPreview.setOnCheckedChangeListener((btn, isChecked) -> {
             if (!isUpdatingUi) viewModel.updateOpenPreviewInApp(isChecked);
@@ -179,7 +175,6 @@ public class SettingsActivity extends BaseActivity {
                 binding.switchLineNumbers.setChecked(settings.isShowLineNumbers());
                 binding.switchAutoClose.setChecked(settings.isAutoCloseBrackets());
                 binding.switchAutoIndent.setChecked(settings.autoIndent);
-                binding.switchValidateJson.setChecked(settings.jsonValidateRealtime);
                 binding.switchInAppPreview.setChecked(settings.openPreviewInApp);
                 binding.switchAutoSave.setChecked(settings.autoSave);
                 binding.switchConfirmReset.setChecked(settings.gitConfirmHardReset);
@@ -220,7 +215,7 @@ public class SettingsActivity extends BaseActivity {
      * Builds the syntax theme picker row programmatically.
      * Each theme gets a rounded swatch showing its editor background + keyword + string colors.
      * The active theme gets a white border ring.
-    /**
+     * /**
      * Applies the design system fonts to all textual components in the activity.
      */
     private void designUI() {
@@ -242,8 +237,6 @@ public class SettingsActivity extends BaseActivity {
         binding.tvAutoCloseBracketsDesc.setTypeface(fm.getUiFont(this));
         binding.tvAutoIndent.setTypeface(fm.getUiMedium(this));
         binding.tvAutoIndentDesc.setTypeface(fm.getUiFont(this));
-        binding.tvValidateJsonAtRealtime.setTypeface(fm.getUiMedium(this));
-        binding.tvValidateJsonAtRealtimeDesc.setTypeface(fm.getUiFont(this));
 
         // Style Git preference rows
         binding.tvDefaultBranch.setTypeface(fm.getUiMedium(this));

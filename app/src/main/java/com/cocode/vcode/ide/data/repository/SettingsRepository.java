@@ -7,6 +7,8 @@ import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.prefs.PreferenceKeys;
 import com.cocode.vcode.ide.git.core.GitCredentialStore;
 
+import java.nio.charset.StandardCharsets;
+
 /**
  * Access provider interface interacting with local SharedPreferences.
  * Synchronizes identity profiles, handles system fallback evaluations,
@@ -43,7 +45,6 @@ public class SettingsRepository {
 
         // Language syntax preferences
         s.jsonFormatOnSave = prefs.getBoolean(PreferenceKeys.JSON_FORMAT_ON_SAVE, s.jsonFormatOnSave);
-        s.jsonValidateRealtime = prefs.getBoolean(PreferenceKeys.JSON_VALIDATE_REALTIME, s.jsonValidateRealtime);
 
         // Version control mapping: Pull security settings from secure credential managers first
         GitCredentialStore credentialStore = new GitCredentialStore();
@@ -90,17 +91,17 @@ public class SettingsRepository {
     public AppSettings loadMergedSettings(java.io.File projectDir) {
         AppSettings global = loadSettings();
         if (projectDir == null) return global;
-        
+
         java.io.File metaFile = new java.io.File(projectDir, "project_meta.json");
         if (!metaFile.exists()) return global;
-        
+
         try {
             java.io.File settingsFile = new java.io.File(projectDir, "project_settings.json");
             java.io.File targetFile = settingsFile.exists() ? settingsFile : metaFile;
-            
+
             if (targetFile.exists()) {
                 StringBuilder sb = new StringBuilder();
-                try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(targetFile), "UTF-8"))) {
+                try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(targetFile), StandardCharsets.UTF_8))) {
                     String line;
                     while ((line = reader.readLine()) != null) {
                         sb.append(line);
@@ -108,20 +109,23 @@ public class SettingsRepository {
                 }
                 org.json.JSONObject obj = new org.json.JSONObject(sb.toString());
                 org.json.JSONObject sObj = null;
-                
+
                 if (targetFile == metaFile && obj.has("settings")) {
                     sObj = obj.getJSONObject("settings");
                 } else if (targetFile == settingsFile) {
                     sObj = obj; // project_settings.json itself is the settings object
                 }
-                
+
                 if (sObj != null) {
                     if (sObj.has("tabSize")) global.tabSize = sObj.getInt("tabSize");
                     if (sObj.has("autoIndent")) global.autoIndent = sObj.getBoolean("autoIndent");
-                    if (sObj.has("jsonValidateRealtime")) global.jsonValidateRealtime = sObj.getBoolean("jsonValidateRealtime");
-                    if (sObj.has("jsonFormatOnSave")) global.jsonFormatOnSave = sObj.getBoolean("jsonFormatOnSave");
-                    if (sObj.has("autoCloseBrackets")) global.autoCloseBrackets = sObj.getBoolean("autoCloseBrackets");
-                    if (sObj.has("autoCloseHtmlTags")) global.autoCloseHtmlTags = sObj.getBoolean("autoCloseHtmlTags");
+
+                    if (sObj.has("jsonFormatOnSave"))
+                        global.jsonFormatOnSave = sObj.getBoolean("jsonFormatOnSave");
+                    if (sObj.has("autoCloseBrackets"))
+                        global.autoCloseBrackets = sObj.getBoolean("autoCloseBrackets");
+                    if (sObj.has("autoCloseHtmlTags"))
+                        global.autoCloseHtmlTags = sObj.getBoolean("autoCloseHtmlTags");
                 }
             }
         } catch (Exception e) {
@@ -150,7 +154,6 @@ public class SettingsRepository {
         ed.putBoolean(PreferenceKeys.MATCH_BRACKETS, s.matchBrackets);
 
         ed.putBoolean(PreferenceKeys.JSON_FORMAT_ON_SAVE, s.jsonFormatOnSave);
-        ed.putBoolean(PreferenceKeys.JSON_VALIDATE_REALTIME, s.jsonValidateRealtime);
 
         ed.putString(PreferenceKeys.GIT_AUTHOR_NAME, s.gitAuthorName != null ? s.gitAuthorName : "");
         ed.putString(PreferenceKeys.GIT_AUTHOR_EMAIL, s.gitAuthorEmail != null ? s.gitAuthorEmail : "");
@@ -187,10 +190,10 @@ public class SettingsRepository {
         if (projectDir == null || s == null) return;
         java.io.File metaFile = new java.io.File(projectDir, "project_meta.json");
         if (!metaFile.exists()) return;
-        
+
         try {
             StringBuilder sb = new StringBuilder();
-            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(metaFile), "UTF-8"))) {
+            try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.InputStreamReader(new java.io.FileInputStream(metaFile), StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
                     sb.append(line);
@@ -200,14 +203,13 @@ public class SettingsRepository {
             org.json.JSONObject sObj = new org.json.JSONObject();
             sObj.put("tabSize", s.tabSize);
             sObj.put("autoIndent", s.autoIndent);
-            sObj.put("jsonValidateRealtime", s.jsonValidateRealtime);
             sObj.put("jsonFormatOnSave", s.jsonFormatOnSave);
             sObj.put("autoCloseBrackets", s.autoCloseBrackets);
             sObj.put("autoCloseHtmlTags", s.autoCloseHtmlTags);
-            
+
             obj.put("settings", sObj);
-            
-            try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(new java.io.FileOutputStream(metaFile), "UTF-8"))) {
+
+            try (java.io.BufferedWriter writer = new java.io.BufferedWriter(new java.io.OutputStreamWriter(new java.io.FileOutputStream(metaFile), StandardCharsets.UTF_8))) {
                 writer.write(obj.toString(2));
             }
         } catch (Exception e) {

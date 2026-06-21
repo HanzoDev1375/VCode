@@ -9,10 +9,6 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 
-import com.cocode.vcode.ide.core.model.FileType;
-import com.cocode.vcode.ide.core.parser.json.JsonError;
-import com.cocode.vcode.ide.core.parser.json.JsonValidator;
-import com.cocode.vcode.ide.core.parser.json.ValidationReport;
 import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.ui.editor.EditorViewModel;
@@ -82,7 +78,7 @@ public class CodeFileViewer implements IFileViewer {
             codeEditText.setAutoIndent(settings.autoIndent);
             editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
         }
-        
+
         codeEditText.setHorizontallyScrolling(false);
 
         codeEditText.setTag(file.getId());
@@ -114,9 +110,6 @@ public class CodeFileViewer implements IFileViewer {
     @Override
     public void onPause() {
         jsonValidationHandler.removeCallbacksAndMessages(null);
-        if (editorCallback != null) {
-            editorCallback.hideJsonStatus();
-        }
     }
 
     @Override
@@ -142,58 +135,25 @@ public class CodeFileViewer implements IFileViewer {
 
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
         if (settings != null) {
-            boolean isJson = currentFile.getFileType() == FileType.JSON;
-            if (isJson && settings.jsonValidateRealtime) {
-                editorCallback.showJsonValidating();
-            }
             jsonValidationHandler.removeCallbacksAndMessages(null);
 
             Runnable validationRunnable = () -> ExecutorProvider.getInstance().runOnIo(() -> {
 
-                // Bracket validation
-                java.util.List<com.cocode.vcode.ide.data.model.Problem> problems = new java.util.ArrayList<>(com.cocode.vcode.ide.core.parser.BracketMatcher.findMismatches(currentFile.getFile(), text));
+                java.util.List<com.cocode.vcode.ide.data.model.Problem> problems =
+                        com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(currentFile.getFile(), text, currentFile.getFileType());
 
-                // JSON Validation
-                if (isJson && settings.jsonValidateRealtime) {
-                    JsonValidator validator = new JsonValidator();
-                    ValidationReport report = validator.validate(text);
-
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
-                            return;
-                        }
-                        
-                        if (report.isValid()) {
-                            editorCallback.showJsonValid();
-                        } else {
-                            for (JsonError error : report.getErrors()) {
-                                problems.add(new com.cocode.vcode.ide.data.model.Problem(
-                                        currentFile.getFile(),
-                                        error.line,
-                                        error.column,
-                                        error.message,
-                                        com.cocode.vcode.ide.data.model.Problem.Severity.ERROR
-                                ));
-                            }
-                            JsonError firstError = report.getErrors().get(0);
-                            String formattedError = firstError.message + " (Line " + firstError.line + ", Col " + firstError.column + ")";
-                            editorCallback.showJsonInvalid(formattedError);
-                        }
-                        editorCallback.reportProblems(currentFile.getFile(), problems);
-                    });
-                } else {
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
-                            return;
-                        }
-                        editorCallback.hideJsonStatus();
-                        editorCallback.reportProblems(currentFile.getFile(), problems);
-                    });
-                }
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
+                        return;
+                    }
+                    if (codeEditText != null) {
+                        codeEditText.applyDiagnostics(problems);
+                    }
+                    editorCallback.reportProblems(currentFile.getFile(), problems);
+                });
             });
+            viewModel.setDiagnosticLoading();
             jsonValidationHandler.postDelayed(validationRunnable, 500);
-        } else {
-            editorCallback.hideJsonStatus();
         }
     }
 }

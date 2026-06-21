@@ -2,11 +2,11 @@ package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
 import android.text.SpannableStringBuilder;
+import android.text.Spanned;
 
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.utils.ColorParser;
 import com.cocode.vcode.ide.views.ColorPreviewSpan;
-import android.text.Spanned;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;

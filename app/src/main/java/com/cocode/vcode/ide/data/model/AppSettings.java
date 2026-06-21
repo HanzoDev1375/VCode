@@ -20,7 +20,6 @@ public class AppSettings {
     // --- JSON Validation & Formatting ---
     public int jsonIndentSize = 2;
     public boolean jsonFormatOnSave = false;
-    public boolean jsonValidateRealtime = true;
 
     // --- Git Integration Settings ---
     public String gitAuthorName = "";

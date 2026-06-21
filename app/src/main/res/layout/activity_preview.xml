@@ -95,8 +95,8 @@
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:clipChildren="false">
+            android:clipChildren="false"
+            android:orientation="vertical">
 
             <FrameLayout
                 android:id="@+id/layout_viewport"
@@ -319,8 +319,8 @@
                 android:id="@+id/scroll_console"
                 android:layout_width="match_parent"
                 android:layout_height="0dp"
-                android:layout_weight="1"
                 android:layout_margin="8dp"
+                android:layout_weight="1"
                 android:background="@drawable/vcode_bg_console_log_area"
                 android:fillViewport="true"
                 android:scrollbars="vertical">

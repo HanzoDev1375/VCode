@@ -7,28 +7,23 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ImageView;
-import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
-import java.io.File;
-
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.core.search.SearchEngine;
 import com.cocode.vcode.ide.core.search.SearchResult;
+import com.cocode.vcode.ide.databinding.BottomSheetProjectSearchBinding;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-import com.google.android.material.textfield.TextInputEditText;
-import com.google.android.material.progressindicator.LinearProgressIndicator;
 
-import android.widget.EditText;
-import com.cocode.vcode.ide.databinding.VcodeBottomSheetProjectSearchBinding;
+import java.io.File;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -38,14 +33,10 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
     private SearchEngine searchEngine;
     private SearchAdapter adapter;
     private ProjectSearchListener listener;
-    
-    private VcodeBottomSheetProjectSearchBinding binding;
-    
-    private Runnable pendingSearch;
 
-    public interface ProjectSearchListener {
-        void onSearchResultSelected(File file, int lineNumber);
-    }
+    private BottomSheetProjectSearchBinding binding;
+
+    private Runnable pendingSearch;
 
     public void setProjectRoot(File root) {
         this.projectRoot = root;
@@ -58,7 +49,7 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
     @Nullable
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
-        binding = VcodeBottomSheetProjectSearchBinding.inflate(inflater, container, false);
+        binding = BottomSheetProjectSearchBinding.inflate(inflater, container, false);
         return binding.getRoot();
     }
 
@@ -69,10 +60,8 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
 
         UiUtils.setViewRounded(binding.etSearchQuery, UiUtils.dpToPx(requireContext(), 10), androidx.core.content.ContextCompat.getColor(requireContext(), R.color.vcode_bg_elevated));
         binding.etSearchQuery.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
-        
-        if (binding.tvTitle != null) {
-            binding.tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
-        }
+
+        binding.tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
 
         binding.rvSearchResults.setLayoutManager(new LinearLayoutManager(requireContext()));
         adapter = new SearchAdapter();
@@ -80,7 +69,8 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
 
         binding.etSearchQuery.addTextChangedListener(new TextWatcher() {
             @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) { }
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
@@ -92,7 +82,8 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
             }
 
             @Override
-            public void afterTextChanged(Editable s) { }
+            public void afterTextChanged(Editable s) {
+            }
         });
     }
 
@@ -104,7 +95,7 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
 
         binding.progressSearch.setVisibility(View.VISIBLE);
         ExecutorProvider.getInstance().runOnCpu(() -> {
-            List<ProjectSearchResult> allResults = new ArrayList<>();
+            List<FileGroup> allResults = new ArrayList<>();
             searchInDirectory(projectRoot, query, allResults);
 
             ExecutorProvider.getInstance().runOnMain(() -> {
@@ -114,30 +105,32 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
-    private void searchInDirectory(File dir, String query, List<ProjectSearchResult> outResults) {
+    private void searchInDirectory(File dir, String query, List<FileGroup> outResults) {
         File[] files = dir.listFiles();
         if (files == null) return;
 
         for (File f : files) {
             String name = f.getName().toLowerCase();
             // Directory exclusions
-            if (name.equals(".git") || name.equals("node_modules") || name.equals(".idea") || name.equals("build")) continue;
+            if (name.equals(".git") || name.equals("node_modules") || name.equals(".idea") || name.equals("build"))
+                continue;
 
             if (f.isDirectory()) {
                 searchInDirectory(f, query, outResults);
             } else {
                 // File exclusions
-                if (name.equals("project_meta.json") || name.equals("session.json") || name.equals("snippets.json")) continue;
-                
+                if (name.equals("project_meta.json") || name.equals("session.json") || name.equals("snippets.json"))
+                    continue;
+
                 // Binary and image exclusions
                 if (name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") ||
-                    name.endsWith(".gif") || name.endsWith(".webp") || name.endsWith(".bmp") ||
-                    name.endsWith(".ico") || name.endsWith(".ttf") || name.endsWith(".woff") ||
-                    name.endsWith(".woff2") || name.endsWith(".eot") || name.endsWith(".pdf") ||
-                    name.endsWith(".mp3") || name.endsWith(".mp4") || name.endsWith(".wav") ||
-                    name.endsWith(".ogg") || name.endsWith(".zip") || name.endsWith(".tar") ||
-                    name.endsWith(".gz") || name.endsWith(".apk") || name.endsWith(".jar") ||
-                    name.endsWith(".class") || name.endsWith(".dex")) {
+                        name.endsWith(".gif") || name.endsWith(".webp") || name.endsWith(".bmp") ||
+                        name.endsWith(".ico") || name.endsWith(".ttf") || name.endsWith(".woff") ||
+                        name.endsWith(".woff2") || name.endsWith(".eot") || name.endsWith(".pdf") ||
+                        name.endsWith(".mp3") || name.endsWith(".mp4") || name.endsWith(".wav") ||
+                        name.endsWith(".ogg") || name.endsWith(".zip") || name.endsWith(".tar") ||
+                        name.endsWith(".gz") || name.endsWith(".apk") || name.endsWith(".jar") ||
+                        name.endsWith(".class") || name.endsWith(".dex")) {
                     continue;
                 }
 
@@ -145,27 +138,35 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
                     // Only read reasonably sized files, skip files > 500kb
                     if (f.length() > 1024 * 500) continue;
 
-                    // Use BufferedReader for API 23 compatibility (Files.readAllBytes requires API 26)
                     StringBuilder sb = new StringBuilder();
                     try (java.io.BufferedReader br = new java.io.BufferedReader(
-                            new java.io.InputStreamReader(new java.io.FileInputStream(f), "UTF-8"))) {
+                            new java.io.InputStreamReader(new java.io.FileInputStream(f), StandardCharsets.UTF_8))) {
                         char[] buf = new char[4096];
                         int read;
                         while ((read = br.read(buf)) != -1) sb.append(buf, 0, read);
                     }
                     String content = sb.toString();
                     List<SearchResult> results = searchEngine.find(query, content, false, false, false);
-                    for (SearchResult r : results) {
-                        int start = Math.max(0, r.absoluteStart - 20);
-                        int end = Math.min(content.length(), r.absoluteEnd + 40);
-                        String snippet = content.substring(start, end).replace('\n', ' ').trim();
-                        outResults.add(new ProjectSearchResult(f, r.lineNumber, snippet));
-                        if (outResults.size() > 200) return; // limit
+                    if (!results.isEmpty()) {
+                        FileGroup group = new FileGroup();
+                        group.file = f;
+                        for (SearchResult r : results) {
+                            int start = Math.max(0, r.absoluteStart - 20);
+                            int end = Math.min(content.length(), r.absoluteEnd + 40);
+                            String snippet = content.substring(start, end).replace('\n', ' ').trim();
+                            group.matches.add(new ProjectSearchResult(f, r.lineNumber, snippet));
+                        }
+                        outResults.add(group);
+                        if (outResults.size() > 100) return; // limit files
                     }
                 } catch (Exception ignored) {
                 }
             }
         }
+    }
+
+    public interface ProjectSearchListener {
+        void onSearchResultSelected(File file, int lineNumber);
     }
 
     private class ProjectSearchResult {
@@ -180,59 +181,121 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         }
     }
 
-    private class SearchAdapter extends RecyclerView.Adapter<SearchAdapter.ViewHolder> {
-        private List<ProjectSearchResult> items = new ArrayList<>();
+    private class FileGroup {
+        File file;
+        List<ProjectSearchResult> matches = new ArrayList<>();
+        boolean expanded = true;
+    }
+
+    private class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
+        private static final int TYPE_FILE = 0;
+        private static final int TYPE_MATCH = 1;
+
+        private List<FileGroup> fileGroups = new ArrayList<>();
+        private final List<Object> flattenedItems = new ArrayList<>();
 
         @SuppressLint("NotifyDataSetChanged")
-        void setResults(List<ProjectSearchResult> newItems) {
-            this.items = newItems;
+        void setResults(List<FileGroup> newItems) {
+            this.fileGroups = newItems;
+            flatten();
+        }
+
+        @SuppressLint("NotifyDataSetChanged")
+        private void flatten() {
+            flattenedItems.clear();
+            for (FileGroup group : fileGroups) {
+                flattenedItems.add(group);
+                if (group.expanded) {
+                    flattenedItems.addAll(group.matches);
+                }
+            }
             notifyDataSetChanged();
+        }
+
+        @Override
+        public int getItemViewType(int position) {
+            if (flattenedItems.get(position) instanceof FileGroup) return TYPE_FILE;
+            return TYPE_MATCH;
         }
 
         @NonNull
         @Override
-        public ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding itemBinding = 
-                com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding.inflate(LayoutInflater.from(parent.getContext()), parent, false);
-            return new ViewHolder(itemBinding);
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            LayoutInflater inflater = LayoutInflater.from(parent.getContext());
+            if (viewType == TYPE_FILE) {
+                com.cocode.vcode.ide.databinding.ItemProjectSearchFileBinding binding =
+                        com.cocode.vcode.ide.databinding.ItemProjectSearchFileBinding.inflate(inflater, parent, false);
+                return new FileViewHolder(binding);
+            } else {
+                com.cocode.vcode.ide.databinding.ItemProjectSearchMatchBinding binding =
+                        com.cocode.vcode.ide.databinding.ItemProjectSearchMatchBinding.inflate(inflater, parent, false);
+                return new MatchViewHolder(binding);
+            }
         }
 
         @Override
-        public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-            ProjectSearchResult item = items.get(position);
-            
-            holder.binding.tvFileName.setText(item.file.getName());
-            holder.binding.tvFileName.setTypeface(FontManager.getInstance().getUiSemiBold(holder.itemView.getContext()));
-            
-            com.cocode.vcode.ide.utils.FileIconHelper.setFileIconAndColor(holder.binding.ivFileIcon, item.file.getName());
-            
-            String relPath = item.file.getAbsolutePath().replace(projectRoot.getAbsolutePath() + File.separator, "");
-            holder.binding.tvFilePath.setText(relPath);
-            holder.binding.tvFilePath.setTypeface(FontManager.getInstance().getUiMedium(holder.itemView.getContext()));
-            
-            holder.binding.tvLineNumber.setText(item.line + ":");
-            holder.binding.tvLineNumber.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
-            
-            holder.binding.tvSnippet.setText(item.snippet);
-            holder.binding.tvSnippet.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
+        public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
+            Object item = flattenedItems.get(position);
 
-            holder.itemView.setOnClickListener(v -> {
-                if (listener != null) {
-                    listener.onSearchResultSelected(item.file, item.line);
+            if (holder instanceof FileViewHolder) {
+                FileGroup group = (FileGroup) item;
+                FileViewHolder fh = (FileViewHolder) holder;
+
+                fh.binding.tvFileName.setText(group.file.getName());
+                fh.binding.tvFileName.setTypeface(FontManager.getInstance().getUiSemiBold(holder.itemView.getContext()));
+                fh.binding.tvMatchesCount.setText(String.valueOf(group.matches.size()));
+                fh.binding.tvMatchesCount.setTypeface(FontManager.getInstance().getUiMedium(holder.itemView.getContext()));
+
+                com.cocode.vcode.ide.utils.FileIconHelper.setFileIconAndColor(fh.binding.ivFileIcon, group.file.getName());
+
+                if (group.expanded) {
+                    fh.binding.ivChevron.setImageResource(R.drawable.ic_chevron_down);
+                } else {
+                    fh.binding.ivChevron.setImageResource(R.drawable.ic_chevron_right);
                 }
-                dismiss();
-            });
+
+                fh.itemView.setOnClickListener(v -> {
+                    group.expanded = !group.expanded;
+                    flatten();
+                });
+
+            } else if (holder instanceof MatchViewHolder) {
+                ProjectSearchResult match = (ProjectSearchResult) item;
+                MatchViewHolder mh = (MatchViewHolder) holder;
+
+                mh.binding.tvLineNumber.setText(match.line + ":");
+                mh.binding.tvLineNumber.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
+
+                mh.binding.tvSnippet.setText(match.snippet);
+                mh.binding.tvSnippet.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
+
+                mh.itemView.setOnClickListener(v -> {
+                    if (listener != null) {
+                        listener.onSearchResultSelected(match.file, match.line);
+                    }
+                    dismiss();
+                });
+            }
         }
 
         @Override
         public int getItemCount() {
-            return items.size();
+            return flattenedItems.size();
         }
 
-        class ViewHolder extends RecyclerView.ViewHolder {
-            com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding binding;
+        class FileViewHolder extends RecyclerView.ViewHolder {
+            com.cocode.vcode.ide.databinding.ItemProjectSearchFileBinding binding;
 
-            ViewHolder(@NonNull com.cocode.vcode.ide.databinding.VcodeItemProjectSearchResultBinding binding) {
+            FileViewHolder(@NonNull com.cocode.vcode.ide.databinding.ItemProjectSearchFileBinding binding) {
+                super(binding.getRoot());
+                this.binding = binding;
+            }
+        }
+
+        class MatchViewHolder extends RecyclerView.ViewHolder {
+            com.cocode.vcode.ide.databinding.ItemProjectSearchMatchBinding binding;
+
+            MatchViewHolder(@NonNull com.cocode.vcode.ide.databinding.ItemProjectSearchMatchBinding binding) {
                 super(binding.getRoot());
                 this.binding = binding;
             }

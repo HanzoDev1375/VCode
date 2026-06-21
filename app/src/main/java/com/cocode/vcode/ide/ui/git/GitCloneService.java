@@ -42,12 +42,12 @@ public class GitCloneService extends Service {
     private NotificationManager notificationManager;
     private NotificationCompat.Builder notificationBuilder;
 
-    public static void setListener(CloneListener listener) {
-        sListenerRef = new java.lang.ref.WeakReference<>(listener);
-    }
-
     private static CloneListener getListener() {
         return sListenerRef != null ? sListenerRef.get() : null;
+    }
+
+    public static void setListener(CloneListener listener) {
+        sListenerRef = new java.lang.ref.WeakReference<>(listener);
     }
 
     public static String parseGitError(Exception e) {

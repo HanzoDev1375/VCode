@@ -96,16 +96,6 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
-    /**
-     * Toggles real-time JSON validation feedback.
-     */
-    public void updateJsonValidateRealtime(boolean value) {
-        AppSettings current = settingsLiveData.getValue();
-        if (current != null) {
-            current.jsonValidateRealtime = value;
-            saveSettings(current);
-        }
-    }
 
     /**
      * Updates the global application theme (Light, Dark, or System).

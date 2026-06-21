@@ -10,32 +10,6 @@ import java.util.Deque;
  */
 public class HtmlTagParser {
 
-    private enum State {
-        TEXT,
-        TAG_OPEN,
-        TAG_NAME,
-        BEFORE_ATTRIBUTE_NAME,
-        ATTRIBUTE_NAME,
-        BEFORE_ATTRIBUTE_VALUE,
-        ATTRIBUTE_VALUE_DOUBLE_QUOTES,
-        ATTRIBUTE_VALUE_SINGLE_QUOTES,
-        ATTRIBUTE_VALUE_UNQUOTED,
-        CLOSE_TAG_OPEN,
-        CLOSE_TAG_NAME,
-        COMMENT,
-        DOCTYPE
-    }
-
-    public static class HtmlContext {
-        public boolean isInsideOpenTag = false;
-        public boolean isTypingTagName = false;
-        public String currentTagName = null;
-        public String currentAttributeName = null;
-        public boolean isInsideAttributeValue = false;
-        public String currentAttributeValue = null;
-        public String unclosedTag = null;
-    }
-
     public static boolean isVoidElement(String tagName) {
         return HtmlTagCache.isVoidElement(tagName);
     }
@@ -81,10 +55,10 @@ public class HtmlTagParser {
                         if (i + 1 < limit && text.charAt(i + 1) == '/') {
                             state = State.CLOSE_TAG_OPEN;
                             i++; // skip '/'
-                        } else if (i + 3 < limit && text.charAt(i+1) == '!' && text.charAt(i+2) == '-' && text.charAt(i+3) == '-') {
+                        } else if (i + 3 < limit && text.charAt(i + 1) == '!' && text.charAt(i + 2) == '-' && text.charAt(i + 3) == '-') {
                             state = State.COMMENT;
                             i += 3;
-                        } else if (i + 1 < limit && text.charAt(i+1) == '!') {
+                        } else if (i + 1 < limit && text.charAt(i + 1) == '!') {
                             state = State.DOCTYPE;
                             i++;
                         } else {
@@ -94,7 +68,7 @@ public class HtmlTagParser {
                     break;
 
                 case COMMENT:
-                    if (c == '-' && i + 2 < limit && text.charAt(i+1) == '-' && text.charAt(i+2) == '>') {
+                    if (c == '-' && i + 2 < limit && text.charAt(i + 1) == '-' && text.charAt(i + 2) == '>') {
                         state = State.TEXT;
                         i += 2;
                     }
@@ -248,12 +222,12 @@ public class HtmlTagParser {
         ctx.unclosedTag = openTags.isEmpty() ? null : openTags.peek();
 
         // If the state at the cursor is inside a tag
-        if (state != State.TEXT && state != State.COMMENT && state != State.DOCTYPE 
-            && state != State.CLOSE_TAG_OPEN && state != State.CLOSE_TAG_NAME) {
-            
+        if (state != State.TEXT && state != State.COMMENT && state != State.DOCTYPE
+                && state != State.CLOSE_TAG_OPEN && state != State.CLOSE_TAG_NAME) {
+
             ctx.isInsideOpenTag = true;
             ctx.currentTagName = currentTag.toString().toLowerCase();
-            
+
             if (state == State.TAG_OPEN || state == State.TAG_NAME) {
                 ctx.isTypingTagName = true;
             }
@@ -268,5 +242,31 @@ public class HtmlTagParser {
         }
 
         return ctx;
+    }
+
+    private enum State {
+        TEXT,
+        TAG_OPEN,
+        TAG_NAME,
+        BEFORE_ATTRIBUTE_NAME,
+        ATTRIBUTE_NAME,
+        BEFORE_ATTRIBUTE_VALUE,
+        ATTRIBUTE_VALUE_DOUBLE_QUOTES,
+        ATTRIBUTE_VALUE_SINGLE_QUOTES,
+        ATTRIBUTE_VALUE_UNQUOTED,
+        CLOSE_TAG_OPEN,
+        CLOSE_TAG_NAME,
+        COMMENT,
+        DOCTYPE
+    }
+
+    public static class HtmlContext {
+        public boolean isInsideOpenTag = false;
+        public boolean isTypingTagName = false;
+        public String currentTagName = null;
+        public String currentAttributeName = null;
+        public boolean isInsideAttributeValue = false;
+        public String currentAttributeValue = null;
+        public String unclosedTag = null;
     }
 }

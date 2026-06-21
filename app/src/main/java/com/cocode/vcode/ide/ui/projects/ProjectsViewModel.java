@@ -28,6 +28,8 @@ public class ProjectsViewModel extends ViewModel {
     private final MutableLiveData<Result<List<Project>>> projectsLiveData = new MutableLiveData<>();
     private final MutableLiveData<Result<Project>> actionResultLiveData = new MutableLiveData<>();
     private final MutableLiveData<AppSettings> settingsLiveData = new MutableLiveData<>();
+    private final androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<java.util.List<com.cocode.vcode.ide.data.model.Project>>> projectsObserver = projectsLiveData::setValue;
+    private androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<java.util.List<com.cocode.vcode.ide.data.model.Project>>> currentProjectsLiveData;
 
     public ProjectsViewModel(ProjectRepository projectRepo, SettingsRepository settingsRepo) {
         this.projectRepo = projectRepo;
@@ -39,9 +41,6 @@ public class ProjectsViewModel extends ViewModel {
     public LiveData<Result<List<Project>>> getProjectsLiveData() {
         return projectsLiveData;
     }
-
-    private androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<java.util.List<com.cocode.vcode.ide.data.model.Project>>> currentProjectsLiveData;
-    private final androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<java.util.List<com.cocode.vcode.ide.data.model.Project>>> projectsObserver = projectsLiveData::setValue;
 
     /**
      * Refetches the complete list of projects from the repository.

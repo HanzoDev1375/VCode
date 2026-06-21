@@ -18,14 +18,14 @@ public class FileRepository {
 
     private static final MutableLiveData<File> fileSavedEvent = new MutableLiveData<>();
 
-    public static LiveData<File> getFileSavedEvent() {
-        return fileSavedEvent;
-    }
-
     /**
      * Instantiates the file repository component.
      */
     public FileRepository() {
+    }
+
+    public static LiveData<File> getFileSavedEvent() {
+        return fileSavedEvent;
     }
 
     // --- Section: Write ---

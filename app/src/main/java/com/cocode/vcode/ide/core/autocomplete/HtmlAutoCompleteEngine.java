@@ -9,13 +9,10 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 /**
  * Intelligent completion coordinator for HTML source code — mirrors VS Code's HTML language server.
@@ -47,54 +44,60 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     // ─── DOCTYPE / entity completions ──────────────────────────────────────────
     private static final List<CompletionItem> DOCTYPE_ITEMS = new ArrayList<>();
     private static final List<CompletionItem> ENTITY_ITEMS = new ArrayList<>();
-    
+
     // Fast prefix lookups
     private static final FastTrie TAG_TRIE = new FastTrie();
+    /**
+     * Maps attribute name → allowed values shown in VS Code dropdowns.
+     */
+    private static final Map<String, String[]> ATTR_VALUES = new HashMap<>();
+
+    // ─── Attribute value enumerations ────────────────────────────────────────────
 
     static {
         String[][] globals = {
-                {"class",           "class=\"|\"",          "CSS class names"},
-                {"id",              "id=\"|\"",             "Unique element ID"},
-                {"style",           "style=\"|\"",          "Inline CSS styles"},
-                {"title",           "title=\"|\"",          "Tooltip text"},
-                {"lang",            "lang=\"|\"",           "Language code"},
-                {"dir",             "dir=\"|\"",            "Text direction"},
-                {"tabindex",        "tabindex=\"|\"",       "Tab order"},
-                {"hidden",          "hidden",               "Hide element"},
-                {"aria-label",      "aria-label=\"|\"",     "Accessible label"},
-                {"aria-hidden",     "aria-hidden=\"true\"", "Hide from assistive tech"},
-                {"aria-describedby","aria-describedby=\"|\"","Accessible description"},
-                {"aria-labelledby", "aria-labelledby=\"|\"","Accessible label (element)"},
-                {"aria-live",       "aria-live=\"|\"",      "Live region"},
-                {"aria-expanded",   "aria-expanded=\"|\"",  "Expanded state"},
-                {"aria-controls",   "aria-controls=\"|\"",  "Controls element"},
-                {"aria-current",    "aria-current=\"|\"",   "Current item indicator"},
-                {"aria-disabled",   "aria-disabled=\"|\"",  "Disabled state"},
-                {"aria-required",   "aria-required=\"|\"",  "Required field"},
-                {"aria-invalid",    "aria-invalid=\"|\"",   "Validation state"},
-                {"aria-haspopup",   "aria-haspopup=\"|\"",  "Has popup"},
-                {"aria-selected",   "aria-selected=\"|\"",  "Selected state"},
-                {"aria-checked",    "aria-checked=\"|\"",   "Checked state"},
-                {"aria-valuemin",   "aria-valuemin=\"|\"",  "Minimum value"},
-                {"aria-valuemax",   "aria-valuemax=\"|\"",  "Maximum value"},
-                {"aria-valuenow",   "aria-valuenow=\"|\"",  "Current value"},
-                {"role",            "role=\"|\"",           "ARIA role"},
-                {"data-",           "data-|=\"\"",          "Custom data attribute"},
-                {"draggable",       "draggable=\"|\"",      "Enable dragging"},
-                {"contenteditable", "contenteditable=\"|\"","Editable content"},
-                {"spellcheck",      "spellcheck=\"|\"",     "Spell check"},
-                {"translate",       "translate=\"|\"",      "Translation hint"},
-                {"accesskey",       "accesskey=\"|\"",      "Keyboard shortcut"},
-                {"autocapitalize",  "autocapitalize=\"|\"", "Auto-capitalise"},
-                {"enterkeyhint",    "enterkeyhint=\"|\"",   "Enter key label"},
-                {"inputmode",       "inputmode=\"|\"",      "Virtual keyboard type"},
-                {"is",              "is=\"|\"",             "Custom element name"},
-                {"part",            "part=\"|\"",           "CSS shadow part"},
-                {"slot",            "slot=\"|\"",           "Named slot target"},
-                {"popover",         "popover",              "Popover element"},
-                {"autofocus",       "autofocus",            "Auto focus on load"},
-                {"inert",           "inert",                "Non-interactive subtree"},
-                {"nonce",           "nonce=\"|\"",          "CSP nonce"},
+                {"class", "class=\"|\"", "CSS class names"},
+                {"id", "id=\"|\"", "Unique element ID"},
+                {"style", "style=\"|\"", "Inline CSS styles"},
+                {"title", "title=\"|\"", "Tooltip text"},
+                {"lang", "lang=\"|\"", "Language code"},
+                {"dir", "dir=\"|\"", "Text direction"},
+                {"tabindex", "tabindex=\"|\"", "Tab order"},
+                {"hidden", "hidden", "Hide element"},
+                {"aria-label", "aria-label=\"|\"", "Accessible label"},
+                {"aria-hidden", "aria-hidden=\"true\"", "Hide from assistive tech"},
+                {"aria-describedby", "aria-describedby=\"|\"", "Accessible description"},
+                {"aria-labelledby", "aria-labelledby=\"|\"", "Accessible label (element)"},
+                {"aria-live", "aria-live=\"|\"", "Live region"},
+                {"aria-expanded", "aria-expanded=\"|\"", "Expanded state"},
+                {"aria-controls", "aria-controls=\"|\"", "Controls element"},
+                {"aria-current", "aria-current=\"|\"", "Current item indicator"},
+                {"aria-disabled", "aria-disabled=\"|\"", "Disabled state"},
+                {"aria-required", "aria-required=\"|\"", "Required field"},
+                {"aria-invalid", "aria-invalid=\"|\"", "Validation state"},
+                {"aria-haspopup", "aria-haspopup=\"|\"", "Has popup"},
+                {"aria-selected", "aria-selected=\"|\"", "Selected state"},
+                {"aria-checked", "aria-checked=\"|\"", "Checked state"},
+                {"aria-valuemin", "aria-valuemin=\"|\"", "Minimum value"},
+                {"aria-valuemax", "aria-valuemax=\"|\"", "Maximum value"},
+                {"aria-valuenow", "aria-valuenow=\"|\"", "Current value"},
+                {"role", "role=\"|\"", "ARIA role"},
+                {"data-", "data-|=\"\"", "Custom data attribute"},
+                {"draggable", "draggable=\"|\"", "Enable dragging"},
+                {"contenteditable", "contenteditable=\"|\"", "Editable content"},
+                {"spellcheck", "spellcheck=\"|\"", "Spell check"},
+                {"translate", "translate=\"|\"", "Translation hint"},
+                {"accesskey", "accesskey=\"|\"", "Keyboard shortcut"},
+                {"autocapitalize", "autocapitalize=\"|\"", "Auto-capitalise"},
+                {"enterkeyhint", "enterkeyhint=\"|\"", "Enter key label"},
+                {"inputmode", "inputmode=\"|\"", "Virtual keyboard type"},
+                {"is", "is=\"|\"", "Custom element name"},
+                {"part", "part=\"|\"", "CSS shadow part"},
+                {"slot", "slot=\"|\"", "Named slot target"},
+                {"popover", "popover", "Popover element"},
+                {"autofocus", "autofocus", "Auto focus on load"},
+                {"inert", "inert", "Non-interactive subtree"},
+                {"nonce", "nonce=\"|\"", "CSP nonce"},
         };
         for (String[] g : globals) {
             GLOBAL_ATTRS.add(new CompletionItem(g[0], g[1], g[2], CompletionItem.Type.ATTRIBUTE, 0));
@@ -102,67 +105,67 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
         // Event handler attributes — complete list matching MDN
         String[][] events = {
-                {"onclick",       "onclick=\"|\"",       "Mouse click"},
-                {"ondblclick",    "ondblclick=\"|\"",    "Double click"},
-                {"onmousedown",   "onmousedown=\"|\"",   "Mouse button pressed"},
-                {"onmouseup",     "onmouseup=\"|\"",     "Mouse button released"},
-                {"onmouseover",   "onmouseover=\"|\"",   "Mouse enters element"},
-                {"onmouseout",    "onmouseout=\"|\"",    "Mouse leaves element"},
-                {"onmousemove",   "onmousemove=\"|\"",   "Mouse moves over element"},
-                {"onmouseenter",  "onmouseenter=\"|\"",  "Mouse enters (no bubble)"},
-                {"onmouseleave",  "onmouseleave=\"|\"",  "Mouse leaves (no bubble)"},
-                {"onkeydown",     "onkeydown=\"|\"",     "Key pressed"},
-                {"onkeyup",       "onkeyup=\"|\"",       "Key released"},
-                {"onkeypress",    "onkeypress=\"|\"",    "Key press (deprecated)"},
-                {"onfocus",       "onfocus=\"|\"",       "Element gains focus"},
-                {"onblur",        "onblur=\"|\"",        "Element loses focus"},
-                {"onfocusin",     "onfocusin=\"|\"",     "Focus (bubbles)"},
-                {"onfocusout",    "onfocusout=\"|\"",    "Blur (bubbles)"},
-                {"onchange",      "onchange=\"|\"",      "Value changed"},
-                {"oninput",       "oninput=\"|\"",       "Input value changes"},
-                {"onsubmit",      "onsubmit=\"|\"",      "Form submitted"},
-                {"onreset",       "onreset=\"|\"",       "Form reset"},
-                {"oninvalid",     "oninvalid=\"|\"",     "Input validation fails"},
-                {"onselect",      "onselect=\"|\"",      "Text selected"},
-                {"onload",        "onload=\"|\"",        "Resource loaded"},
-                {"onerror",       "onerror=\"|\"",       "Error occurred"},
-                {"onresize",      "onresize=\"|\"",      "Element resized"},
-                {"onscroll",      "onscroll=\"|\"",      "Element scrolled"},
-                {"onwheel",       "onwheel=\"|\"",       "Wheel rotated"},
+                {"onclick", "onclick=\"|\"", "Mouse click"},
+                {"ondblclick", "ondblclick=\"|\"", "Double click"},
+                {"onmousedown", "onmousedown=\"|\"", "Mouse button pressed"},
+                {"onmouseup", "onmouseup=\"|\"", "Mouse button released"},
+                {"onmouseover", "onmouseover=\"|\"", "Mouse enters element"},
+                {"onmouseout", "onmouseout=\"|\"", "Mouse leaves element"},
+                {"onmousemove", "onmousemove=\"|\"", "Mouse moves over element"},
+                {"onmouseenter", "onmouseenter=\"|\"", "Mouse enters (no bubble)"},
+                {"onmouseleave", "onmouseleave=\"|\"", "Mouse leaves (no bubble)"},
+                {"onkeydown", "onkeydown=\"|\"", "Key pressed"},
+                {"onkeyup", "onkeyup=\"|\"", "Key released"},
+                {"onkeypress", "onkeypress=\"|\"", "Key press (deprecated)"},
+                {"onfocus", "onfocus=\"|\"", "Element gains focus"},
+                {"onblur", "onblur=\"|\"", "Element loses focus"},
+                {"onfocusin", "onfocusin=\"|\"", "Focus (bubbles)"},
+                {"onfocusout", "onfocusout=\"|\"", "Blur (bubbles)"},
+                {"onchange", "onchange=\"|\"", "Value changed"},
+                {"oninput", "oninput=\"|\"", "Input value changes"},
+                {"onsubmit", "onsubmit=\"|\"", "Form submitted"},
+                {"onreset", "onreset=\"|\"", "Form reset"},
+                {"oninvalid", "oninvalid=\"|\"", "Input validation fails"},
+                {"onselect", "onselect=\"|\"", "Text selected"},
+                {"onload", "onload=\"|\"", "Resource loaded"},
+                {"onerror", "onerror=\"|\"", "Error occurred"},
+                {"onresize", "onresize=\"|\"", "Element resized"},
+                {"onscroll", "onscroll=\"|\"", "Element scrolled"},
+                {"onwheel", "onwheel=\"|\"", "Wheel rotated"},
                 {"oncontextmenu", "oncontextmenu=\"|\"", "Context menu opened"},
-                {"ondrag",        "ondrag=\"|\"",        "Dragging"},
-                {"ondragstart",   "ondragstart=\"|\"",   "Drag started"},
-                {"ondragend",     "ondragend=\"|\"",     "Drag ended"},
-                {"ondragover",    "ondragover=\"|\"",    "Dragged over target"},
-                {"ondragenter",   "ondragenter=\"|\"",   "Enters drop target"},
-                {"ondragleave",   "ondragleave=\"|\"",   "Leaves drop target"},
-                {"ondrop",        "ondrop=\"|\"",        "Dropped on target"},
-                {"ontouchstart",  "ontouchstart=\"|\"",  "Touch started"},
-                {"ontouchmove",   "ontouchmove=\"|\"",   "Touch moved"},
-                {"ontouchend",    "ontouchend=\"|\"",    "Touch ended"},
+                {"ondrag", "ondrag=\"|\"", "Dragging"},
+                {"ondragstart", "ondragstart=\"|\"", "Drag started"},
+                {"ondragend", "ondragend=\"|\"", "Drag ended"},
+                {"ondragover", "ondragover=\"|\"", "Dragged over target"},
+                {"ondragenter", "ondragenter=\"|\"", "Enters drop target"},
+                {"ondragleave", "ondragleave=\"|\"", "Leaves drop target"},
+                {"ondrop", "ondrop=\"|\"", "Dropped on target"},
+                {"ontouchstart", "ontouchstart=\"|\"", "Touch started"},
+                {"ontouchmove", "ontouchmove=\"|\"", "Touch moved"},
+                {"ontouchend", "ontouchend=\"|\"", "Touch ended"},
                 {"ontouchcancel", "ontouchcancel=\"|\"", "Touch cancelled"},
                 {"onpointerdown", "onpointerdown=\"|\"", "Pointer pressed"},
-                {"onpointerup",   "onpointerup=\"|\"",   "Pointer released"},
+                {"onpointerup", "onpointerup=\"|\"", "Pointer released"},
                 {"onpointermove", "onpointermove=\"|\"", "Pointer moved"},
-                {"onpointerenter","onpointerenter=\"|\"","Pointer enters"},
-                {"onpointerleave","onpointerleave=\"|\"","Pointer leaves"},
+                {"onpointerenter", "onpointerenter=\"|\"", "Pointer enters"},
+                {"onpointerleave", "onpointerleave=\"|\"", "Pointer leaves"},
                 {"onpointerover", "onpointerover=\"|\"", "Pointer over"},
-                {"onpointerout",  "onpointerout=\"|\"",  "Pointer out"},
-                {"onpointercancel","onpointercancel=\"|\"","Pointer cancelled"},
-                {"onanimationstart","onanimationstart=\"|\"","CSS animation starts"},
-                {"onanimationend", "onanimationend=\"|\"","CSS animation ends"},
-                {"onanimationiteration","onanimationiteration=\"|\"","CSS animation repeats"},
-                {"ontransitionend","ontransitionend=\"|\"","CSS transition ends"},
-                {"oncopy",        "oncopy=\"|\"",        "Content copied"},
-                {"oncut",         "oncut=\"|\"",         "Content cut"},
-                {"onpaste",       "onpaste=\"|\"",       "Content pasted"},
-                {"onplay",        "onplay=\"|\"",        "Media playback starts"},
-                {"onpause",       "onpause=\"|\"",       "Media playback paused"},
-                {"onended",       "onended=\"|\"",       "Media playback ended"},
-                {"ontimeupdate",  "ontimeupdate=\"|\"",  "Media time changed"},
-                {"onvolumechange","onvolumechange=\"|\"","Media volume changed"},
-                {"oncanplay",     "oncanplay=\"|\"",     "Media can start"},
-                {"ontoggle",      "ontoggle=\"|\"",      "Details toggled"},
+                {"onpointerout", "onpointerout=\"|\"", "Pointer out"},
+                {"onpointercancel", "onpointercancel=\"|\"", "Pointer cancelled"},
+                {"onanimationstart", "onanimationstart=\"|\"", "CSS animation starts"},
+                {"onanimationend", "onanimationend=\"|\"", "CSS animation ends"},
+                {"onanimationiteration", "onanimationiteration=\"|\"", "CSS animation repeats"},
+                {"ontransitionend", "ontransitionend=\"|\"", "CSS transition ends"},
+                {"oncopy", "oncopy=\"|\"", "Content copied"},
+                {"oncut", "oncut=\"|\"", "Content cut"},
+                {"onpaste", "onpaste=\"|\"", "Content pasted"},
+                {"onplay", "onplay=\"|\"", "Media playback starts"},
+                {"onpause", "onpause=\"|\"", "Media playback paused"},
+                {"onended", "onended=\"|\"", "Media playback ended"},
+                {"ontimeupdate", "ontimeupdate=\"|\"", "Media time changed"},
+                {"onvolumechange", "onvolumechange=\"|\"", "Media volume changed"},
+                {"oncanplay", "oncanplay=\"|\"", "Media can start"},
+                {"ontoggle", "ontoggle=\"|\"", "Details toggled"},
         };
         for (String[] ev : events) {
             EVENT_ATTRS.add(new CompletionItem(ev[0], ev[1], ev[2], CompletionItem.Type.ATTRIBUTE, 0));
@@ -175,99 +178,95 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
         // HTML entity completions
         String[][] entities = {
-                {"&amp;",    "&amp;",    "& ampersand"},
-                {"&lt;",     "&lt;",     "< less-than"},
-                {"&gt;",     "&gt;",     "> greater-than"},
-                {"&quot;",   "&quot;",   "\" quotation mark"},
-                {"&apos;",   "&apos;",   "' apostrophe"},
-                {"&nbsp;",   "&nbsp;",   "Non-breaking space"},
-                {"&copy;",   "&copy;",   "\u00A9 copyright"},
-                {"&reg;",    "&reg;",    "\u00AE registered"},
-                {"&trade;",  "&trade;",  "\u2122 trademark"},
-                {"&mdash;",  "&mdash;",  "\u2014 em dash"},
-                {"&ndash;",  "&ndash;",  "\u2013 en dash"},
-                {"&laquo;",  "&laquo;",  "\u00AB left guillemet"},
-                {"&raquo;",  "&raquo;",  "\u00BB right guillemet"},
-                {"&bull;",   "&bull;",   "\u2022 bullet"},
+                {"&amp;", "&amp;", "& ampersand"},
+                {"&lt;", "&lt;", "< less-than"},
+                {"&gt;", "&gt;", "> greater-than"},
+                {"&quot;", "&quot;", "\" quotation mark"},
+                {"&apos;", "&apos;", "' apostrophe"},
+                {"&nbsp;", "&nbsp;", "Non-breaking space"},
+                {"&copy;", "&copy;", "\u00A9 copyright"},
+                {"&reg;", "&reg;", "\u00AE registered"},
+                {"&trade;", "&trade;", "\u2122 trademark"},
+                {"&mdash;", "&mdash;", "\u2014 em dash"},
+                {"&ndash;", "&ndash;", "\u2013 en dash"},
+                {"&laquo;", "&laquo;", "\u00AB left guillemet"},
+                {"&raquo;", "&raquo;", "\u00BB right guillemet"},
+                {"&bull;", "&bull;", "\u2022 bullet"},
                 {"&hellip;", "&hellip;", "\u2026 horizontal ellipsis"},
-                {"&larr;",   "&larr;",   "\u2190 left arrow"},
-                {"&rarr;",   "&rarr;",   "\u2192 right arrow"},
-                {"&uarr;",   "&uarr;",   "\u2191 up arrow"},
-                {"&darr;",   "&darr;",   "\u2193 down arrow"},
-                {"&times;",  "&times;",  "\u00D7 multiplication"},
+                {"&larr;", "&larr;", "\u2190 left arrow"},
+                {"&rarr;", "&rarr;", "\u2192 right arrow"},
+                {"&uarr;", "&uarr;", "\u2191 up arrow"},
+                {"&darr;", "&darr;", "\u2193 down arrow"},
+                {"&times;", "&times;", "\u00D7 multiplication"},
                 {"&divide;", "&divide;", "\u00F7 division"},
                 {"&plusmn;", "&plusmn;", "\u00B1 plus-minus"},
-                {"&deg;",    "&deg;",    "\u00B0 degree"},
-                {"&infin;",  "&infin;",  "\u221E infinity"},
-                {"&lsquo;",  "&lsquo;",  "\u2018 left single quote"},
-                {"&rsquo;",  "&rsquo;",  "\u2019 right single quote"},
-                {"&ldquo;",  "&ldquo;",  "\u201C left double quote"},
-                {"&rdquo;",  "&rdquo;",  "\u201D right double quote"},
-                {"&euro;",   "&euro;",   "\u20AC euro sign"},
-                {"&pound;",  "&pound;",  "\u00A3 pound sign"},
-                {"&yen;",    "&yen;",    "\u00A5 yen sign"},
-                {"&cent;",   "&cent;",   "\u00A2 cent sign"},
-                {"&check;",  "&check;",  "\u2713 check mark"},
+                {"&deg;", "&deg;", "\u00B0 degree"},
+                {"&infin;", "&infin;", "\u221E infinity"},
+                {"&lsquo;", "&lsquo;", "\u2018 left single quote"},
+                {"&rsquo;", "&rsquo;", "\u2019 right single quote"},
+                {"&ldquo;", "&ldquo;", "\u201C left double quote"},
+                {"&rdquo;", "&rdquo;", "\u201D right double quote"},
+                {"&euro;", "&euro;", "\u20AC euro sign"},
+                {"&pound;", "&pound;", "\u00A3 pound sign"},
+                {"&yen;", "&yen;", "\u00A5 yen sign"},
+                {"&cent;", "&cent;", "\u00A2 cent sign"},
+                {"&check;", "&check;", "\u2713 check mark"},
                 {"&hearts;", "&hearts;", "\u2665 heart"},
-                {"&star;",   "&star;",   "\u2606 star"},
+                {"&star;", "&star;", "\u2606 star"},
         };
         for (String[] e : entities) {
             ENTITY_ITEMS.add(new CompletionItem(e[0], e[1], e[2], CompletionItem.Type.VALUE, 0));
         }
     }
 
-    // ─── Attribute value enumerations ────────────────────────────────────────────
-    /** Maps attribute name → allowed values shown in VS Code dropdowns. */
-    private static final Map<String, String[]> ATTR_VALUES = new HashMap<>();
-
     static {
         ATTR_VALUES.put("type", new String[]{
-                "text","password","email","number","tel","url","search","date","time","datetime-local",
-                "month","week","color","range","checkbox","radio","file","hidden","submit","reset","button","image"
+                "text", "password", "email", "number", "tel", "url", "search", "date", "time", "datetime-local",
+                "month", "week", "color", "range", "checkbox", "radio", "file", "hidden", "submit", "reset", "button", "image"
         });
-        ATTR_VALUES.put("method",     new String[]{"get", "post", "dialog"});
-        ATTR_VALUES.put("enctype",    new String[]{"application/x-www-form-urlencoded", "multipart/form-data", "text/plain"});
-        ATTR_VALUES.put("target",     new String[]{"_blank", "_self", "_parent", "_top"});
-        ATTR_VALUES.put("rel",        new String[]{"noopener", "noreferrer", "nofollow", "stylesheet", "icon", "preload", "prefetch", "canonical", "alternate", "author", "license", "manifest", "dns-prefetch", "preconnect", "modulepreload", "prev", "next", "help", "search"});
-        ATTR_VALUES.put("loading",    new String[]{"lazy", "eager"});
-        ATTR_VALUES.put("decoding",   new String[]{"async", "sync", "auto"});
+        ATTR_VALUES.put("method", new String[]{"get", "post", "dialog"});
+        ATTR_VALUES.put("enctype", new String[]{"application/x-www-form-urlencoded", "multipart/form-data", "text/plain"});
+        ATTR_VALUES.put("target", new String[]{"_blank", "_self", "_parent", "_top"});
+        ATTR_VALUES.put("rel", new String[]{"noopener", "noreferrer", "nofollow", "stylesheet", "icon", "preload", "prefetch", "canonical", "alternate", "author", "license", "manifest", "dns-prefetch", "preconnect", "modulepreload", "prev", "next", "help", "search"});
+        ATTR_VALUES.put("loading", new String[]{"lazy", "eager"});
+        ATTR_VALUES.put("decoding", new String[]{"async", "sync", "auto"});
         ATTR_VALUES.put("fetchpriority", new String[]{"high", "low", "auto"});
-        ATTR_VALUES.put("crossorigin",new String[]{"anonymous", "use-credentials"});
-        ATTR_VALUES.put("referrerpolicy", new String[]{"no-referrer","no-referrer-when-downgrade","origin","origin-when-cross-origin","same-origin","strict-origin","strict-origin-when-cross-origin","unsafe-url"});
-        ATTR_VALUES.put("autocomplete", new String[]{"on","off","name","email","username","current-password","new-password","one-time-code","postal-code","country","tel","address-line1","address-line2","city","state","zip"});
-        ATTR_VALUES.put("dir",        new String[]{"ltr", "rtl", "auto"});
-        ATTR_VALUES.put("draggable",  new String[]{"true", "false"});
+        ATTR_VALUES.put("crossorigin", new String[]{"anonymous", "use-credentials"});
+        ATTR_VALUES.put("referrerpolicy", new String[]{"no-referrer", "no-referrer-when-downgrade", "origin", "origin-when-cross-origin", "same-origin", "strict-origin", "strict-origin-when-cross-origin", "unsafe-url"});
+        ATTR_VALUES.put("autocomplete", new String[]{"on", "off", "name", "email", "username", "current-password", "new-password", "one-time-code", "postal-code", "country", "tel", "address-line1", "address-line2", "city", "state", "zip"});
+        ATTR_VALUES.put("dir", new String[]{"ltr", "rtl", "auto"});
+        ATTR_VALUES.put("draggable", new String[]{"true", "false"});
         ATTR_VALUES.put("contenteditable", new String[]{"true", "false", "plaintext-only"});
         ATTR_VALUES.put("spellcheck", new String[]{"true", "false"});
-        ATTR_VALUES.put("translate",  new String[]{"yes", "no"});
-        ATTR_VALUES.put("scope",      new String[]{"col", "row", "colgroup", "rowgroup"});
-        ATTR_VALUES.put("wrap",       new String[]{"soft", "hard"});
-        ATTR_VALUES.put("preload",    new String[]{"none", "metadata", "auto"});
-        ATTR_VALUES.put("kind",       new String[]{"subtitles", "captions", "descriptions", "chapters", "metadata"});
-        ATTR_VALUES.put("inputmode",  new String[]{"none","text","decimal","numeric","tel","search","email","url"});
-        ATTR_VALUES.put("enterkeyhint", new String[]{"enter","done","go","next","previous","search","send"});
-        ATTR_VALUES.put("autocapitalize", new String[]{"off","none","on","sentences","words","characters"});
-        ATTR_VALUES.put("sandbox",    new String[]{"allow-forms","allow-modals","allow-popups","allow-same-origin","allow-scripts","allow-top-navigation"});
-        ATTR_VALUES.put("aria-live",  new String[]{"off", "polite", "assertive"});
+        ATTR_VALUES.put("translate", new String[]{"yes", "no"});
+        ATTR_VALUES.put("scope", new String[]{"col", "row", "colgroup", "rowgroup"});
+        ATTR_VALUES.put("wrap", new String[]{"soft", "hard"});
+        ATTR_VALUES.put("preload", new String[]{"none", "metadata", "auto"});
+        ATTR_VALUES.put("kind", new String[]{"subtitles", "captions", "descriptions", "chapters", "metadata"});
+        ATTR_VALUES.put("inputmode", new String[]{"none", "text", "decimal", "numeric", "tel", "search", "email", "url"});
+        ATTR_VALUES.put("enterkeyhint", new String[]{"enter", "done", "go", "next", "previous", "search", "send"});
+        ATTR_VALUES.put("autocapitalize", new String[]{"off", "none", "on", "sentences", "words", "characters"});
+        ATTR_VALUES.put("sandbox", new String[]{"allow-forms", "allow-modals", "allow-popups", "allow-same-origin", "allow-scripts", "allow-top-navigation"});
+        ATTR_VALUES.put("aria-live", new String[]{"off", "polite", "assertive"});
         ATTR_VALUES.put("aria-expanded", new String[]{"true", "false"});
-        ATTR_VALUES.put("aria-haspopup", new String[]{"true","false","menu","listbox","tree","grid","dialog"});
-        ATTR_VALUES.put("aria-current", new String[]{"page","step","location","date","time","true","false"});
-        ATTR_VALUES.put("aria-invalid", new String[]{"false","true","grammar","spelling"});
-        ATTR_VALUES.put("popover",    new String[]{"auto", "manual"});
-        ATTR_VALUES.put("shape",      new String[]{"rect", "circle", "poly", "default"});
-        ATTR_VALUES.put("http-equiv", new String[]{"content-type","default-style","refresh","x-ua-compatible","content-security-policy"});
-        ATTR_VALUES.put("name",       new String[]{"viewport","description","keywords","author","robots","theme-color","color-scheme","generator","application-name"});
-        ATTR_VALUES.put("property",   new String[]{"og:title","og:description","og:image","og:url","og:type","og:site_name","og:locale"});
-        ATTR_VALUES.put("role",       new String[]{"alert","alertdialog","application","article","banner","button","cell","checkbox","columnheader","combobox","complementary","contentinfo","definition","dialog","directory","document","feed","figure","form","grid","gridcell","group","heading","img","link","list","listbox","listitem","log","main","marquee","math","menu","menubar","menuitem","menuitemcheckbox","menuitemradio","navigation","none","note","option","presentation","progressbar","radio","radiogroup","region","row","rowgroup","rowheader","scrollbar","search","searchbox","separator","slider","spinbutton","status","switch","tab","table","tablist","tabpanel","term","textbox","timer","toolbar","tooltip","tree","treegrid","treeitem"});
+        ATTR_VALUES.put("aria-haspopup", new String[]{"true", "false", "menu", "listbox", "tree", "grid", "dialog"});
+        ATTR_VALUES.put("aria-current", new String[]{"page", "step", "location", "date", "time", "true", "false"});
+        ATTR_VALUES.put("aria-invalid", new String[]{"false", "true", "grammar", "spelling"});
+        ATTR_VALUES.put("popover", new String[]{"auto", "manual"});
+        ATTR_VALUES.put("shape", new String[]{"rect", "circle", "poly", "default"});
+        ATTR_VALUES.put("http-equiv", new String[]{"content-type", "default-style", "refresh", "x-ua-compatible", "content-security-policy"});
+        ATTR_VALUES.put("name", new String[]{"viewport", "description", "keywords", "author", "robots", "theme-color", "color-scheme", "generator", "application-name"});
+        ATTR_VALUES.put("property", new String[]{"og:title", "og:description", "og:image", "og:url", "og:type", "og:site_name", "og:locale"});
+        ATTR_VALUES.put("role", new String[]{"alert", "alertdialog", "application", "article", "banner", "button", "cell", "checkbox", "columnheader", "combobox", "complementary", "contentinfo", "definition", "dialog", "directory", "document", "feed", "figure", "form", "grid", "gridcell", "group", "heading", "img", "link", "list", "listbox", "listitem", "log", "main", "marquee", "math", "menu", "menubar", "menuitem", "menuitemcheckbox", "menuitemradio", "navigation", "none", "note", "option", "presentation", "progressbar", "radio", "radiogroup", "region", "row", "rowgroup", "rowheader", "scrollbar", "search", "searchbox", "separator", "slider", "spinbutton", "status", "switch", "tab", "table", "tablist", "tabpanel", "term", "textbox", "timer", "toolbar", "tooltip", "tree", "treegrid", "treeitem"});
     }
 
     // ─── Instance state ──────────────────────────────────────────────────────────
     private final List<CompletionItem> tagItems = new ArrayList<>();
-    private final HtmlTagParser tagParser       = new HtmlTagParser();
+    private final HtmlTagParser tagParser = new HtmlTagParser();
     private final Map<String, List<CompletionItem>> attrMap = new HashMap<>();
 
     private final CssAutoCompleteEngine cssEngine;
-    private final JsAutoCompleteEngine  jsEngine;
+    private final JsAutoCompleteEngine jsEngine;
     private File currentFile;
     private String htmlBoilerplate;
 
@@ -275,7 +274,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         super(context);
         loadTags();
         this.cssEngine = new CssAutoCompleteEngine(context);
-        this.jsEngine  = new JsAutoCompleteEngine(context);
+        this.jsEngine = new JsAutoCompleteEngine(context);
     }
 
     public void setCurrentFile(File file) {
@@ -298,9 +297,9 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             JSONArray arr = new JSONArray(json);
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject obj = arr.getJSONObject(i);
-                String tag     = obj.optString("tag");
+                String tag = obj.optString("tag");
                 String snippet = obj.optString("snippet", "<" + tag + ">|</" + tag + ">");
-                String detail  = obj.optString("detail", "");
+                String detail = obj.optString("detail", "");
 
                 CompletionItem item = new CompletionItem(tag, snippet, detail,
                         CompletionItem.Type.TAG, 0);
@@ -347,8 +346,8 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         }
 
         String lineBefore = getLineBeforeCursor(fullText, cursorPos);
-        String trimmed    = lineBefore.trim();
-        String word       = getWordBeforeCursor(fullText, cursorPos);
+        String trimmed = lineBefore.trim();
+        String word = getWordBeforeCursor(fullText, cursorPos);
 
         // ── 1. DOCTYPE / comment completions (when typing "<!" or "<!D") ─────────
         if (trimmed.equals("<!") || trimmed.startsWith("<!D") || trimmed.startsWith("<!d")) {
@@ -423,10 +422,10 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 }
 
                 // 5c. Inside file-path attribute → file suggestions
-                if (attrName.equals("src") || attrName.equals("href") || attrName.equals("action") || 
-                    attrName.equals("formaction") || attrName.equals("poster") || attrName.equals("data") || 
-                    attrName.equals("cite") || attrName.equals("manifest") || attrName.equals("srcset")) {
-                    
+                if (attrName.equals("src") || attrName.equals("href") || attrName.equals("action") ||
+                        attrName.equals("formaction") || attrName.equals("poster") || attrName.equals("data") ||
+                        attrName.equals("cite") || attrName.equals("manifest") || attrName.equals("srcset")) {
+
                     String pathQuery = typedValue;
                     if (attrName.equals("srcset")) {
                         // In srcset, URLs can be separated by commas and spaces. We only want the last token.
@@ -439,7 +438,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                             pathQuery = pathQuery.substring(lastSpace + 1);
                         }
                     }
-                    
+
                     return getFileSuggestions(pathQuery, ctx.currentTagName, attrName);
                 }
 
@@ -449,7 +448,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 if (lastSpace != -1) {
                     attrWord = typedValue.substring(lastSpace + 1);
                 }
-                
+
                 if ("class".equals(attrName)) {
                     List<CompletionItem> classes = ProjectSymbolIndex.getInstance().getCssClassItems();
                     if (!classes.isEmpty()) {
@@ -474,7 +473,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                     }
                     return fuzzyFilter(valItems, typedValue);
                 }
-                
+
                 // We are inside quotes for an attribute, but we don't have specific completions.
                 // Return empty list so we don't fall through and suggest attribute names.
                 return new ArrayList<>();
@@ -517,7 +516,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                 return emmetResults.isEmpty() ? new ArrayList<>() : emmetResults;
             }
             List<CompletionItem> finalResults = new ArrayList<>(emmetResults);
-            
+
             // Get O(L) fast prefix matches via Trie
             List<CompletionItem> prefixMatches = TAG_TRIE.getCompletions(word, MAX_SUGGESTIONS);
             if (!prefixMatches.isEmpty()) {
@@ -607,9 +606,9 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
         if (lastSlash != -1 || typedPath.isEmpty()) {
             // User typed a path with a directory component OR it's empty — list that directory
-            String dirPart      = lastSlash != -1 ? typedPath.substring(0, lastSlash) : "";
+            String dirPart = lastSlash != -1 ? typedPath.substring(0, lastSlash) : "";
             String filterPrefix = lastSlash != -1 ? typedPath.substring(lastSlash + 1).toLowerCase() : typedPath.toLowerCase();
-            File   searchDir    = dirPart.isEmpty() ? currentDir : new File(currentDir, dirPart);
+            File searchDir = dirPart.isEmpty() ? currentDir : new File(currentDir, dirPart);
 
             if (searchDir.exists() && searchDir.isDirectory()) {
                 List<File> files = VFSManager.getInstance().listCachedFiles(searchDir);
@@ -618,7 +617,8 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
                         if (f.getName().startsWith(".")) continue;
                         if (!isFileAllowed(f, tagName, attrName)) continue;
                         String name = f.getName();
-                        if (!filterPrefix.isEmpty() && !name.toLowerCase().startsWith(filterPrefix)) continue;
+                        if (!filterPrefix.isEmpty() && !name.toLowerCase().startsWith(filterPrefix))
+                            continue;
                         String completion = name + (f.isDirectory() ? "/" : "");
                         CompletionItem ci = new CompletionItem(completion, completion,
                                 f.isDirectory() ? "Directory" : getFileSizeHint(f),
@@ -641,7 +641,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
 
         for (File f : allMatching) {
             String relPath = getRelativeHtmlPath(currentDir, f);
-            String label   = f.getName() + (f.isDirectory() ? "/" : "");
+            String label = f.getName() + (f.isDirectory() ? "/" : "");
             CompletionItem ci = new CompletionItem(label, relPath,
                     f.isDirectory() ? "Directory" : relPath,
                     f.isDirectory() ? CompletionItem.Type.FOLDER : CompletionItem.Type.FILE, 0);
@@ -682,7 +682,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     }
 
     private String getRelativeHtmlPath(File baseDir, File target) {
-        String[] basePath   = baseDir.getAbsolutePath().split("/");
+        String[] basePath = baseDir.getAbsolutePath().split("/");
         String[] targetPath = target.getAbsolutePath().split("/");
 
         int common = 0;
@@ -710,7 +710,7 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
         for (File f : files) {
             if (f.getName().startsWith(".")) continue;
             if (!isFileAllowed(f, tagName, attrName)) continue;
-            
+
             if (f.getName().toLowerCase().startsWith(query)) {
                 results.add(f);
                 if (results.size() >= limit) return;
@@ -724,20 +724,20 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
     private boolean isFileAllowed(File f, String tagName, String attrName) {
         if (f.isDirectory()) return true; // Always allow traversing directories
         String name = f.getName().toLowerCase();
-        
+
         if ("img".equals(tagName) || "poster".equals(attrName) || "srcset".equals(attrName)) {
-            return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") 
-                || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp") || name.endsWith(".ico");
+            return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")
+                    || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp") || name.endsWith(".ico");
         }
         if ("script".equals(tagName)) {
-            return name.endsWith(".js") || name.endsWith(".ts") || name.endsWith(".jsx") 
-                || name.endsWith(".tsx") || name.endsWith(".mjs") || name.endsWith(".cjs") || name.endsWith(".vue");
+            return name.endsWith(".js") || name.endsWith(".ts") || name.endsWith(".jsx")
+                    || name.endsWith(".tsx") || name.endsWith(".mjs") || name.endsWith(".cjs") || name.endsWith(".vue");
         }
         if ("link".equals(tagName) && "href".equals(attrName)) {
-            return name.endsWith(".css") || name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".ico") 
-                || name.endsWith(".svg") || name.endsWith(".json") || name.endsWith(".webmanifest")
-                || name.endsWith(".woff") || name.endsWith(".woff2") || name.endsWith(".ttf") 
-                || name.endsWith(".otf") || name.endsWith(".eot") || name.endsWith(".xml");
+            return name.endsWith(".css") || name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") || name.endsWith(".ico")
+                    || name.endsWith(".svg") || name.endsWith(".json") || name.endsWith(".webmanifest")
+                    || name.endsWith(".woff") || name.endsWith(".woff2") || name.endsWith(".ttf")
+                    || name.endsWith(".otf") || name.endsWith(".eot") || name.endsWith(".xml");
         }
         if ("audio".equals(tagName)) {
             return name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg");
@@ -746,10 +746,10 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             return name.endsWith(".mp4") || name.endsWith(".webm") || name.endsWith(".ogg");
         }
         if ("source".equals(tagName)) {
-            return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg") 
-                || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp")
-                || name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg")
-                || name.endsWith(".mp4") || name.endsWith(".webm");
+            return name.endsWith(".png") || name.endsWith(".jpg") || name.endsWith(".jpeg")
+                    || name.endsWith(".gif") || name.endsWith(".svg") || name.endsWith(".webp")
+                    || name.endsWith(".mp3") || name.endsWith(".wav") || name.endsWith(".ogg")
+                    || name.endsWith(".mp4") || name.endsWith(".webm");
         }
         if ("html".equals(tagName) && "manifest".equals(attrName)) {
             return name.endsWith(".json") || name.endsWith(".webmanifest");
@@ -758,6 +758,6 @@ public class HtmlAutoCompleteEngine extends AutoCompleteEngine {
             return name.endsWith(".php") || name.endsWith(".html") || name.endsWith(".htm") || name.endsWith(".js");
         }
         // For other generic tags (like <a>, <iframe>), allow everything
-        return true; 
+        return true;
     }
 }

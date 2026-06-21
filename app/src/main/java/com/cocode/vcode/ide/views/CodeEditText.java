@@ -13,7 +13,6 @@ import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
 import android.text.style.BackgroundColorSpan;
-import android.text.style.ForegroundColorSpan;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.View;
@@ -64,7 +63,9 @@ public class CodeEditText extends AppCompatEditText {
     private static final int VIEWPORT_BUFFER_LINES = 30; // extra lines above/below visible area
     private static final long AUTOCOMPLETE_DELAY_MS = 100;
 
-    /** Characters that trigger a new completion context — typed alone (no word before them). */
+    /**
+     * Characters that trigger a new completion context — typed alone (no word before them).
+     */
     private static final String TRIGGER_CHARS = ".</:'" + "\"" + "@#!";
 
     private final HtmlTagParser htmlTagParser = new HtmlTagParser();
@@ -74,65 +75,40 @@ public class CodeEditText extends AppCompatEditText {
 
     private final UndoRedoManager undoRedoManager = new UndoRedoManager();
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
-
+    private final boolean autoCloseHtmlTags = true;
+    private final boolean isFormatting = false;
+    private final DirtyRangeTracker dirtyTracker = new DirtyRangeTracker();
     // Edit tracking for intelligent undo grouping
     private String undoOldText;
     private int undoEditStart;
     private int undoDeletedCount;
     private int undoInsertedCount;
-
-    private final boolean autoCloseHtmlTags = true;
-    private final boolean isFormatting = false;
     private SyntaxHighlighter syntaxHighlighter;
     private AutoCompleteEngine autoCompleteEngine;
     private FileType fileType = FileType.TEXT;
+    private final Runnable autoCompleteRunnable = this::triggerAutoComplete;
     private boolean autoCloseBrackets = true;
     private boolean autoIndent = true;
     private Paint lineHighlightPaint;
     private boolean isAutoClosing = false;
     private boolean isApplyingHighlight = false;
-    private final Runnable highlightRunnable = this::triggerHighlight;
-    private final Runnable autoCompleteRunnable = this::triggerAutoComplete;
-    private final Runnable scrollHighlightRunnable = this::triggerHighlight;
     private boolean isUndoRedoActive = false;
     private boolean isSettingText = false;
     private boolean isTypingText = false;
     private boolean isInsertingCompletion = false;
     private File currentFile;
     private OnScrollChangeListener scrollChangeListener;
-
-    private static class DirtyRangeTracker {
-        int start = -1;
-        int end = -1;
-
-        void addEdit(int editStart, int beforeLength, int afterLength) {
-            if (start == -1) {
-                start = editStart;
-                end = editStart + afterLength;
-            } else {
-                int diff = afterLength - beforeLength;
-                if (editStart <= end) {
-                    end += diff;
-                }
-                start = Math.min(start, editStart);
-                end = Math.max(end, editStart + afterLength);
-            }
-        }
-
-        void reset() {
-            start = -1;
-            end = -1;
-        }
-
-        boolean isDirty() {
-            return start != -1;
-        }
-    }
-
-    private final DirtyRangeTracker dirtyTracker = new DirtyRangeTracker();
+    private Paint diagnosticPaint;
+    private android.graphics.Path diagnosticPath;
+    // Cached line-start offsets — rebuilt only when diagnostics are applied (not every frame)
+    private int[] cachedLineOffsets = null;
+    private int cachedLineOffsetsTextLen = -1;
     private int lastHighlightStart = -1;
     private int lastHighlightEnd = -1;
     private long highlightVersion = 0;
+    private final Runnable highlightRunnable = this::triggerHighlight;
+    private final Runnable scrollHighlightRunnable = this::triggerHighlight;
+    private List<com.cocode.vcode.ide.data.model.Problem> currentProblems = new ArrayList<>();
 
     public CodeEditText(Context context) {
         super(context);
@@ -195,6 +171,11 @@ public class CodeEditText extends AppCompatEditText {
         lineHighlightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         lineHighlightPaint.setColor(ContextCompat.getColor(context, R.color.vcode_active_line_highlight));
         lineHighlightPaint.setStyle(Paint.Style.FILL);
+
+        diagnosticPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        diagnosticPaint.setStyle(Paint.Style.STROKE);
+        diagnosticPaint.setStrokeWidth(3f);
+        diagnosticPath = new android.graphics.Path();
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             setBreakStrategy(LineBreaker.BREAK_STRATEGY_SIMPLE);
@@ -310,12 +291,90 @@ public class CodeEditText extends AppCompatEditText {
             int cursor = getSelectionStart();
             if (cursor >= 0 && cursor <= (getText() != null ? getText().length() : 0)) {
                 int line = getLayout().getLineForOffset(cursor);
-                float lineTop = getLayout().getLineTop(line) + getPaddingTop();
-                float lineBot = getLayout().getLineBottom(line) + getPaddingTop();
+                float lineTop = getLayout().getLineTop(line) + getTotalPaddingTop();
+                float lineBot = getLayout().getLineBottom(line) + getTotalPaddingTop();
                 canvas.drawRect(0, lineTop, getWidth(), lineBot, lineHighlightPaint);
             }
         }
         super.onDraw(canvas);
+
+        if (getLayout() != null && currentProblems != null && !currentProblems.isEmpty() && getText() != null) {
+            if (cachedLineOffsets == null) rebuildLineOffsets();
+            if (cachedLineOffsets == null) return;
+            int[] lineOffsets = cachedLineOffsets;
+            int lineCount = lineOffsets.length;
+
+            // Visible scroll bounds — skip problems outside viewport
+            int scrollY = getScrollY();
+            int visibleTop = scrollY - getTotalPaddingTop();
+            int visibleBot = scrollY + getHeight();
+
+            int errorColor = androidx.core.content.ContextCompat.getColor(getContext(), com.cocode.vcode.ide.R.color.vcode_accent_error);
+            int warningColor = androidx.core.content.ContextCompat.getColor(getContext(), com.cocode.vcode.ide.R.color.vcode_accent_warning);
+            int infoColor = androidx.core.content.ContextCompat.getColor(getContext(), com.cocode.vcode.ide.R.color.vcode_accent_primary);
+
+            int textLen = getText().length();
+
+            for (com.cocode.vcode.ide.data.model.Problem problem : currentProblems) {
+                int lineIdx = problem.getLine() - 1;
+                if (lineIdx < 0 || lineIdx >= lineCount) continue;
+
+                int colIdx = Math.max(0, problem.getColumn() - 1);
+                int startOff = lineOffsets[lineIdx] + colIdx;
+                int lineEnd = (lineIdx + 1 < lineCount) ? lineOffsets[lineIdx + 1] - 1 : textLen;
+                int endOff = Math.min(startOff + Math.max(1, problem.getLength()), lineEnd);
+                if (startOff >= endOff) endOff = Math.min(startOff + 1, textLen);
+                if (startOff < 0 || startOff >= textLen) continue;
+
+                int color = infoColor;
+                if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.ERROR)
+                    color = errorColor;
+                else if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.WARNING)
+                    color = warningColor;
+                diagnosticPaint.setColor(color);
+
+                int startLayout = getLayout().getLineForOffset(startOff);
+                int endLayout = getLayout().getLineForOffset(Math.min(endOff - 1, textLen - 1));
+
+                for (int l = startLayout; l <= endLayout; l++) {
+                    float lineTop = getLayout().getLineTop(l) + getTotalPaddingTop();
+                    float lineBot = getLayout().getLineBottom(l) + getTotalPaddingTop();
+                    // Skip lines outside the visible viewport
+                    if (lineBot < visibleTop || lineTop > visibleBot) continue;
+
+                    int drawStart = Math.max(startOff, getLayout().getLineStart(l));
+                    int drawEnd = Math.min(endOff, getLayout().getLineEnd(l));
+                    if (drawStart >= drawEnd) continue;
+
+                    float x0 = getLayout().getPrimaryHorizontal(drawStart) + getTotalPaddingLeft();
+                    float x1 = getLayout().getPrimaryHorizontal(drawEnd) + getTotalPaddingLeft();
+                    if (x0 > x1) {
+                        float t = x0;
+                        x0 = x1;
+                        x1 = t;
+                    }
+
+                    float baseline = getLayout().getLineBaseline(l) + getTotalPaddingTop();
+                    float waveY = baseline + 3f;
+                    float amp = 2.5f;   // wave amplitude
+                    float period = 8f;     // full wave width in px
+
+                    diagnosticPath.reset();
+                    diagnosticPath.moveTo(x0, waveY);
+                    // Smooth quadratic bézier wave: each segment is half-period wide
+                    float half = period / 2f;
+                    boolean up = true;
+                    for (float cx = x0; cx < x1; cx += half) {
+                        float ex = Math.min(cx + half, x1);
+                        float mid = (cx + ex) / 2f;
+                        float ctlY = up ? waveY - amp : waveY + amp;
+                        diagnosticPath.quadTo(mid, ctlY, ex, waveY);
+                        up = !up;
+                    }
+                    canvas.drawPath(diagnosticPath, diagnosticPaint);
+                }
+            }
+        }
     }
 
     @Override
@@ -568,6 +627,34 @@ public class CodeEditText extends AppCompatEditText {
         });
     }
 
+    public void applyDiagnostics(List<com.cocode.vcode.ide.data.model.Problem> problems) {
+        if (getText() == null) return;
+        this.currentProblems = problems != null ? problems : new ArrayList<>();
+        // Rebuild line offset cache now (on main thread, text is stable)
+        rebuildLineOffsets();
+        invalidate();
+    }
+
+    private void rebuildLineOffsets() {
+        if (getText() == null) {
+            cachedLineOffsets = null;
+            return;
+        }
+        String s = getText().toString();
+        int len = s.length();
+        if (cachedLineOffsets != null && cachedLineOffsetsTextLen == len) return; // still valid
+        // count lines
+        int count = 1;
+        for (int i = 0; i < len; i++) if (s.charAt(i) == '\n') count++;
+        cachedLineOffsets = new int[count];
+        cachedLineOffsets[0] = 0;
+        int idx = 1;
+        for (int i = 0; i < len && idx < count; i++) {
+            if (s.charAt(i) == '\n') cachedLineOffsets[idx++] = i + 1;
+        }
+        cachedLineOffsetsTextLen = len;
+    }
+
     /**
      * Applies highlight spans only within the specified range, avoiding full-document span operations.
      */
@@ -633,8 +720,8 @@ public class CodeEditText extends AppCompatEditText {
     private void triggerAutoComplete() {
         if (autoCompleteEngine == null || getText() == null) return;
 
-        String text   = getText().toString();
-        int    cursor = getSelectionStart();
+        String text = getText().toString();
+        int cursor = getSelectionStart();
 
         if (cursor <= 0 || cursor > text.length()) {
             autoCompletePopup.dismiss();
@@ -649,8 +736,8 @@ public class CodeEditText extends AppCompatEditText {
             return;
         }
 
-        boolean isTriggerChar  = TRIGGER_CHARS.indexOf(lastChar) >= 0;
-        boolean isIdentifier   = Character.isLetterOrDigit(lastChar)
+        boolean isTriggerChar = TRIGGER_CHARS.indexOf(lastChar) >= 0;
+        boolean isIdentifier = Character.isLetterOrDigit(lastChar)
                 || lastChar == '_' || lastChar == '$'
                 || (lastChar == '-' && (fileType == FileType.CSS || fileType == FileType.HTML));
 
@@ -898,8 +985,6 @@ public class CodeEditText extends AppCompatEditText {
         }
     }
 
-    // ─── Undo/Redo ─────────────────────────────────────────────────────────────
-
     /**
      * Pops previous document states off history stacks to roll modifications backwards safely.
      */
@@ -920,6 +1005,8 @@ public class CodeEditText extends AppCompatEditText {
         isUndoRedoActive = false;
         scheduleHighlight();
     }
+
+    // ─── Undo/Redo ─────────────────────────────────────────────────────────────
 
     /**
      * Advances document history tracking forward to re-apply rolled-back entries.
@@ -1042,7 +1129,7 @@ public class CodeEditText extends AppCompatEditText {
     @Override
     protected void onScrollChanged(int horiz, int vert, int oldHoriz, int oldVert) {
         super.onScrollChanged(horiz, vert, oldHoriz, oldVert);
-        
+
         // Hide autocomplete popup if the user manually scrolls the editor
         if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
             autoCompletePopup.dismiss();
@@ -1112,6 +1199,34 @@ public class CodeEditText extends AppCompatEditText {
         void onScrollChanged(int scrollX, int scrollY);
     }
 
+    private static class DirtyRangeTracker {
+        int start = -1;
+        int end = -1;
+
+        void addEdit(int editStart, int beforeLength, int afterLength) {
+            if (start == -1) {
+                start = editStart;
+                end = editStart + afterLength;
+            } else {
+                int diff = afterLength - beforeLength;
+                if (editStart <= end) {
+                    end += diff;
+                }
+                start = Math.min(start, editStart);
+                end = Math.max(end, editStart + afterLength);
+            }
+        }
+
+        void reset() {
+            start = -1;
+            end = -1;
+        }
+
+        boolean isDirty() {
+            return start != -1;
+        }
+    }
+
     private static class EditorState {
         final String text;
         final int cursor;
@@ -1151,6 +1266,16 @@ public class CodeEditText extends AppCompatEditText {
         private long lastEditTime;         // Timestamp of last edit in current group
         private int lastEditType;          // 0=none, 1=insert, 2=backspace, 3=forward-delete
 
+        private static boolean isWordBoundary(char c) {
+            return c == ' ' || c == '\n' || c == '\t' || c == '\r'
+                    || c == '.' || c == ',' || c == ';' || c == ':'
+                    || c == '(' || c == ')' || c == '{' || c == '}'
+                    || c == '[' || c == ']' || c == '<' || c == '>'
+                    || c == '"' || c == '\'' || c == '`'
+                    || c == '=' || c == '+' || c == '-' || c == '/'
+                    || c == '!' || c == '?' || c == '&' || c == '|';
+        }
+
         void reset(String text) {
             history.clear();
             index = -1;
@@ -1171,12 +1296,12 @@ public class CodeEditText extends AppCompatEditText {
         /**
          * Called on every text change with edit metadata for intelligent grouping.
          *
-         * @param newText    Full document text after the edit
-         * @param cursor     Cursor position after the edit
-         * @param start      Start position of the edit
-         * @param deletedCount Number of characters deleted (0 for pure inserts)
+         * @param newText       Full document text after the edit
+         * @param cursor        Cursor position after the edit
+         * @param start         Start position of the edit
+         * @param deletedCount  Number of characters deleted (0 for pure inserts)
          * @param insertedCount Number of characters inserted (0 for pure deletes)
-         * @param oldText    Full document text before the edit
+         * @param oldText       Full document text before the edit
          */
         void onEdit(String newText, int cursor, int start, int deletedCount, int insertedCount, String oldText) {
             long now = System.currentTimeMillis();
@@ -1198,12 +1323,9 @@ public class CodeEditText extends AppCompatEditText {
             }
 
             // Check if we should break the group
-            boolean shouldBreak = false;
+            boolean shouldBreak = lastEditType != 0 && (now - lastEditTime) > TIME_GAP_MS;
 
             // Time gap — force new group
-            if (lastEditType != 0 && (now - lastEditTime) > TIME_GAP_MS) {
-                shouldBreak = true;
-            }
 
             // Direction change (insert→delete or backspace↔forward-delete)
             if (lastEditType != 0 && editType != lastEditType) {
@@ -1317,16 +1439,6 @@ public class CodeEditText extends AppCompatEditText {
         EditorState redo() {
             if (!canRedo()) return null;
             return history.get(++index);
-        }
-
-        private static boolean isWordBoundary(char c) {
-            return c == ' ' || c == '\n' || c == '\t' || c == '\r'
-                    || c == '.' || c == ',' || c == ';' || c == ':'
-                    || c == '(' || c == ')' || c == '{' || c == '}'
-                    || c == '[' || c == ']' || c == '<' || c == '>'
-                    || c == '"' || c == '\'' || c == '`'
-                    || c == '=' || c == '+' || c == '-' || c == '/'
-                    || c == '!' || c == '?' || c == '&' || c == '|';
         }
     }
 

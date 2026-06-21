@@ -17,9 +17,9 @@ import android.widget.LinearLayout;
 public class CodeEditorLayout extends LinearLayout {
 
     private static final long SYNC_DEBOUNCE_MS = 50;
+    private final Handler handler = new Handler(Looper.getMainLooper());
     private LineNumberView lineNumberView;
     private CodeEditText codeEditText;
-    private final Handler handler = new Handler(Looper.getMainLooper());
     private final Runnable syncRunnable = this::syncLineNumberView;
 
     public CodeEditorLayout(Context context) {
@@ -61,7 +61,7 @@ public class CodeEditorLayout extends LinearLayout {
         // Synchronize scroll shifts from the editor to the line numbers gutter
         codeEditText.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             lineNumberView.setScrollY(scrollY);
-            lineNumberView.setCurrentLine(codeEditText.getCurrentLine());
+            lineNumberView.setCursorOffset(codeEditText.getSelectionStart());
         });
 
         codeEditText.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
@@ -99,7 +99,7 @@ public class CodeEditorLayout extends LinearLayout {
 
         lineNumberView.setLineCount();
         lineNumberView.setLineHeight();
-        lineNumberView.setCurrentLine(codeEditText.getCurrentLine());
+        lineNumberView.setCursorOffset(codeEditText.getSelectionStart());
         lineNumberView.setScrollY(codeEditText.getScrollY());
         lineNumberView.updateGutterWidth(lineCount);
     }

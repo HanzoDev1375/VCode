@@ -66,6 +66,7 @@
                 android:background="@drawable/vcode_bg_symbol_key"
                 android:paddingHorizontal="6dp"
                 android:paddingVertical="2dp"
+                android:text="@string/vcode_head_badge"
                 android:textAllCaps="true"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                 android:textColor="@color/vcode_on_secondary_container"
@@ -73,7 +74,6 @@
                 android:visibility="gone"
                 app:backgroundTint="@color/vcode_secondary_container"
                 tools:ignore="SmallSp"
-                android:text="@string/vcode_head_badge"
                 tools:visibility="visible" />
 
             <TextView

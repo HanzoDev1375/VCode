@@ -157,6 +157,7 @@ public class AutoCompletePopup {
 
     /**
      * Moves the keyboard selection highlight up or down.
+     *
      * @param direction +1 for down, -1 for up
      */
     public void moveSelection(int direction) {

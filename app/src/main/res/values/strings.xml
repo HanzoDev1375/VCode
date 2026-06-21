@@ -24,8 +24,6 @@
     <string name="auto_save">Auto save</string>
     <string name="automatically_save_file">Automatically save the file as you stopped typing</string>
     <string name="git_settings">GIT SETTINGS</string>
-    <string name="validate_json">Validate JSON</string>
-    <string name="keeps_validating_json_at_realtime">Keeps validating JSON file in realtime and shows the status</string>
     <string name="in_app_preview">In-app Preview</string>
     <string name="show_in_app_preview_directly_in_the_app">Preview the website directly inside the app\'s native preview section</string>
     <string name="default_branch">DEFAULT BRANCH</string>

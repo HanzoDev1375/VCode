@@ -13,7 +13,6 @@ import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.LinearLayout;
 import android.widget.PopupWindow;
-import android.widget.TextView;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -198,22 +197,22 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
         });
 
-        View flProblems = findViewById(R.id.fl_problems);
-        if (flProblems != null) {
-            flProblems.setOnClickListener(v -> {
+
+        if (binding.diagnosticBar != null) {
+            binding.diagnosticBar.setOnClickListener(v -> {
                 com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet sheet = new com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet();
                 sheet.setListener(this::jumpToLine);
+                Integer activeIndex = viewModel.getActiveTabIndex().getValue();
+                if (activeIndex != null && activeIndex >= 0) {
+                    java.util.List<com.cocode.vcode.ide.data.model.EditorFile> openFiles = viewModel.getOpenFiles().getValue();
+                    if (openFiles != null && activeIndex < openFiles.size()) {
+                        sheet.setFilterFile(openFiles.get(activeIndex).getFile());
+                    }
+                }
                 sheet.show(getSupportFragmentManager(), "ProblemsSheet");
             });
         }
 
-        // Refresh TODO panel on file save
-        com.cocode.vcode.ide.data.repository.FileRepository.getFileSavedEvent().observe(this, file -> {
-            androidx.fragment.app.Fragment f = getSupportFragmentManager().findFragmentByTag("TodoPanel");
-            if (f instanceof com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet) {
-                ((com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet) f).refresh();
-            }
-        });
 
         binding.btnOverflow.setOnClickListener(this::showOverflowMenu);
 
@@ -394,7 +393,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 }
                 binding.tabBar.setVisibility(View.GONE);
                 binding.breadcrumb.setVisibility(View.GONE);
-                hideJsonStatus();
+                binding.diagnosticBar.setVisibility(View.GONE);
 
                 // Hide keyboard
                 InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -426,21 +425,40 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     }
                 }
                 updateActiveViewer(activeFile, isPreview);
+                binding.diagnosticBar.setVisibility(isFileDiagnosable(activeFile) ? View.VISIBLE : View.GONE);
             }
             updateToolbarVisibility();
         });
 
-        viewModel.getProblems().observe(this, problems -> {
-            TextView badge = findViewById(R.id.tv_problems_badge);
-            if (badge != null) {
-                if (problems != null && !problems.isEmpty()) {
-                    badge.setVisibility(View.VISIBLE);
-                    badge.setText(String.valueOf(problems.size()));
-                } else {
-                    badge.setVisibility(View.GONE);
-                }
+        viewModel.getActiveFileDiagnostics().observe(this, counts -> {
+            List<EditorFile> files = viewModel.getOpenFiles().getValue();
+            Integer idx = viewModel.getActiveTabIndex().getValue();
+            if (files == null || idx == null || idx < 0 || idx >= files.size() || !isFileDiagnosable(files.get(idx))) {
+                binding.diagnosticBar.setVisibility(View.GONE);
+                return;
+            }
+            binding.diagnosticBar.setVisibility(View.VISIBLE);
+            if (counts != null) {
+                binding.diagnosticBar.update(counts[0], counts[1], counts[2]);
+            } else {
+                binding.diagnosticBar.setLoading();
             }
         });
+    }
+
+    private boolean isFileDiagnosable(EditorFile file) {
+        if (file == null) return false;
+        switch (file.getFileType()) {
+            case HTML:
+            case CSS:
+            case SCSS:
+            case JAVASCRIPT:
+            case TYPESCRIPT:
+            case JSON:
+                return true;
+            default:
+                return false;
+        }
     }
 
     private void updateActiveViewer(EditorFile activeFile, boolean isPreview) {
@@ -552,19 +570,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
 
-            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_bars, "Symbol Outline", () -> {
-                com.cocode.vcode.ide.ui.editor.outline.SymbolOutlineBottomSheet bottomSheet = new com.cocode.vcode.ide.ui.editor.outline.SymbolOutlineBottomSheet();
-                bottomSheet.setEditor(getActiveCodeEditor(), activeFile.getFileType());
-                bottomSheet.show(getSupportFragmentManager(), "SymbolOutline");
-            });
         }
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
-
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_check, "TODO Panel", () -> {
-            popupWindow.dismiss();
-            showTodoPanel();
-        });
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);
@@ -688,40 +696,33 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         sheet.show(getSupportFragmentManager(), "GoToLineSheet");
     }
 
-    private void showTodoPanel() {
-        com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet sheet =
-                com.cocode.vcode.ide.ui.sheets.TodoPanelBottomSheet.newInstance(viewModel.getProjectRoot());
-        sheet.setListener((file, line) -> {
-            viewModel.openFile(file);
-            new android.os.Handler(android.os.Looper.getMainLooper()).postDelayed(() -> jumpToLine(line), 250);
-        });
-        sheet.show(getSupportFragmentManager(), "TodoPanel");
-    }
-
     public void jumpToLine(int line) {
         CodeEditText codeEditText = getActiveCodeEditor();
         if (codeEditText == null || codeEditText.getText() == null) return;
 
         int targetLineIndex = line - 1;
+        String text = codeEditText.getText().toString();
+
+        // 1. Find exact character offset for the LOGICAL line
+        int currentLine = 0;
+        int offset = 0;
+        for (int i = 0; i < text.length(); i++) {
+            if (currentLine == targetLineIndex) {
+                offset = i;
+                break;
+            }
+            if (text.charAt(i) == '\n') currentLine++;
+        }
+
+        // 2. Set the cursor there
+        codeEditText.setSelection(offset);
+
+        // 3. Scroll to the VISUAL layout line that corresponds to this offset
         Layout layout = codeEditText.getLayout();
         if (layout != null) {
-            if (targetLineIndex < 0 || targetLineIndex >= layout.getLineCount()) return;
-            int offset = layout.getLineStart(targetLineIndex);
-            codeEditText.setSelection(offset);
-            int y = layout.getLineTop(targetLineIndex);
+            int visualLine = layout.getLineForOffset(offset);
+            int y = layout.getLineTop(visualLine);
             codeEditText.scrollTo(0, Math.max(0, y - codeEditText.getPaddingTop()));
-        } else {
-            String text = codeEditText.getText().toString();
-            int currentLine = 0;
-            int offset = 0;
-            for (int i = 0; i < text.length(); i++) {
-                if (currentLine == targetLineIndex) {
-                    offset = i;
-                    break;
-                }
-                if (text.charAt(i) == '\n') currentLine++;
-            }
-            codeEditText.setSelection(offset);
         }
     }
 
@@ -806,27 +807,6 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         if (viewerManager != null) viewerManager.destroyAll();
     }
 
-    @Override
-    public void showJsonValidating() {
-        binding.jsonStatusBar.setVisibility(View.VISIBLE);
-        binding.jsonStatusBar.showValidating();
-    }
-
-    @Override
-    public void showJsonValid() {
-        binding.jsonStatusBar.showValid();
-    }
-
-    @Override
-    public void showJsonInvalid(String error) {
-        binding.jsonStatusBar.showInvalid(error);
-    }
-
-    @Override
-    public void hideJsonStatus() {
-        binding.jsonStatusBar.setVisibility(View.GONE);
-    }
-    
     @Override
     public void reportProblems(File file, List<com.cocode.vcode.ide.data.model.Problem> problems) {
         if (viewModel != null) {
