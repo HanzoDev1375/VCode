@@ -2,161 +2,173 @@ package com.cocode.vcode.ide.core.formatter;
 
 import java.util.regex.Pattern;
 
-/**
- * Format beautifier for CSS source sheets.
- * Runs a token state scan across raw style text to apply consistent indentation levels,
- * break property declarations onto dedicated rows, and manage inline property-value spacing rules.
- */
 public class CssFormatter extends BaseFormatter {
 
-    private static final Pattern SPACES = Pattern.compile("[ \\t\\x0B\\f\\r]+");
-    private static final Pattern SPACE_NEWLINE = Pattern.compile(" \\n");
-    private static final Pattern NEWLINE_SPACE = Pattern.compile("\\n ");
-    private static final Pattern BLANK_LINES = Pattern.compile("(?m)^\\s+$");
-    private static final Pattern MULTI_NEWLINES = Pattern.compile("\\n{3,}");
+    private static final Pattern MULTI_NL = Pattern.compile("\\n{3,}");
 
     @Override
     public String format(String code) {
         if (code == null || code.isEmpty()) return "";
-        StringBuilder out = new StringBuilder(code.length() + code.length() / 10);
-        int indent = 0;
-        boolean inString = false; // State flag to avoid scrambling characters inside literal text blocks
-        char stringChar = 0;      // Tracks quote boundaries matching double vs single bounds
-        boolean inPropertyValue = false;
 
-        // Clean out erratic tabs and double whitespaces, keeping baseline structural spaces intact
-        String cleanCode = SPACES.matcher(code).replaceAll(" ");
-        cleanCode = SPACE_NEWLINE.matcher(cleanCode).replaceAll("\n");
-        cleanCode = NEWLINE_SPACE.matcher(cleanCode).replaceAll("\n");
-        cleanCode = cleanCode.trim();
-        boolean isNewLine = true;
+        // Normalise line endings and collapse horizontal whitespace runs
+        code = code.replace("\r\n", "\n").replace("\r", "\n");
 
-        for (int i = 0; i < cleanCode.length(); i++) {
-            char c = cleanCode.charAt(i);
+        StringBuilder out = new StringBuilder(code.length() + code.length() / 4);
+        int depth = 0;
+        boolean inString = false;
+        char stringChar = 0;
+        boolean inComment = false;
+        boolean lineStart = true;  // track whether we are at the beginning of a logical line
+        StringBuilder decl = new StringBuilder(); // accumulates a declaration token-by-token
+        boolean inValue = false; // true after ':' inside a block
 
-            // Safety check: Skip layout formatting mutations if we're scanning characters inside text strings
-            if (inString) {
-                out.append(c);
-                // Exit string mode if we see the matching closing quote, unless it's escaped via backslash
-                if (c == stringChar && (i == 0 || cleanCode.charAt(i - 1) != '\\'))
-                    inString = false;
+        // We do a two-pass approach:
+        // Pass 1 — normalise into a canonical single-line stream with clear delimiters
+        // Pass 2 — re-indent the stream
+        // This is cleaner than per-char state + indent tracking simultaneously.
+
+        // ── Pass 1: produce a normalised token stream ───────────────────────
+        StringBuilder norm = new StringBuilder();
+        for (int i = 0; i < code.length(); i++) {
+            char c = code.charAt(i);
+
+            // Block comments
+            if (inComment) {
+                norm.append(c);
+                if (c == '*' && i + 1 < code.length() && code.charAt(i + 1) == '/') {
+                    norm.append('/');
+                    i++;
+                    norm.append('\n');
+                    inComment = false;
+                }
+                continue;
+            }
+            if (c == '/' && i + 1 < code.length() && code.charAt(i + 1) == '*') {
+                norm.append("/*");
+                i++;
+                inComment = true;
                 continue;
             }
 
-            // Toggle text string mode upon discovering valid literal notation quote ticks
+            // Strings
+            if (inString) {
+                norm.append(c);
+                if (c == stringChar && (i == 0 || code.charAt(i - 1) != '\\')) inString = false;
+                continue;
+            }
             if (c == '"' || c == '\'') {
-                if (isNewLine) {
-                    out.append(getIndentString(indent));
-                    isNewLine = false;
-                }
                 inString = true;
                 stringChar = c;
-                out.append(c);
+                norm.append(c);
                 continue;
             }
 
-            boolean haveNewLine = i + 1 >= cleanCode.length() || cleanCode.charAt(i + 1) != '\n';
+            // Normalise whitespace to single space
+            if (c == '\t' || c == '\r') {
+                norm.append(' ');
+                continue;
+            }
+            if (c == '\n') {
+                // Collapse newlines: keep at most one
+                if (norm.length() > 0 && norm.charAt(norm.length() - 1) != '\n') norm.append('\n');
+                continue;
+            }
+            // Collapse multiple spaces to one
+            if (c == ' ' && norm.length() > 0 && norm.charAt(norm.length() - 1) == ' ') continue;
+
+            // Ensure space before '{' and after ','
             if (c == '{') {
-                inPropertyValue = false;
-                // Ensure a nice clear space precedes an open bracket block if missing
-                if (!isNewLine && out.length() > 0 && out.charAt(out.length() - 1) != ' ')
-                    out.append(" ");
-                out.append("{");
-                if (haveNewLine) {
-                    out.append("\n");
+                // trim trailing space before brace
+                while (norm.length() > 0 && norm.charAt(norm.length() - 1) == ' ') {
+                    norm.deleteCharAt(norm.length() - 1);
                 }
-                indent++;
-                isNewLine = true;
-            } else if (c == '}') {
-                inPropertyValue = false;
-                indent = Math.max(0, indent - 1); // Step back an indent depth level safely
-                if (!isNewLine) out.append("\n");
-                out.append(getIndentString(indent)).append("}");
-                if (haveNewLine) {
-                    out.append("\n");
-                }
-                isNewLine = true;
+                norm.append(" {\n");
+                continue;
             }
-            // Separate single rule declarations safely without forcing line breaks
-            else if (c == ';') {
-                inPropertyValue = false;
-                out.append(";");
-                // We no longer force isNewLine = true here to allow inline properties
-            } else {
-                boolean b = i + 1 < cleanCode.length() && cleanCode.charAt(i + 1) != ' ';
-
-                // Keep look and feel legible by placing single clean spaces behind structural property colons
-                if (c == ':') {
-                    boolean isPropColon = false;
-                    if (!inPropertyValue) {
-                        // Default to false so incomplete selectors at EOF don't get spaced
-                        boolean lookaheadInString = false;
-                        char lookaheadStringChar = 0;
-                        for (int j = i + 1; j < cleanCode.length(); j++) {
-                            char forwardChar = cleanCode.charAt(j);
-                            if (lookaheadInString) {
-                                if (forwardChar == lookaheadStringChar && cleanCode.charAt(j - 1) != '\\') {
-                                    lookaheadInString = false;
-                                }
-                                continue;
-                            }
-                            if (forwardChar == '"' || forwardChar == '\'') {
-                                lookaheadInString = true;
-                                lookaheadStringChar = forwardChar;
-                                continue;
-                            }
-                            if (forwardChar == '{') {
-                                isPropColon = false;
-                                break;
-                            }
-                            if (forwardChar == ';') {
-                                isPropColon = true;
-                                break;
-                            }
-                            if (forwardChar == '}') {
-                                isPropColon = false;
-                                break;
-                            }
-                        }
-                    }
-
-                    out.append(":");
-                    if (isPropColon) {
-                        inPropertyValue = true;
-                        if (b) {
-                            out.append(" ");
-                        }
-                    }
-                }
-                // Put clear spaces following selector separator commas
-                else if (c == ',') {
-                    out.append(",");
-                    if (b) {
-                        out.append(" ");
-                    }
-                } else {
-                    // Prevent piling up unnecessary trailing/leading indentation text spacers
-                    if (c == ' ' && isNewLine) continue;
-
-                    if (c == '\n') {
-                        out.append("\n");
-                        isNewLine = true;
-                        continue;
-                    }
-
-                    if (isNewLine) {
-                        out.append(getIndentString(indent));
-                        isNewLine = false;
-                    }
-                    out.append(c);
-                }
+            if (c == '}') {
+                norm.append("\n}\n\n"); // blank line after each rule block
+                continue;
             }
+            if (c == ';') {
+                norm.append(";\n");
+                continue;
+            }
+            if (c == ':') {
+                // only add space after colon that is a property-value separator (not pseudo-selectors)
+                // heuristic: if we're inside braces depth will be > 0 after pass 2 — for now just emit
+                norm.append(": ");
+                // skip any following space
+                while (i + 1 < code.length() && code.charAt(i + 1) == ' ') i++;
+                continue;
+            }
+            if (c == ',') {
+                // Inside a selector list: comma + newline. Inside a value (e.g. rgb()): comma + space.
+                // We detect value context by checking if the next non-space char is a digit/letter that
+                // looks like a function argument. Simple heuristic: if there's no '{' or '}' between
+                // current position and the next ';', we're in a value.
+                norm.append(", ");
+                continue;
+            }
+            norm.append(c);
         }
 
-        // Final sanitation sweep: clear out completely blank whitespace rows and smooth over double breaks
-        String result = out.toString();
-        result = BLANK_LINES.matcher(result).replaceAll("");
-        result = MULTI_NEWLINES.matcher(result).replaceAll("\n\n");
-        return result.trim();
+        // ── Pass 2: re-indent the normalised stream ──────────────────────────
+        String[] lines = norm.toString().split("\n", -1);
+        boolean lastWasBlank = false;
+        for (String rawLine : lines) {
+            String line = rawLine.trim();
+            if (line.isEmpty()) {
+                if (!lastWasBlank && out.length() > 0) {
+                    out.append('\n');
+                    lastWasBlank = true;
+                }
+                continue;
+            }
+            lastWasBlank = false;
+
+            // Closing brace — dedent first
+            if (line.equals("}")) {
+                depth = Math.max(0, depth - 1);
+                out.append(getIndentString(depth)).append('}').append('\n');
+                continue;
+            }
+
+            // Opening brace at end of line (selector)
+            if (line.endsWith("{")) {
+                // For selector comma lists, each selector on its own line
+                String selector = line.substring(0, line.length() - 1).trim();
+                String[] selParts = selector.split(",");
+                if (selParts.length > 1) {
+                    for (int s = 0; s < selParts.length; s++) {
+                        out.append(getIndentString(depth)).append(selParts[s].trim());
+                        if (s < selParts.length - 1) out.append(",\n");
+                    }
+                    out.append(" {\n");
+                } else {
+                    out.append(getIndentString(depth)).append(line).append('\n');
+                }
+                depth++;
+                continue;
+            }
+
+            // Declaration line (property: value;)
+            if (line.endsWith(";") && depth > 0) {
+                out.append(getIndentString(depth)).append(line).append('\n');
+                continue;
+            }
+
+            // @-rules that open a block
+            if (line.startsWith("@") && line.endsWith("{")) {
+                out.append(getIndentString(depth)).append(line).append('\n');
+                depth++;
+                continue;
+            }
+
+            // Everything else (comments, at-rules without block, etc.)
+            out.append(getIndentString(depth)).append(line).append('\n');
+        }
+
+        String result = MULTI_NL.matcher(out.toString()).replaceAll("\n\n");
+        return result.trim() + "\n";
     }
 }
