@@ -432,7 +432,7 @@ public class CodeEditText extends AppCompatEditText {
 
         if (newlineIndex > 0 && newlineIndex + 1 < text.length()) {
             char before = text.charAt(newlineIndex - 1);
-            char after = text.charAt(newlineIndex + 1);
+            char after  = text.charAt(newlineIndex + 1);
 
             if ((before == '{' && after == '}') ||
                     (before == '[' && after == ']') ||
@@ -442,20 +442,49 @@ public class CodeEditText extends AppCompatEditText {
                 isBracketSplit = true;
 
                 int lineStart = newlineIndex - 1;
-                while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') {
-                    lineStart--;
-                }
+                while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') lineStart--;
 
                 StringBuilder baseIndent = new StringBuilder();
                 for (int i = lineStart; i < newlineIndex; i++) {
                     char c = text.charAt(i);
-                    if (c == ' ' || c == '\t') {
-                        baseIndent.append(c);
-                    } else {
-                        break;
-                    }
+                    if (c == ' ' || c == '\t') baseIndent.append(c);
+                    else break;
                 }
                 outerIndent = baseIndent.toString();
+            }
+        }
+
+        // ── HTML tag expansion: <tag>content</tag> → Enter at end expands to 3 lines ──
+        // Detect pattern: cursor at end of a line whose trimmed form ends with </tagname>
+        // and also contains the matching opening <tagname> — only for block-level HTML tags.
+        if (!isBracketSplit && fileType == com.cocode.vcode.ide.core.model.FileType.HTML) {
+            int lineStart = newlineIndex - 1;
+            while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') lineStart--;
+            String currentLine = text.substring(lineStart, newlineIndex);
+            String trimmed = currentLine.trim();
+
+            // Match lines ending with </tag> that also have <tag> or <tag ...> opening
+            if (trimmed.endsWith(">")) {
+                int closeStart = trimmed.lastIndexOf("</");
+                if (closeStart >= 0) {
+                    String closePart = trimmed.substring(closeStart); // e.g. </div>
+                    String tagName = closePart.substring(2, closePart.length() - 1).trim().toLowerCase();
+                    // Check opening tag exists earlier on the same line
+                    String openTag = "<" + tagName;
+                    int openIdx = trimmed.toLowerCase().indexOf(openTag);
+                    if (openIdx >= 0 && openIdx < closeStart
+                            && HtmlTagCache.isBlockElement(tagName)) {
+                        // Extract base indent of the line
+                        StringBuilder base = new StringBuilder();
+                        for (char c : currentLine.toCharArray()) {
+                            if (c == ' ' || c == '\t') base.append(c);
+                            else break;
+                        }
+                        outerIndent  = base.toString();
+                        innerIndent  = outerIndent + indentEngine.getTabString();
+                        isBracketSplit = true;
+                    }
+                }
             }
         }
 
