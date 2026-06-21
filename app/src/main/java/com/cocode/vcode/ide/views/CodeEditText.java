@@ -31,6 +31,7 @@ import com.cocode.vcode.ide.core.autocomplete.JsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.JsonAutoCompleteEngine;
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.core.parser.BracketMatcher;
+import com.cocode.vcode.ide.core.parser.HtmlTagCache;
 import com.cocode.vcode.ide.core.parser.HtmlTagParser;
 import com.cocode.vcode.ide.core.parser.IndentationEngine;
 import com.cocode.vcode.ide.core.syntax.CssSyntaxHighlighter;
