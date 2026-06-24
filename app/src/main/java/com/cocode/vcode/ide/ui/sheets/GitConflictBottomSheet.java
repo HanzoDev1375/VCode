@@ -73,7 +73,6 @@ public class GitConflictBottomSheet extends BottomSheetDialogFragment {
         Context ctx = requireContext();
         binding.tvConflictTitle.setTypeface(fm.getUiSemiBold(ctx));
         binding.tvConflictDesc.setTypeface(fm.getUiMedium(ctx));
-        binding.tvConflictTip.setTypeface(fm.getUiMedium(ctx));
         binding.tvOursTitle.setTypeface(fm.getUiSemiBold(ctx));
         binding.tvOursDesc.setTypeface(fm.getUiMedium(ctx));
         binding.tvTheirsTitle.setTypeface(fm.getUiSemiBold(ctx));

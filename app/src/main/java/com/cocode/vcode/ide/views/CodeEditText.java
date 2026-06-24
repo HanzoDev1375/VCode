@@ -101,9 +101,8 @@ public class CodeEditText extends AppCompatEditText {
     private OnScrollChangeListener scrollChangeListener;
     private Paint diagnosticPaint;
     private android.graphics.Path diagnosticPath;
-    // Cached line-start offsets — rebuilt only when diagnostics are applied (not every frame)
     private int[] cachedLineOffsets = null;
-    private int cachedLineOffsetsTextLen = -1;
+    private boolean lineOffsetsDirty = true;
     private int lastHighlightStart = -1;
     private int lastHighlightEnd = -1;
     private long highlightVersion = 0;
@@ -206,6 +205,12 @@ public class CodeEditText extends AppCompatEditText {
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
+                lineOffsetsDirty = true;
+                if (currentProblems != null && !currentProblems.isEmpty()) {
+                    currentProblems.clear();
+                    invalidate();
+                }
+
                 // Ignore self-induced system operations or text styling passes
                 if (isApplyingHighlight || isUndoRedoActive || isSettingText || isAutoClosing)
                     return;
@@ -300,9 +305,7 @@ public class CodeEditText extends AppCompatEditText {
         super.onDraw(canvas);
 
         if (getLayout() != null && currentProblems != null && !currentProblems.isEmpty() && getText() != null) {
-            // Rebuild if explicitly invalidated OR if text length has changed since last build
-            if (cachedLineOffsets == null || cachedLineOffsetsTextLen == -1
-                    || cachedLineOffsetsTextLen != getText().length()) rebuildLineOffsets();
+            rebuildLineOffsets();
             if (cachedLineOffsets == null) return;
             int[] lineOffsets = cachedLineOffsets;
             int lineCount = lineOffsets.length;
@@ -322,12 +325,15 @@ public class CodeEditText extends AppCompatEditText {
                 int lineIdx = problem.getLine() - 1;
                 if (lineIdx < 0 || lineIdx >= lineCount) continue;
 
-                int colIdx = Math.max(0, problem.getColumn() - 1);
-                int startOff = lineOffsets[lineIdx] + colIdx;
+                int lineStart = lineOffsets[lineIdx];
                 int lineEnd = (lineIdx + 1 < lineCount) ? lineOffsets[lineIdx + 1] - 1 : textLen;
-                int endOff = Math.min(startOff + Math.max(1, problem.getLength()), lineEnd);
-                if (startOff >= endOff) endOff = Math.min(startOff + 1, textLen);
+                int colIdx = Math.max(0, problem.getColumn() - 1);
+                
+                int startOff = Math.min(lineStart + colIdx, lineEnd);
+                int endOff = Math.min(startOff + Math.max(1, problem.getLength()), textLen);
                 if (startOff < 0 || startOff >= textLen) continue;
+
+                if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.INFO) continue;
 
                 int color = infoColor;
                 if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.ERROR)
@@ -457,39 +463,7 @@ public class CodeEditText extends AppCompatEditText {
             }
         }
 
-        // ── HTML tag expansion: <tag>content</tag> → Enter at end expands to 3 lines ──
-        // Detect pattern: cursor at end of a line whose trimmed form ends with </tagname>
-        // and also contains the matching opening <tagname> — only for block-level HTML tags.
-        if (!isBracketSplit && fileType == com.cocode.vcode.ide.core.model.FileType.HTML) {
-            int lineStart = newlineIndex - 1;
-            while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') lineStart--;
-            String currentLine = text.substring(lineStart, newlineIndex);
-            String trimmed = currentLine.trim();
-
-            // Match lines ending with </tag> that also have <tag> or <tag ...> opening
-            if (trimmed.endsWith(">")) {
-                int closeStart = trimmed.lastIndexOf("</");
-                if (closeStart >= 0) {
-                    String closePart = trimmed.substring(closeStart); // e.g. </div>
-                    String tagName = closePart.substring(2, closePart.length() - 1).trim().toLowerCase();
-                    // Check opening tag exists earlier on the same line
-                    String openTag = "<" + tagName;
-                    int openIdx = trimmed.toLowerCase().indexOf(openTag);
-                    if (openIdx >= 0 && openIdx < closeStart
-                            && HtmlTagCache.isBlockElement(tagName)) {
-                        // Extract base indent of the line
-                        StringBuilder base = new StringBuilder();
-                        for (char c : currentLine.toCharArray()) {
-                            if (c == ' ' || c == '\t') base.append(c);
-                            else break;
-                        }
-                        outerIndent  = base.toString();
-                        innerIndent  = outerIndent + indentEngine.getTabString();
-                        isBracketSplit = true;
-                    }
-                }
-            }
-        }
+        // HTML tag expansion logic removed as per user request
 
         final String finalInnerIndent = innerIndent;
         final boolean finalSplit = isBracketSplit;
@@ -692,11 +666,10 @@ public class CodeEditText extends AppCompatEditText {
     }
 
     private void rebuildLineOffsets() {
+        if (!lineOffsetsDirty && cachedLineOffsets != null) return;
         if (getText() == null) { cachedLineOffsets = null; return; }
         String s = getText().toString();
         int len = s.length();
-        // Use length as the primary check; -1 means explicitly invalidated (set by applyHighlightSpans)
-        if (cachedLineOffsetsTextLen == len && cachedLineOffsets != null) return;
         int count = 1;
         for (int i = 0; i < len; i++) if (s.charAt(i) == '\n') count++;
         cachedLineOffsets = new int[count];
@@ -705,7 +678,7 @@ public class CodeEditText extends AppCompatEditText {
         for (int i = 0; i < len && idx < count; i++) {
             if (s.charAt(i) == '\n') cachedLineOffsets[idx++] = i + 1;
         }
-        cachedLineOffsetsTextLen = len;
+        lineOffsetsDirty = false;
     }
 
     /**
@@ -757,7 +730,7 @@ public class CodeEditText extends AppCompatEditText {
         isApplyingHighlight = false;
 
         // Text changed — force lineOffsets cache to rebuild on next onDraw
-        cachedLineOffsetsTextLen = -1;
+        lineOffsetsDirty = true;
     }
 
     private void scheduleAutoComplete() {
@@ -810,24 +783,7 @@ public class CodeEditText extends AppCompatEditText {
         }
 
         if (isIdentifier && !isTriggerChar) {
-            // Count the current word length — require ≥ 2 chars to avoid trivial single-letter floods
-            int wordLen = 1;
-            int i = cursor - 2;
-            while (i >= 0) {
-                char c = text.charAt(i);
-                if (Character.isLetterOrDigit(c) || c == '_' || c == '$'
-                        || (c == '-' && (fileType == FileType.CSS || fileType == FileType.HTML))) {
-                    wordLen++;
-                    i--;
-                } else {
-                    break;
-                }
-            }
-            if (wordLen < 2) {
-                // Single char typed — dismiss any stale popup but don't open a new one
-                autoCompletePopup.dismiss();
-                return;
-            }
+            // Allow autocomplete on a single character
         }
 
         final int capturedCursor = cursor;

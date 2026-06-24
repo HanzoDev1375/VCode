@@ -38,6 +38,17 @@
                 android:visibility="gone"
                 app:tint="@color/vcode_accent_success" />
 
+            <TextView
+                android:id="@+id/tv_analyzing"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="4dp"
+                android:includeFontPadding="false"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="@color/vcode_text_primary"
+                android:visibility="gone"
+                android:text="Analyzing..." />
+
             <LinearLayout
                 android:id="@+id/ll_errors"
                 android:layout_width="wrap_content"

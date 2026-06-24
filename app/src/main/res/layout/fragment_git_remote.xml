@@ -142,27 +142,20 @@
                         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/til_remote_url"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox"
+                    <EditText
+                        android:id="@+id/et_remote_url"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
                         android:layout_marginBottom="16dp"
-                        app:errorEnabled="true"
-                        app:hintEnabled="false">
-
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:id="@+id/et_remote_url"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="monospace"
-                            android:hint="@string/vcode_remote_url_hint"
-                            android:inputType="textUri"
-                            android:padding="14dp"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
-                            android:textColor="?attr/colorOnSurface" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        android:background="?attr/colorSurfaceContainerHigh"
+                        android:fontFamily="monospace"
+                        android:hint="@string/vcode_remote_url_hint"
+                        android:inputType="textUri"
+                        android:padding="14dp"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant" />
 
                     <TextView
                         android:id="@+id/tv_label_branch"
@@ -172,25 +165,20 @@
                         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                         android:textColor="?attr/colorOnSurfaceVariant" />
 
-                    <com.google.android.material.textfield.TextInputLayout
-                        android:id="@+id/til_target_branch"
-                        style="@style/Widget.Material3.TextInputLayout.OutlinedBox.ExposedDropdownMenu"
+                    <TextView
+                        android:id="@+id/tv_target_branch_selector"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="6dp"
-                        app:errorEnabled="true"
-                        app:hintEnabled="false">
-
-                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
-                            android:id="@+id/auto_target_branch"
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
-                            android:fontFamily="monospace"
-                            android:hint="@string/vcode_select_target_branch_hint"
-                            android:inputType="none"
-                            android:padding="14dp"
-                            android:textAppearance="@style/TextAppearance.Material3.BodyMedium" />
-                    </com.google.android.material.textfield.TextInputLayout>
+                        android:background="?attr/colorSurfaceContainerHigh"
+                        android:fontFamily="monospace"
+                        android:hint="@string/vcode_select_target_branch_hint"
+                        android:padding="14dp"
+                        android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant"
+                        app:drawableEndCompat="@drawable/ic_chevron_down"
+                        app:drawableTint="?attr/colorOnSurfaceVariant" />
 
                 </LinearLayout>
             </com.google.android.material.card.MaterialCardView>
@@ -203,29 +191,30 @@
                 android:weightSum="3">
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_pull"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                    android:id="@+id/btn_fetch"
+                    style="@style/Widget.Material3.Button.TextButton"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
+                    android:layout_weight="1"
+                    android:text="Fetch"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btn_pull"
+                    style="@style/Widget.Material3.Button.OutlinedButton"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
                     android:text="Pull"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorOnSurface" />
 
                 <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btn_fetch"
-                    style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginHorizontal="4dp"
-                    android:layout_weight="1"
-                    android:text="Fetch"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <com.google.android.material.button.MaterialButton
                     android:id="@+id/btn_push"
+                    style="@style/Widget.Material3.Button"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="4dp"

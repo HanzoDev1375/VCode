@@ -84,7 +84,7 @@ public class GitRemoteFragment extends Fragment {
         binding.tvLabelRemoteUrl.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.etRemoteUrl.setTypeface(FontManager.getInstance().getUiMedium(context));
         binding.tvLabelBranch.setTypeface(FontManager.getInstance().getUiSemiBold(context));
-        binding.autoTargetBranch.setTypeface(FontManager.getInstance().getUiMedium(context));
+        binding.tvTargetBranchSelector.setTypeface(FontManager.getInstance().getUiMedium(context));
 
         binding.btnPull.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.btnFetch.setTypeface(FontManager.getInstance().getUiSemiBold(context));
@@ -94,6 +94,9 @@ public class GitRemoteFragment extends Fragment {
         binding.tvEmptyRemoteTitle.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.tvEmptyRemoteDesc.setTypeface(FontManager.getInstance().getUiMedium(context));
         binding.btnLinkAccount.setTypeface(FontManager.getInstance().getUiSemiBold(context));
+
+        com.cocode.vcode.ide.utils.UiUtils.setViewRounded(binding.etRemoteUrl, com.cocode.vcode.ide.utils.UiUtils.dpToPx(context, 10), ContextCompat.getColor(context, R.color.vcode_bg_elevated));
+        com.cocode.vcode.ide.utils.UiUtils.setViewRounded(binding.tvTargetBranchSelector, com.cocode.vcode.ide.utils.UiUtils.dpToPx(context, 10), ContextCompat.getColor(context, R.color.vcode_bg_elevated));
     }
 
     /**
@@ -178,16 +181,56 @@ public class GitRemoteFragment extends Fragment {
                 }
             }
 
-            ArrayAdapter<String> dropdownAdapter = new ArrayAdapter<>(requireContext(),
-                    android.R.layout.simple_dropdown_item_1line, branchNames);
-            binding.autoTargetBranch.setAdapter(dropdownAdapter);
-
             // Set initial selection if not already specified by the user
-            if (!currentActive.isEmpty() && binding.autoTargetBranch.getText().toString().isEmpty()) {
-                binding.autoTargetBranch.setText(currentActive, false);
+            if (!currentActive.isEmpty() && binding.tvTargetBranchSelector.getText().toString().isEmpty()) {
+                binding.tvTargetBranchSelector.setText(currentActive);
                 binding.tvActiveOrigin.setText("origin/".concat(currentActive));
             }
+            
+            binding.tvTargetBranchSelector.setOnClickListener(v -> showBranchSelectionDialog(branchNames));
         });
+    }
+
+    private void showBranchSelectionDialog(List<String> branchNames) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_select_branch, null);
+        builder.setView(dialogView);
+        android.app.AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        android.widget.TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_title);
+        if (tvTitle != null) {
+            tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
+        }
+
+        android.widget.ListView listView = dialogView.findViewById(R.id.list_branches);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, branchNames) {
+            @NonNull
+            @Override
+            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                android.widget.TextView tv = view.findViewById(android.R.id.text1);
+                if (tv != null) {
+                    tv.setTypeface(FontManager.getInstance().getUiMedium(getContext()));
+                }
+                return view;
+            }
+        };
+        listView.setAdapter(adapter);
+
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = branchNames.get(position);
+            binding.tvTargetBranchSelector.setText(selected);
+            binding.tvActiveOrigin.setText("origin/".concat(selected));
+            dialog.dismiss();
+        });
+
+        com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(R.id.btn_cancel);
+        btnCancel.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     /**
@@ -267,22 +310,19 @@ public class GitRemoteFragment extends Fragment {
         }
 
         String url = binding.etRemoteUrl.getText() != null ? binding.etRemoteUrl.getText().toString().trim() : "";
-        String branch = binding.autoTargetBranch.getText().toString().trim();
+        String branch = binding.tvTargetBranchSelector.getText().toString().trim();
 
         // Validate remote URL and branch name
         if (url.isEmpty()) {
-            binding.tilRemoteUrl.setError("Remote URL cannot be empty");
+            binding.etRemoteUrl.setError("Remote URL cannot be empty");
             binding.etRemoteUrl.requestFocus();
             return;
         }
-        binding.tilRemoteUrl.setError(null);
 
         if (branch.isEmpty()) {
-            binding.tilTargetBranch.setError("Select a tracking operational branch");
-            binding.autoTargetBranch.requestFocus();
+            binding.tvTargetBranchSelector.setError("Select a tracking operational branch");
             return;
         }
-        binding.tilTargetBranch.setError(null);
 
         String globalPatToken = "";
         try {
@@ -370,7 +410,7 @@ public class GitRemoteFragment extends Fragment {
      */
     private void toggleFormInputState(boolean enabled) {
         binding.etRemoteUrl.setEnabled(enabled);
-        binding.autoTargetBranch.setEnabled(enabled);
+        binding.tvTargetBranchSelector.setEnabled(enabled);
         binding.btnDisconnectGithub.setEnabled(enabled);
         binding.btnPush.setEnabled(enabled);
         binding.btnPull.setEnabled(enabled);

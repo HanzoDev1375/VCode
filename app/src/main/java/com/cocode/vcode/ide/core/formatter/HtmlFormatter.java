@@ -123,12 +123,7 @@ public class HtmlFormatter extends BaseFormatter {
             // Decrease depth before printing close tag
             if (isClose) depth = Math.max(0, depth - 1);
 
-            // Blank line before section-level elements, but only inside <body> (depth >= 2)
-            // Never add blank lines at document root level (DOCTYPE, html, head, body themselves)
-            if (isOpen && depth >= 2 && SECTION.contains(tagName)
-                    && out.length() > 0 && !endsWithBlankLine(out)) {
-                out.append("\n");
-            }
+            // Removed logic that added a blank line before section-level elements
 
             String pad = getIndentString(depth);
 
@@ -144,10 +139,6 @@ public class HtmlFormatter extends BaseFormatter {
                 }
             } else if (isClose) {
                 out.append(pad).append(trimmed).append("\n");
-                // Blank line after closing section-level elements, only inside body
-                if (depth >= 1 && SECTION.contains(tagName) && ti < tokens.size() - 1) {
-                    out.append("\n");
-                }
             } else {
                 // Text node
                 String text = trimmed;

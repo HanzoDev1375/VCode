@@ -47,6 +47,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
     private TextView tvProgressPercentage;
     private CircularProgressIndicator progressIndicator;
     private MaterialButton btnRunBackground;
+    private GitCloneService.CloneListener cloneListener;
 
     public GitCloneBottomSheet(ProjectsViewModel viewModel) {
         this.projectsViewModel = viewModel;
@@ -171,7 +172,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
             return;
         }
 
-        GitCloneService.setListener(new GitCloneService.CloneListener() {
+        cloneListener = new GitCloneService.CloneListener() {
             @Override
             public void onProgress(String task, int done, int total, int percentage) {
                 ExecutorProvider.getInstance().runOnMain(() -> {
@@ -205,7 +206,7 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (isAdded()) {
                         projectsViewModel.loadProjects();
-                        dismiss();
+                        dismissAllowingStateLoss();
                     }
                 });
             }
@@ -214,7 +215,8 @@ public class GitCloneBottomSheet extends BottomSheetDialogFragment {
             public void onFailure(String error) {
                 notifyFailure(error);
             }
-        });
+        };
+        GitCloneService.setListener(cloneListener);
 
         Intent serviceIntent = new Intent(context, GitCloneService.class);
         serviceIntent.setAction(GitCloneService.ACTION_START_CLONE);

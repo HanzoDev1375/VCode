@@ -53,7 +53,8 @@ public class VFSManager {
 
         List<File> cachedList = new ArrayList<>();
         for (File child : children) {
-            if (child.getName().startsWith(".")) continue; // Skip hidden/git
+            String name = child.getName();
+            if (name.startsWith(".") || name.equals("session.json") || name.equals("project_meta.json")) continue; // Skip hidden/git and meta files
             cachedList.add(child);
 
             // Also add sub-directories to the queue
@@ -76,7 +77,10 @@ public class VFSManager {
             if (diskFiles != null) {
                 List<File> list = new ArrayList<>();
                 for (File f : diskFiles) {
-                    if (!f.getName().startsWith(".")) list.add(f);
+                    String name = f.getName();
+                    if (!name.startsWith(".") && !name.equals("session.json") && !name.equals("project_meta.json")) {
+                        list.add(f);
+                    }
                 }
                 directoryCache.put(directory.getAbsolutePath(), list);
                 return list;

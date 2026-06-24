@@ -23,7 +23,7 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:text="Project Search"
+            android:text="Global Search"
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
             android:textColor="?attr/colorOnSurface" />
     </LinearLayout>
@@ -35,7 +35,7 @@
         android:layout_marginHorizontal="20dp"
         android:layout_marginBottom="8dp"
         android:background="?attr/colorSurfaceContainerHigh"
-        android:hint="@string/vcode_search_hint"
+        android:hint="Search across this project"
         android:imeOptions="actionSearch"
         android:importantForAutofill="no"
         android:inputType="text"

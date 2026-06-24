@@ -42,15 +42,15 @@
 
         <com.google.android.material.button.MaterialButton
             android:id="@+id/btn_create_stash"
+            style="@style/Widget.Material3.Button"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:layout_marginStart="12dp"
-            android:paddingHorizontal="20dp"
             android:text="Stash"
-            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="?attr/colorOnPrimary"
             app:backgroundTint="?attr/colorPrimary"
-            app:cornerRadius="8dp" />
+            app:elevation="2dp" />
 
     </LinearLayout>
 

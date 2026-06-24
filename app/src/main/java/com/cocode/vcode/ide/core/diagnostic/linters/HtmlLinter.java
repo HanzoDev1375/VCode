@@ -206,6 +206,9 @@ public class HtmlLinter {
                 }
                 if (j < len && text.charAt(j) == '>') j++;
 
+                // Update tagLen to cover the entire tag
+                tagLen = j - i;
+
                 // ── RULE: unknown tag ──────────────────────────────────────
                 if (!KnownElements.VALID_HTML_TAGS.contains(tagName)
                         && !KnownElements.DEPRECATED_ELEMENTS.containsKey(tagName)

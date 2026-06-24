@@ -29,7 +29,7 @@ public class TsLinter {
             "\\(([^)]+)\\)");
     private static final Pattern PAT_NAMESPACE = Pattern.compile("\\bnamespace\\s+\\w+");
     private static final Pattern PAT_FUNCTION_TYPE = Pattern.compile(":\\s*Function\\b");
-    private static final Pattern PAT_ENUM = Pattern.compile("\\benum\\s+\\w+");
+    private static final Pattern PAT_ENUM = Pattern.compile("\\benum\\s+(\\w+)");
     private static final Pattern PAT_REDUNDANT_TYPE = Pattern.compile(
             "\\b(?:const|let)\\s+(\\w+)\\s*:\\s*(string|number|boolean)\\s*=\\s*(['\"`].*?['\"`]|\\d+\\.?\\d*|true|false)");
     private static final Pattern PAT_NONNULL_COUNT = Pattern.compile("\\w+\\s*!");
@@ -79,8 +79,9 @@ public class TsLinter {
             String value = m.group(3).trim();
             String valueType = inferLiteralType(value);
             if (valueType != null && !valueType.equals(declType)) {
-                int line = LinterUtils.getLine(text, m.start());
-                int col = LinterUtils.getColumn(text, m.start());
+                int nameStart = m.start(1);
+                int line = LinterUtils.getLine(text, nameStart);
+                int col = LinterUtils.getColumn(text, nameStart);
                 out.add(new Problem(file, line, col, name.length(),
                         "Type mismatch: cannot assign '" + valueType + "' to '" + declType + "' for '" + name + "'",
                         Problem.Severity.ERROR));
@@ -103,8 +104,9 @@ public class TsLinter {
         Matcher m = PAT_RETURN_ANY.matcher(text);
         while (m.find()) {
             if (mask.isMasked(m.start())) continue;
-            int line = LinterUtils.getLine(text, m.start());
-            int col = LinterUtils.getColumn(text, m.start());
+            int nameStart = m.start(1);
+            int line = LinterUtils.getLine(text, nameStart);
+            int col = LinterUtils.getColumn(text, nameStart);
             out.add(new Problem(file, line, col, m.group(1).length(),
                     "Function '" + m.group(1) + "' returns 'any': specify an explicit return type instead",
                     Problem.Severity.ERROR));
@@ -156,9 +158,10 @@ public class TsLinter {
         Matcher m = PAT_AS_CAST.matcher(text);
         while (m.find()) {
             if (mask.isMasked(m.start())) continue;
-            int line = LinterUtils.getLine(text, m.start());
-            int col = LinterUtils.getColumn(text, m.start());
-            out.add(new Problem(file, line, col, m.group().length(),
+            int nameStart = m.start(1);
+            int line = LinterUtils.getLine(text, nameStart);
+            int col = LinterUtils.getColumn(text, nameStart);
+            out.add(new Problem(file, line, col, m.group(1).length(),
                     "Type assertion 'as " + m.group(1) + "': make sure the cast is safe",
                     Problem.Severity.WARNING));
         }
@@ -169,8 +172,8 @@ public class TsLinter {
         while (m.find()) {
             if (mask.isMasked(m.start())) continue;
             // The pattern already requires the function closes ) then { without ': Type'
-            int line = LinterUtils.getLine(text, m.start());
-            int col = LinterUtils.getColumn(text, m.start());
+            int line = LinterUtils.getLine(text, m.start(1));
+            int col = LinterUtils.getColumn(text, m.start(1));
             out.add(new Problem(file, line, col, m.group(1).length(),
                     "Exported function '" + m.group(1) + "' is missing a return type annotation",
                     Problem.Severity.WARNING));
@@ -229,10 +232,10 @@ public class TsLinter {
         Matcher m = PAT_ENUM.matcher(text);
         while (m.find()) {
             if (mask.isMasked(m.start())) continue;
-            // skip 'const enum' — still flag but note it
-            int line = LinterUtils.getLine(text, m.start());
-            int col = LinterUtils.getColumn(text, m.start());
-            out.add(new Problem(file, line, col, 4,
+            int nameStart = m.start(1);
+            int line = LinterUtils.getLine(text, nameStart);
+            int col = LinterUtils.getColumn(text, nameStart);
+            out.add(new Problem(file, line, col, m.group(1).length(),
                     "Enums add runtime overhead: consider 'const' object with 'as const' for better tree-shaking",
                     Problem.Severity.WARNING));
         }
@@ -247,8 +250,9 @@ public class TsLinter {
             String value = m.group(3);
             String inferred = inferLiteralType(value);
             if (declType.equals(inferred)) {
-                int line = LinterUtils.getLine(text, m.start());
-                int col = LinterUtils.getColumn(text, m.start());
+                int nameStart = m.start(1);
+                int line = LinterUtils.getLine(text, nameStart);
+                int col = LinterUtils.getColumn(text, nameStart);
                 out.add(new Problem(file, line, col, name.length(),
                         "Type '" + declType + "' is inferred: remove the explicit annotation ':" + declType + "' for '" + name + "'",
                         Problem.Severity.WARNING));
@@ -285,8 +289,9 @@ public class TsLinter {
         Matcher m = PAT_READONLY_ARRAY.matcher(text);
         while (m.find()) {
             if (mask.isMasked(m.start())) continue;
-            int line = LinterUtils.getLine(text, m.start());
-            int col = LinterUtils.getColumn(text, m.start());
+            int nameStart = m.start(1);
+            int line = LinterUtils.getLine(text, nameStart);
+            int col = LinterUtils.getColumn(text, nameStart);
             out.add(new Problem(file, line, col, m.group(1).length(),
                     "Consider 'readonly " + m.group(1) + ": " + m.group(2) + "[]' to prevent accidental mutation",
                     Problem.Severity.INFO));

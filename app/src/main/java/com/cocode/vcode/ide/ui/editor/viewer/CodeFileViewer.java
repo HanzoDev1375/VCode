@@ -137,10 +137,18 @@ public class CodeFileViewer implements IFileViewer {
         if (settings != null) {
             jsonValidationHandler.removeCallbacksAndMessages(null);
 
+            final EditorFile capturedFile = currentFile;
+            final IEditorCallback capturedCallback = editorCallback;
             Runnable validationRunnable = () -> ExecutorProvider.getInstance().runOnIo(() -> {
+                if (capturedFile == null || capturedFile.getFile() == null) {
+                    ExecutorProvider.getInstance().runOnMain(() -> {
+                        if (codeEditText != null) codeEditText.applyDiagnostics(new java.util.ArrayList<>());
+                    });
+                    return;
+                }
 
                 java.util.List<com.cocode.vcode.ide.data.model.Problem> problems =
-                        com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(currentFile.getFile(), text, currentFile.getFileType());
+                        com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(capturedFile.getFile(), text, capturedFile.getFileType());
 
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
@@ -149,7 +157,9 @@ public class CodeFileViewer implements IFileViewer {
                     if (codeEditText != null) {
                         codeEditText.applyDiagnostics(problems);
                     }
-                    editorCallback.reportProblems(currentFile.getFile(), problems);
+                    if (capturedCallback != null) {
+                        capturedCallback.reportProblems(capturedFile.getFile(), problems);
+                    }
                 });
             });
             viewModel.setDiagnosticLoading();

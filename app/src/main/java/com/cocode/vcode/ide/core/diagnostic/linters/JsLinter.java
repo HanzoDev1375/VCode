@@ -361,8 +361,9 @@ public class JsLinter {
             if (params.isEmpty()) continue;
             int count = params.split(",").length;
             if (count > 4) {
-                int line = LinterUtils.getLine(text, m.start());
-                int col = LinterUtils.getColumn(text, m.start());
+                int nameStart = m.start(1);
+                int line = LinterUtils.getLine(text, nameStart);
+                int col = LinterUtils.getColumn(text, nameStart);
                 out.add(new Problem(file, line, col, m.group(1).length(),
                         "Function '" + m.group(1) + "' has " + count + " parameters: consider a config object for readability",
                         Problem.Severity.WARNING));
@@ -425,8 +426,9 @@ public class JsLinter {
         Matcher m = PAT_CONST_INIT.matcher(text);
         while (m.find()) {
             if (mask.isMasked(m.start())) continue;
-            int line = LinterUtils.getLine(text, m.start());
-            int col = LinterUtils.getColumn(text, m.start());
+            int nameStart = m.start(1);
+            int line = LinterUtils.getLine(text, nameStart);
+            int col = LinterUtils.getColumn(text, nameStart);
             out.add(new Problem(file, line, col, m.group(1).length(),
                     "'const " + m.group(1) + "' must be initialized at declaration",
                     Problem.Severity.ERROR));
@@ -608,8 +610,9 @@ public class JsLinter {
                 if (um.start() >= declEnd) usages++;
             }
             if (usages == 0) {
-                int line = LinterUtils.getLine(text, m.start());
-                int col = LinterUtils.getColumn(text, m.start());
+                int nameStart = m.start(2);
+                int line = LinterUtils.getLine(text, nameStart);
+                int col = LinterUtils.getColumn(text, nameStart);
                 out.add(new Problem(file, line, col, name.length(),
                         "Variable '" + name + "' is declared but never used",
                         Problem.Severity.WARNING));

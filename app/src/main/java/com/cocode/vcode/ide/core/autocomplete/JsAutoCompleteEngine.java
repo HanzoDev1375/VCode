@@ -583,6 +583,9 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                     items.add(new CompletionItem(name + "/", name + "/",
                             "Directory", CompletionItem.Type.FOLDER, 0));
                 } else if (isJsLike(name) || typedPath.isEmpty()) {
+                    if (name.equals("project_meta.json") || name.equals("session.json")) continue;
+                    if (currentFile != null && f.getAbsolutePath().equals(currentFile.getAbsolutePath())) continue;
+
                     items.add(new CompletionItem(name, name, "File", CompletionItem.Type.FILE, 0));
                 }
             }

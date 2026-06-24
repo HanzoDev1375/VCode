@@ -282,19 +282,6 @@
         </LinearLayout>
     </com.google.android.material.card.MaterialCardView>
 
-    <!-- Tip -->
-    <TextView
-        android:id="@+id/tv_conflict_tip"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-        android:layout_marginTop="12dp"
-        android:gravity="center"
-        android:lineSpacingMultiplier="1.3"
-        android:text="Tip: Open conflicting files in the editor to resolve markers manually (&lt;&lt;&lt;&lt;&lt;&lt;&lt; ======= &gt;&gt;&gt;&gt;&gt;&gt;&gt;)"
-        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-        android:textColor="?attr/colorOnSurfaceVariant" />
-
     <View android:layout_width="match_parent" android:layout_height="48dp" />
 
 </LinearLayout>

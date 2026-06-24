@@ -40,15 +40,29 @@ public class NewBranchBottomSheet extends BottomSheetDialogFragment {
         // Bind to Activity-scoped ViewModel to execute the branch creation
         viewModel = new ViewModelProvider(requireActivity()).get(GitViewModel.class);
 
+        android.content.Context context = requireContext();
+        com.cocode.vcode.ide.utils.FontManager fm = com.cocode.vcode.ide.utils.FontManager.getInstance();
+        binding.tvNewBranchTitle.setTypeface(fm.getUiSemiBold(context));
+        binding.tvNewBranchSubtitle.setTypeface(fm.getUiMedium(context));
+        binding.tvLabelBranchName.setTypeface(fm.getUiSemiBold(context));
+        binding.tvLabelBaseBranch.setTypeface(fm.getUiSemiBold(context));
+        binding.etBranchName.setTypeface(fm.getUiMedium(context));
+        binding.tvCreateFromSelector.setTypeface(fm.getUiMedium(context));
+        binding.btnCreateBranch.setTypeface(fm.getUiSemiBold(context));
+
+        com.cocode.vcode.ide.utils.UiUtils.setViewRounded(binding.etBranchName, com.cocode.vcode.ide.utils.UiUtils.dpToPx(context, 10), androidx.core.content.ContextCompat.getColor(context, com.cocode.vcode.ide.R.color.vcode_bg_elevated));
+        com.cocode.vcode.ide.utils.UiUtils.setViewRounded(binding.tvCreateFromSelector, com.cocode.vcode.ide.utils.UiUtils.dpToPx(context, 10), androidx.core.content.ContextCompat.getColor(context, com.cocode.vcode.ide.R.color.vcode_bg_elevated));
+
         setupDropdown();
 
         binding.btnCreateBranch.setOnClickListener(v -> {
             String name = Objects.requireNonNull(binding.etBranchName.getText()).toString().trim();
-            String from = binding.autoCreateFrom.getText().toString();
+            String from = binding.tvCreateFromSelector.getText().toString();
 
             // Validate branch name against standard Git naming conventions (basic regex)
             if (!name.matches("^[a-zA-Z0-9._-]+$")) {
-                binding.tilBranchName.setError("Invalid name format (alphanumeric, dots, dashes, underscores)");
+                binding.etBranchName.setError("Invalid name format (alphanumeric, dots, dashes, underscores)");
+                binding.etBranchName.requestFocus();
                 return;
             }
 
@@ -67,15 +81,54 @@ public class NewBranchBottomSheet extends BottomSheetDialogFragment {
             List<String> names = new ArrayList<>();
             for (BranchItem b : branches) names.add(b.getName());
 
-            ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(),
-                    android.R.layout.simple_dropdown_item_1line, names);
-            binding.autoCreateFrom.setAdapter(adapter);
-
             // Default to the first available branch (usually the current HEAD)
-            if (!names.isEmpty() && binding.autoCreateFrom.getText().toString().isEmpty()) {
-                binding.autoCreateFrom.setText(names.get(0), false);
+            if (!names.isEmpty() && binding.tvCreateFromSelector.getText().toString().isEmpty()) {
+                binding.tvCreateFromSelector.setText(names.get(0));
             }
+            
+            binding.tvCreateFromSelector.setOnClickListener(v -> showBranchSelectionDialog(names));
         });
+    }
+
+    private void showBranchSelectionDialog(List<String> branchNames) {
+        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
+        View dialogView = LayoutInflater.from(requireContext()).inflate(com.cocode.vcode.ide.R.layout.dialog_select_branch, null);
+        builder.setView(dialogView);
+        android.app.AlertDialog dialog = builder.create();
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
+        }
+
+        android.widget.TextView tvTitle = dialogView.findViewById(com.cocode.vcode.ide.R.id.tv_dialog_title);
+        if (tvTitle != null) {
+            tvTitle.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiSemiBold(requireContext()));
+        }
+
+        android.widget.ListView listView = dialogView.findViewById(com.cocode.vcode.ide.R.id.list_branches);
+        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, branchNames) {
+            @NonNull
+            @Override
+            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
+                View view = super.getView(position, convertView, parent);
+                android.widget.TextView tv = view.findViewById(android.R.id.text1);
+                if (tv != null) {
+                    tv.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiMedium(getContext()));
+                }
+                return view;
+            }
+        };
+        listView.setAdapter(adapter);
+
+        listView.setOnItemClickListener((parent, view, position, id) -> {
+            String selected = branchNames.get(position);
+            binding.tvCreateFromSelector.setText(selected);
+            dialog.dismiss();
+        });
+
+        com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_cancel);
+        btnCancel.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiMedium(requireContext()));
+        btnCancel.setOnClickListener(v -> dialog.dismiss());
+        dialog.show();
     }
 
     @Override
