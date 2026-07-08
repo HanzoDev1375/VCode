@@ -35,7 +35,7 @@ import com.cocode.vcode.ide.ui.base.BaseActivity;
 import com.cocode.vcode.ide.ui.editor.EditorActivity;
 import com.cocode.vcode.ide.ui.settings.SettingsActivity;
 import com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet;
-import com.cocode.vcode.ide.ui.sheets.GitCloneBottomSheet;
+
 import com.cocode.vcode.ide.ui.sheets.GitHubLoginBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.NewProjectBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.RenameBottomSheet;
@@ -273,17 +273,12 @@ public class ProjectsActivity extends BaseActivity {
             }
         });
 
-        binding.iconGithubClone.setOnClickListener(v -> {
-            if (hasStoragePermission()) {
-                GitCloneBottomSheet.show(getSupportFragmentManager(), viewModel);
-            } else {
-                Toast.makeText(this, "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
-                requestStoragePermission();
-            }
-        });
 
         // GitHub Authentication workflow
-        binding.iconGithub.setOnClickListener(v -> GitHubLoginBottomSheet.show(getSupportFragmentManager(), (token, updater) -> ExecutorProvider.getInstance().runOnIo(() -> {
+        binding.iconGithub.setOnClickListener(v -> GitHubLoginBottomSheet.show(getSupportFragmentManager(), () -> {
+            viewModel.loadProjects();
+
+        }, (token, updater) -> ExecutorProvider.getInstance().runOnIo(() -> {
                             try {
                                 // Validate the provided Personal Access Token against the GitHub API
                                 GitHubApiClient client = new GitHubApiClient(token);

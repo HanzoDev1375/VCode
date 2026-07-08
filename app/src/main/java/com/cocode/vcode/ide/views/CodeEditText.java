@@ -17,6 +17,7 @@ import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
+import android.view.inputmethod.InputConnection;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatEditText;
@@ -60,7 +61,7 @@ public class CodeEditText extends AppCompatEditText {
 
     private static final long HIGHLIGHT_DELAY_MS_SMALL = 150;
     private static final long HIGHLIGHT_DELAY_MS_LARGE = 300;
-    private static final int LARGE_FILE_THRESHOLD = 5000; // chars
+    private static final int LARGE_FILE_THRESHOLD = 20000; // chars — files under this get full highlighting
     private static final int VIEWPORT_BUFFER_LINES = 30; // extra lines above/below visible area
     private static final long AUTOCOMPLETE_DELAY_MS = 100;
 
@@ -109,6 +110,15 @@ public class CodeEditText extends AppCompatEditText {
     private final Runnable highlightRunnable = this::triggerHighlight;
     private final Runnable scrollHighlightRunnable = this::triggerHighlight;
     private List<com.cocode.vcode.ide.data.model.Problem> currentProblems = new ArrayList<>();
+    // Perf: cached diagnostic draw colors — avoid ContextCompat.getColor() inside onDraw every frame
+    private int cachedErrorColor;
+    private int cachedWarningColor;
+    private int cachedInfoColor;
+    private int cachedBracketHighlightColor;
+    // Perf: debounced bracket match to avoid span scan on main thread every keystroke
+    private final Runnable bracketMatchRunnable = () -> {
+        if (getText() != null) updateBracketMatch(getText().toString(), getSelectionStart());
+    };
 
     public CodeEditText(Context context) {
         super(context);
@@ -176,6 +186,11 @@ public class CodeEditText extends AppCompatEditText {
         diagnosticPaint.setStyle(Paint.Style.STROKE);
         diagnosticPaint.setStrokeWidth(3f);
         diagnosticPath = new android.graphics.Path();
+        // Perf: pre-load diagnostic colors once to avoid ContextCompat.getColor() in onDraw
+        cachedErrorColor = ContextCompat.getColor(context, R.color.vcode_accent_error);
+        cachedWarningColor = ContextCompat.getColor(context, R.color.vcode_accent_warning);
+        cachedInfoColor = ContextCompat.getColor(context, R.color.vcode_accent_primary);
+        cachedBracketHighlightColor = ContextCompat.getColor(context, R.color.vcode_bracket_match_bg);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             setBreakStrategy(LineBreaker.BREAK_STRATEGY_SIMPLE);
@@ -217,6 +232,7 @@ public class CodeEditText extends AppCompatEditText {
 
                 dirtyTracker.addEdit(start, before, count);
 
+
                 if (count == 1) {
                     char typed = s.charAt(start);
 
@@ -251,7 +267,9 @@ public class CodeEditText extends AppCompatEditText {
                             undoEditStart, undoDeletedCount, undoInsertedCount, undoOldText);
                     undoOldText = null;
                 }
-                updateBracketMatch(s.toString(), getSelectionStart());
+                // Perf: debounce bracket-match span scan — avoids full-document getSpans() on every keystroke
+                mainHandler.removeCallbacks(bracketMatchRunnable);
+                mainHandler.postDelayed(bracketMatchRunnable, 150);
             }
         });
 
@@ -292,7 +310,6 @@ public class CodeEditText extends AppCompatEditText {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        // Render horizontal strip highlighting behind the row holding the active text cursor pointer
         if (getLayout() != null && isFocused()) {
             int cursor = getSelectionStart();
             if (cursor >= 0 && cursor <= (getText() != null ? getText().length() : 0)) {
@@ -302,8 +319,10 @@ public class CodeEditText extends AppCompatEditText {
                 canvas.drawRect(0, lineTop, getWidth(), lineBot, lineHighlightPaint);
             }
         }
+
         super.onDraw(canvas);
 
+        // ── 5. Diagnostic squiggles ────────────────────────────────────────────
         if (getLayout() != null && currentProblems != null && !currentProblems.isEmpty() && getText() != null) {
             rebuildLineOffsets();
             if (cachedLineOffsets == null) return;
@@ -315,9 +334,9 @@ public class CodeEditText extends AppCompatEditText {
             int visibleTop = scrollY - getTotalPaddingTop();
             int visibleBot = scrollY + getHeight();
 
-            int errorColor = androidx.core.content.ContextCompat.getColor(getContext(), com.cocode.vcode.ide.R.color.vcode_accent_error);
-            int warningColor = androidx.core.content.ContextCompat.getColor(getContext(), com.cocode.vcode.ide.R.color.vcode_accent_warning);
-            int infoColor = androidx.core.content.ContextCompat.getColor(getContext(), com.cocode.vcode.ide.R.color.vcode_accent_primary);
+            int errorColor = cachedErrorColor;
+            int warningColor = cachedWarningColor;
+            int infoColor = cachedInfoColor;
 
             int textLen = getText().length();
 
@@ -386,10 +405,12 @@ public class CodeEditText extends AppCompatEditText {
         }
     }
 
+
     @Override
     public boolean onKeyDown(int keyCode, KeyEvent event) {
         if (isApplyingHighlight || isUndoRedoActive || isSettingText)
             return super.onKeyDown(keyCode, event);
+
 
         // ── Autocomplete keyboard navigation ─────────────────────────────────
         if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
@@ -668,15 +689,19 @@ public class CodeEditText extends AppCompatEditText {
     private void rebuildLineOffsets() {
         if (!lineOffsetsDirty && cachedLineOffsets != null) return;
         if (getText() == null) { cachedLineOffsets = null; return; }
-        String s = getText().toString();
-        int len = s.length();
+        // Perf: use CharSequence directly — avoids full String copy every time diagnostics need line offsets
+        CharSequence seq = getText();
+        int len = seq.length();
         int count = 1;
-        for (int i = 0; i < len; i++) if (s.charAt(i) == '\n') count++;
-        cachedLineOffsets = new int[count];
+        for (int i = 0; i < len; i++) if (seq.charAt(i) == '\n') count++;
+        // Perf: reuse existing array if size matches — avoids GC allocation on every keystroke
+        if (cachedLineOffsets == null || cachedLineOffsets.length != count) {
+            cachedLineOffsets = new int[count];
+        }
         cachedLineOffsets[0] = 0;
         int idx = 1;
         for (int i = 0; i < len && idx < count; i++) {
-            if (s.charAt(i) == '\n') cachedLineOffsets[idx++] = i + 1;
+            if (seq.charAt(i) == '\n') cachedLineOffsets[idx++] = i + 1;
         }
         lineOffsetsDirty = false;
     }
@@ -983,23 +1008,37 @@ public class CodeEditText extends AppCompatEditText {
         BracketMatchSpan[] old = getText().getSpans(0, getText().length(), BracketMatchSpan.class);
         for (BracketMatchSpan s : old) getText().removeSpan(s);
 
-        // Skip bracket matching for large files to avoid lag
-        if (text.length() > LARGE_FILE_THRESHOLD * 4) return;
+        if (text.length() > 60000) return;
 
-        BracketMatcher.MatchResult match = bracketMatcher.findMatch(text, cursor);
+        BracketMatcher.MatchResult match = null;
+
+        if (cursor < text.length()) {
+            match = bracketMatcher.findMatch(text, cursor);
+        }
+
+        if ((match == null || !match.found) && cursor > 0) {
+            match = bracketMatcher.findMatch(text, cursor - 1);
+        }
+
+        if (match == null || !match.found) {
+            match = bracketMatcher.findEnclosing(text, cursor);
+        }
+
         if (match != null && match.found) {
-            int color = ContextCompat.getColor(getContext(), R.color.vcode_accent_primary);
-            int alphaColor = android.graphics.Color.argb(60,
-                    android.graphics.Color.red(color),
-                    android.graphics.Color.green(color),
-                    android.graphics.Color.blue(color));
-            int len = getText().length();
-            if (match.openPos >= 0 && match.openPos + 1 <= len) {
-                getText().setSpan(new BracketMatchSpan(alphaColor), match.openPos, match.openPos + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }
-            if (match.closePos >= 0 && match.closePos + 1 <= len) {
-                getText().setSpan(new BracketMatchSpan(alphaColor), match.closePos, match.closePos + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            }
+            applyBracketSpans(match);
+        }
+    }
+
+    private void applyBracketSpans(BracketMatcher.MatchResult match) {
+        int len = getText().length();
+        int color = cachedBracketHighlightColor;
+        int textColor = getCurrentTextColor();
+
+        if (match.openPos >= 0 && match.openPos + 1 <= len) {
+            getText().setSpan(new BracketMatchSpan(color, textColor), match.openPos, match.openPos + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        if (match.closePos >= 0 && match.closePos + 1 <= len) {
+            getText().setSpan(new BracketMatchSpan(color, textColor), match.closePos, match.closePos + 1, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
     }
 
@@ -1167,18 +1206,15 @@ public class CodeEditText extends AppCompatEditText {
     protected void onScrollChanged(int horiz, int vert, int oldHoriz, int oldVert) {
         super.onScrollChanged(horiz, vert, oldHoriz, oldVert);
 
-        // Hide autocomplete popup if the user manually scrolls the editor
-        if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
-            autoCompletePopup.dismiss();
-        }
-
+        // Notify scroll listener (drives LineNumberView.invalidate)
         if (scrollChangeListener != null) {
             scrollChangeListener.onScrollChanged(horiz, vert);
         }
-        // Re-highlight on scroll for large files (viewport changed)
+
+        // Re-highlight viewport after scroll settles — debounced to avoid hammering CPU during fast fling
         if (getText() != null && getText().length() > LARGE_FILE_THRESHOLD) {
             mainHandler.removeCallbacks(scrollHighlightRunnable);
-            mainHandler.postDelayed(scrollHighlightRunnable, 100);
+            mainHandler.postDelayed(scrollHighlightRunnable, 200);
         }
     }
 
@@ -1199,9 +1235,11 @@ public class CodeEditText extends AppCompatEditText {
 
     @Override
     public boolean onKeyPreIme(int keyCode, android.view.KeyEvent event) {
-        if (keyCode == android.view.KeyEvent.KEYCODE_BACK && event.getAction() == android.view.KeyEvent.ACTION_UP) {
+        if (keyCode == android.view.KeyEvent.KEYCODE_BACK
+                && event.getAction() == android.view.KeyEvent.ACTION_UP) {
             if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
                 autoCompletePopup.dismiss();
+                return true;
             }
         }
         return super.onKeyPreIme(keyCode, event);
@@ -1219,8 +1257,11 @@ public class CodeEditText extends AppCompatEditText {
             if (autoCompletePopup != null && autoCompletePopup.isShowing()) {
                 autoCompletePopup.dismiss();
             }
+            mainHandler.removeCallbacks(bracketMatchRunnable);
+            mainHandler.postDelayed(bracketMatchRunnable, 80);
         }
     }
+
 
     @Override
     protected void onDetachedFromWindow() {
@@ -1479,9 +1520,39 @@ public class CodeEditText extends AppCompatEditText {
         }
     }
 
-    private static class BracketMatchSpan extends BackgroundColorSpan {
-        BracketMatchSpan(int color) {
-            super(color);
+    private static class BracketMatchSpan extends android.text.style.ReplacementSpan {
+        private final Paint borderPaint;
+        private final int defaultTextColor;
+
+        BracketMatchSpan(int borderColor, int defaultTextColor) {
+            borderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            borderPaint.setStyle(Paint.Style.STROKE);
+            borderPaint.setStrokeWidth(4f); // Increased stroke width as requested
+            borderPaint.setColor(borderColor);
+            this.defaultTextColor = defaultTextColor;
+        }
+
+        @Override
+        public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {
+            return (int) paint.measureText(text, start, end);
+        }
+
+        @Override
+        public void draw(Canvas canvas, CharSequence text, int start, int end,
+                         float x, int top, int y, int bottom, Paint paint) {
+            int oldColor = paint.getColor();
+            int colorToUse = defaultTextColor;
+            if (text instanceof android.text.Spanned) {
+                android.text.style.ForegroundColorSpan[] spans = ((android.text.Spanned) text).getSpans(start, end, android.text.style.ForegroundColorSpan.class);
+                if (spans.length > 0) {
+                    colorToUse = spans[spans.length - 1].getForegroundColor();
+                }
+            }
+            paint.setColor(colorToUse);
+            canvas.drawText(text, start, end, x, y, paint);
+            float charW = paint.measureText(text, start, end);
+            canvas.drawRect(x + 0.5f, top + 1, x + charW - 0.5f, bottom - 1, borderPaint);
+            paint.setColor(oldColor);
         }
     }
 }

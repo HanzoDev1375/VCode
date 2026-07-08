@@ -261,7 +261,7 @@ public class GitRemoteFragment extends Fragment {
      * Launches the GitHub Login bottom sheet for Personal Access Token authentication.
      */
     private void openGitHubLoginSheet() {
-        GitHubLoginBottomSheet.show(getChildFragmentManager(), (token, updater) -> ExecutorProvider.getInstance().runOnIo(() -> {
+        GitHubLoginBottomSheet.show(getChildFragmentManager(), null, (token, updater) -> ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 // Validate token and retrieve account details from the GitHub API
                 GitHubApiClient client = new GitHubApiClient(token);

@@ -13,13 +13,21 @@ import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.interfaces.RSAPublicKey;
 
+import org.eclipse.jgit.api.TransportConfigCallback;
+import org.eclipse.jgit.transport.SshTransport;
+import org.eclipse.jgit.transport.Transport;
+import org.eclipse.jgit.transport.ssh.jsch.JschConfigSessionFactory;
+import org.eclipse.jgit.transport.ssh.jsch.OpenSshConfig;
+import org.eclipse.jgit.util.FS;
+import com.jcraft.jsch.JSch;
+import com.jcraft.jsch.JSchException;
+import com.jcraft.jsch.Session;
+
 /**
  * Manages SSH keypair generation for Git operations.
- * Uses only java.security — no external JSch or SSHD dependency needed.
+ * Uses only java.security — no external JSch or SSHD dependency needed for generation.
  * <p>
- * Note: JGit SSH transport registration (configureJGit) requires the optional
- * org.eclipse.jgit:org.eclipse.jgit.ssh.apache artifact. Until that dependency
- * is added to build.gradle, SSH remotes must use HTTPS + PAT instead.
+ * Provides JGit SSH transport registration via JSch.
  */
 public class SshKeyManager {
 
@@ -39,6 +47,34 @@ public class SshKeyManager {
 
     public static boolean hasKeys(Context context) {
         return getPrivateKeyFile(context).exists() && getPublicKeyFile(context).exists();
+    }
+
+    public static TransportConfigCallback getTransportConfigCallback(Context context) {
+        return new TransportConfigCallback() {
+            @Override
+            public void configure(Transport transport) {
+                if (transport instanceof SshTransport) {
+                    SshTransport sshTransport = (SshTransport) transport;
+                    sshTransport.setSshSessionFactory(new JschConfigSessionFactory() {
+                        @Override
+                        protected void configure(OpenSshConfig.Host host, Session session) {
+                            session.setConfig("StrictHostKeyChecking", "no");
+                        }
+
+                        @Override
+                        protected JSch createDefaultJSch(FS fs) throws JSchException {
+                            JSch defaultJSch = super.createDefaultJSch(fs);
+                            defaultJSch.removeAllIdentity();
+                            File privateKey = getPrivateKeyFile(context);
+                            if (privateKey.exists()) {
+                                defaultJSch.addIdentity(privateKey.getAbsolutePath());
+                            }
+                            return defaultJSch;
+                        }
+                    });
+                }
+            }
+        };
     }
 
     /**

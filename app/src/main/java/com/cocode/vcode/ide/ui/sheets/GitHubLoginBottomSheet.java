@@ -3,7 +3,10 @@ package com.cocode.vcode.ide.ui.sheets;
 import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
+import android.text.Editable;
+import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -17,27 +20,32 @@ import androidx.fragment.app.FragmentManager;
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.databinding.BottomSheetGithubLoginBinding;
 import com.cocode.vcode.ide.git.core.GitCredentialStore;
+import com.cocode.vcode.ide.ui.git.GitCloneService;
+import com.cocode.vcode.ide.utils.ExecutorProvider;
+import com.cocode.vcode.ide.utils.FileUtils;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
-/**
- * GitHubLoginBottomSheet provides a secure interface for linking a GitHub account via Personal Access Token.
- * It features a dual-state UI: a login form for unauthenticated users, and a profile card
- * for users who have already connected their account.
- */
+import java.io.File;
+import java.util.UUID;
+
 public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetGithubLoginBinding binding;
     private GitHubLoginListener listener;
+    private Runnable onCloneSuccess;
+    private GitCloneService.CloneListener cloneListener;
 
-    /**
-     * Static helper to instantiate and display the GitHub login sheet.
-     */
-    public static void show(FragmentManager manager, GitHubLoginListener listener) {
+    public static void show(FragmentManager manager, @Nullable Runnable onCloneSuccess, GitHubLoginListener listener) {
         GitHubLoginBottomSheet sheet = new GitHubLoginBottomSheet();
         sheet.setListener(listener);
+        sheet.setOnCloneSuccess(onCloneSuccess);
         sheet.show(manager, "GitHubLoginBottomSheet");
+    }
+
+    public void setOnCloneSuccess(Runnable onCloneSuccess) {
+        this.onCloneSuccess = onCloneSuccess;
     }
 
     public void setListener(GitHubLoginListener listener) {
@@ -56,20 +64,43 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         super.onViewCreated(view, savedInstanceState);
 
         designUI();
-        // Determine which UI state (Login vs Profile) to display based on existing credentials
         refreshUIState();
         setupListeners();
+        setupCloneLogic();
+
+        if (onCloneSuccess == null) {
+            binding.tabGroup.setVisibility(View.GONE);
+            binding.layoutLoginContainer.setVisibility(View.VISIBLE);
+            binding.layoutCloneContainer.setVisibility(View.GONE);
+        } else {
+            binding.tabGroup.setVisibility(View.VISIBLE);
+            binding.tabGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
+                if (isChecked) {
+                    if (checkedId == R.id.tab_login) {
+                        binding.layoutLoginContainer.setVisibility(View.VISIBLE);
+                        binding.layoutCloneContainer.setVisibility(View.GONE);
+                    } else if (checkedId == R.id.tab_clone) {
+                        binding.layoutLoginContainer.setVisibility(View.GONE);
+                        binding.layoutCloneContainer.setVisibility(View.VISIBLE);
+                        // Make sure permission is handled in Activity? Or here. 
+                        // Actually, projectsActivity was handling permission.
+                        // Let's assume permission is granted or handle it.
+                    }
+                }
+            });
+        }
+        
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 100);
+            }
+        }
     }
 
-    /**
-     * Toggles the visibility of UI components based on the current authentication status.
-     * Displays the user's profile card if logged in, otherwise shows the PAT entry form.
-     */
     private void refreshUIState() {
         GitCredentialStore store = new GitCredentialStore();
 
         if (store.hasCredentials(requireContext())) {
-            // User IS authenticated: Show profile details and logout option
             binding.cardGithubLoggedIn.setVisibility(View.VISIBLE);
 
             binding.imgGithub.setVisibility(View.GONE);
@@ -83,7 +114,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             binding.tvAccountUsername.setText(username != null ? username : "Connected");
 
         } else {
-            // User is NOT authenticated: Show PAT input form and instructions
             binding.cardGithubLoggedIn.setVisibility(View.GONE);
 
             binding.imgGithub.setVisibility(View.VISIBLE);
@@ -95,11 +125,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         }
     }
 
-    /**
-     * Initializes listeners for token creation navigation, account connection, and disconnection.
-     */
     private void setupListeners() {
-        // Navigate the user to the GitHub PAT creation page with pre-defined scopes
         binding.btnVisitTokenPage.setOnClickListener(v -> {
             try {
                 Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/settings/tokens/new?scopes=repo,workflow"));
@@ -109,7 +135,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             }
         });
 
-        // Handle the login attempt with the provided token
         binding.btnConnectGithub.setOnClickListener(v -> {
             String token = binding.etPat.getText() != null ? binding.etPat.getText().toString().trim() : "";
 
@@ -119,19 +144,14 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                 return;
             }
             binding.etPat.setError(null);
-
-            // Display loading state during the validation request
             setLoadingState(true);
 
             if (listener != null) {
                 listener.onLogin(token, (success, errorMsg) -> {
-                    // Update UI state based on the asynchronous validation result
                     if (getView() != null) {
                         getView().post(() -> {
                             setLoadingState(false);
-
                             if (success) {
-                                // Switch to profile card UI on successful login
                                 refreshUIState();
                             } else {
                                 binding.etPat.setError(errorMsg != null ? errorMsg : "Invalid token");
@@ -145,7 +165,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             }
         });
 
-        // Handle account disconnection (logout)
         binding.btnDisconnectGithub.setOnClickListener(v -> {
             GitCredentialStore store = new GitCredentialStore();
             try {
@@ -154,15 +173,151 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 Toast.makeText(requireContext(), "Failed to disconnect. Please try again.", Toast.LENGTH_SHORT).show();
             }
-
-            // Revert back to the login form UI
             refreshUIState();
         });
     }
 
-    /**
-     * Applies the branding fonts and rounded styling to the sheet's components.
-     */
+    private void setupCloneLogic() {
+        binding.etRepoUrl.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+            }
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                String url = s.toString().trim();
+                if (url.endsWith(".git")) {
+                    url = url.substring(0, url.length() - 4);
+                }
+                int lastSlash = url.lastIndexOf('/');
+                if (lastSlash >= 0 && lastSlash < url.length() - 1) {
+                    String candidateName = url.substring(lastSlash + 1);
+                    if (binding.etProjectName.getText().toString().trim().isEmpty()) {
+                        binding.etProjectName.setText(candidateName);
+                    }
+                }
+            }
+        });
+
+        binding.btnExecuteClone.setOnClickListener(v -> initiateRepositoryCloneWorkflow());
+        binding.btnRunBackground.setOnClickListener(v -> dismiss());
+    }
+
+    private void initiateRepositoryCloneWorkflow() {
+        String repoUrl = binding.etRepoUrl.getText().toString().trim();
+        String projectName = binding.etProjectName.getText().toString().trim();
+
+        if (repoUrl.isEmpty()) {
+            Toast.makeText(getContext(), "Repository URL is required.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (projectName.isEmpty()) {
+            Toast.makeText(getContext(), "Project name is required.", Toast.LENGTH_SHORT).show();
+            return;
+        }
+
+        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+             Toast.makeText(getContext(), "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
+             return; // Or request permissions if needed.
+        }
+
+        setCancelable(false);
+        binding.layoutForm.setVisibility(View.GONE);
+        binding.layoutProgress.setVisibility(View.VISIBLE);
+        // also hide tabs
+        binding.tabGroup.setVisibility(View.GONE);
+
+        Context context = requireContext().getApplicationContext();
+        String projectId = UUID.randomUUID().toString();
+        File rootDir = FileUtils.getProjectsDir(context);
+        File targetProjectDirectory = new File(rootDir, projectId);
+
+        GitCredentialStore store = new GitCredentialStore();
+        String gitUser = store.getUsername(context);
+        String gitToken;
+        try {
+            gitToken = store.getToken(context);
+        } catch (Exception e) {
+            notifyFailure("Authentication token not found. Please log in to GitHub.");
+            return;
+        }
+
+        cloneListener = new GitCloneService.CloneListener() {
+            @Override
+            public void onProgress(String task, int done, int total, int percentage) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (isAdded()) {
+                        binding.tvProgressTask.setText(task);
+                        if (total > 0) {
+                            binding.progressIndicator.setIndeterminate(false);
+                            binding.progressIndicator.setProgressCompat(percentage, true);
+                            binding.tvProgressPercentage.setText(percentage + "%");
+                            binding.tvProgressDetails.setText(done + " / " + total + " completed.");
+                        } else {
+                            binding.progressIndicator.setIndeterminate(true);
+                            binding.tvProgressPercentage.setText("0%");
+                            binding.tvProgressDetails.setText("Working...");
+                        }
+                    }
+                });
+            }
+
+            @Override
+            public void onUpdate(int completed) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (isAdded()) {
+                        binding.tvProgressDetails.setText(completed + " entities synchronized.");
+                    }
+                });
+            }
+
+            @Override
+            public void onSuccess() {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (isAdded()) {
+                        if (onCloneSuccess != null) {
+                            onCloneSuccess.run();
+                        }
+                        dismissAllowingStateLoss();
+                    }
+                });
+            }
+
+            @Override
+            public void onFailure(String error) {
+                notifyFailure(error);
+            }
+        };
+        GitCloneService.setListener(cloneListener);
+
+        Intent serviceIntent = new Intent(context, GitCloneService.class);
+        serviceIntent.setAction(GitCloneService.ACTION_START_CLONE);
+        serviceIntent.putExtra(GitCloneService.EXTRA_REPO_URL, repoUrl);
+        serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_NAME, projectName);
+        serviceIntent.putExtra(GitCloneService.EXTRA_TARGET_DIR, targetProjectDirectory.getAbsolutePath());
+        serviceIntent.putExtra(GitCloneService.EXTRA_GIT_USER, gitUser);
+        serviceIntent.putExtra(GitCloneService.EXTRA_GIT_TOKEN, gitToken);
+        serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_ID, projectId);
+
+        ContextCompat.startForegroundService(context, serviceIntent);
+    }
+
+    private void notifyFailure(String traceMessage) {
+        ExecutorProvider.getInstance().runOnMain(() -> {
+            if (isAdded()) {
+                setCancelable(true);
+                binding.layoutProgress.setVisibility(View.GONE);
+                binding.layoutForm.setVisibility(View.VISIBLE);
+                binding.tabGroup.setVisibility(View.VISIBLE);
+                Toast.makeText(getContext(), "Clone failed: " + traceMessage, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
     private void designUI() {
         FontManager fm = FontManager.getInstance();
         Context ctx = requireContext();
@@ -171,19 +326,32 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         binding.tvHowToGetGithubToken.setTypeface(fm.getUiMedium(ctx));
         binding.tvPat.setTypeface(fm.getUiMedium(ctx));
         binding.etPat.setTypeface(fm.getUiMedium(ctx));
-
         binding.btnConnectGithub.setTypeface(fm.getUiSemiBold(ctx));
         binding.btnVisitTokenPage.setTypeface(fm.getUiSemiBold(ctx));
-
         binding.tvGithubAccount.setTypeface(fm.getUiSemiBold(ctx));
         binding.tvAccountUsername.setTypeface(fm.getUiSemiBold(ctx));
 
+        binding.tabLogin.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tabClone.setTypeface(fm.getUiSemiBold(ctx));
+
+        binding.tvCloneTitle.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tvCloneSubtitle.setTypeface(fm.getUiMedium(ctx));
+        binding.tvRepoUrlLabel.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tvProjectNameLabel.setTypeface(fm.getUiSemiBold(ctx));
+
+        binding.etRepoUrl.setTypeface(fm.getUiMedium(ctx));
+        binding.etProjectName.setTypeface(fm.getUiMedium(ctx));
+        binding.btnExecuteClone.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tvProgressTask.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tvProgressDetails.setTypeface(fm.getUiMedium(ctx));
+        binding.tvProgressPercentage.setTypeface(fm.getUiSemiBold(ctx));
+        binding.btnRunBackground.setTypeface(fm.getUiMedium(ctx));
+
         UiUtils.setViewRounded(binding.etPat, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
+        UiUtils.setViewRounded(binding.etRepoUrl, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
+        UiUtils.setViewRounded(binding.etProjectName, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
     }
 
-    /**
-     * Manages the button text and enabled state during an active login request.
-     */
     private void setLoadingState(boolean isLoading) {
         if (isLoading) {
             binding.btnConnectGithub.setEnabled(false);
@@ -202,16 +370,10 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         binding = null;
     }
 
-    /**
-     * Interface for communicating the login token to the parent component.
-     */
     public interface GitHubLoginListener {
         void onLogin(String token, GitHubLoginUpdater updater);
     }
 
-    /**
-     * Interface for reporting the result of the GitHub account validation.
-     */
     public interface GitHubLoginUpdater {
         void onResult(boolean success, String errorMsg);
     }

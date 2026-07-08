@@ -12,6 +12,7 @@
     <color name="vcode_accent_error">#D93B38</color>
     <color name="vcode_accent_json">#B58B00</color>
     <color name="vcode_accent_git">#C0392B</color>
+    <color name="vcode_bracket_match_bg">#26007AFF</color>
 
     <color name="vcode_bracket_1">#FFD700</color> <!-- Gold -->
     <color name="vcode_bracket_2">#DA70D6</color> <!-- Orchid -->

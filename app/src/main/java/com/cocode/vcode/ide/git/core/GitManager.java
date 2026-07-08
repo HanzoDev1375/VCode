@@ -47,18 +47,24 @@ public class GitManager {
      * @param callback  An active interface monitor tracking asynchronous download states.
      * @return A descriptive GitOperationResult wrapping process status signals.
      */
-    public static GitOperationResult cloneRepo(String url, File targetDir,
+    public static GitOperationResult cloneRepo(android.content.Context context, String url, File targetDir,
                                                String username, String token,
                                                CloneProgressCallback callback) {
         try {
             org.eclipse.jgit.api.CloneCommand clone = Git.cloneRepository()
                     .setURI(url)
-                    .setDirectory(targetDir)
-                    .setCredentialsProvider(
-                            new UsernamePasswordCredentialsProvider(
-                                    username != null ? username : "token",
-                                    token != null ? token : ""))
-                    .setProgressMonitor(new org.eclipse.jgit.lib.ProgressMonitor() {
+                    .setDirectory(targetDir);
+
+            if (url.startsWith("http")) {
+                clone.setCredentialsProvider(
+                        new UsernamePasswordCredentialsProvider(
+                                username != null ? username : "token",
+                                token != null ? token : ""));
+            } else {
+                clone.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(context));
+            }
+
+            clone.setProgressMonitor(new org.eclipse.jgit.lib.ProgressMonitor() {
                         private int totalWork;
                         private int completedWork;
                         private String currentTask;

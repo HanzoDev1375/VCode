@@ -16,9 +16,12 @@ import java.io.PrintWriter;
 import java.io.StringWriter;
 
 public class VCodeApplication extends Application {
+    private static VCodeApplication instance;
+
     @Override
     public void onCreate() {
         super.onCreate();
+        instance = this;
         KnownElements.init(this);
         HtmlTagCache.load(this);
 
@@ -54,5 +57,9 @@ public class VCodeApplication extends Application {
         // Kill the current process
         android.os.Process.killProcess(android.os.Process.myPid());
         System.exit(1);
+    }
+
+    public static VCodeApplication getInstance() {
+        return instance;
     }
 }

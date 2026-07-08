@@ -109,6 +109,10 @@ public class BracketMatcher {
         }
 
         char c = text.charAt(cursorPos);
+        if (isInStringOrComment(text, cursorPos)) {
+            return new MatchResult(-1, -1, false);
+        }
+
         int openIdx = OPEN_BRACKETS.indexOf(c);
         int closeIdx = CLOSE_BRACKETS.indexOf(c);
 
@@ -145,6 +149,70 @@ public class BracketMatcher {
 
         // No matching partner token was discovered within document limits
         return new MatchResult(-1, -1, false);
+    }
+
+    /**
+     * Finds the innermost bracket pair that ENCLOSES the cursor position.
+     * Used when the cursor is not sitting on a bracket itself.
+     *
+     * @param text      Full document text.
+     * @param cursorPos Current cursor offset (0-based).
+     * @return MatchResult with openPos/closePos, or found=false if not inside any bracket.
+     */
+    public MatchResult findEnclosing(String text, int cursorPos) {
+        if (text == null || cursorPos <= 0) return new MatchResult(-1, -1, false);
+
+        int depth_paren  = 0;
+        int depth_square = 0;
+        int depth_brace  = 0;
+
+        for (int i = cursorPos - 1; i >= 0; i--) {
+            if (isInStringOrComment(text, i)) continue;
+
+            char c = text.charAt(i);
+            if      (c == ')') depth_paren++;
+            else if (c == ']') depth_square++;
+            else if (c == '}') depth_brace++;
+            else if (c == '(') {
+                if (depth_paren == 0) return findMatch(text, i);
+                depth_paren--;
+            } else if (c == '[') {
+                if (depth_square == 0) return findMatch(text, i);
+                depth_square--;
+            } else if (c == '{') {
+                if (depth_brace == 0) return findMatch(text, i);
+                depth_brace--;
+            }
+        }
+        return new MatchResult(-1, -1, false);
+    }
+
+    private static boolean isInStringOrComment(String text, int pos) {
+        boolean inSingle = false, inDouble = false, inTemplate = false;
+        boolean inLineComment = false, inBlockComment = false;
+
+        for (int i = 0; i < pos && i < text.length(); i++) {
+            char c = text.charAt(i);
+            char n = i < text.length() - 1 ? text.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && n == '/') { inBlockComment = false; i++; }
+                continue;
+            }
+            if (!inSingle && !inDouble && !inTemplate) {
+                if (c == '/' && n == '/') { inLineComment = true; i++; continue; }
+                if (c == '/' && n == '*') { inBlockComment = true; i++; continue; }
+            }
+            if (c == '\\') { i++; continue; } // skip escaped chars
+            if (c == '\'' && !inDouble && !inTemplate) inSingle = !inSingle;
+            else if (c == '"' && !inSingle && !inTemplate) inDouble = !inDouble;
+            else if (c == '`' && !inSingle && !inDouble) inTemplate = !inTemplate;
+        }
+        return inSingle || inDouble || inTemplate || inLineComment || inBlockComment;
     }
 
     /**

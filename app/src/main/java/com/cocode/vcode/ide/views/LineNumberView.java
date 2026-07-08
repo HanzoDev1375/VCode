@@ -27,6 +27,20 @@ public class LineNumberView extends View {
     private CodeEditText editor;
     private int cursorOffset = 0;
 
+    // Perf: cache cursor-line scan result to avoid O(n) scan every draw frame
+    private int cachedCursorOffset = -1;
+    private int cachedCursorLine = 1;
+    // Perf: cache firstLine scan result
+    private int cachedFirstLineStart = -1;
+    private int cachedFirstLogicalLine = 1;
+    // Perf: reuse char buffer to avoid String alloc per line in draw loop
+    private final char[] lineNumBuffer = new char[6];
+    // Perf: cache color lookups (ContextCompat.getColor is not free)
+    private int colorPrimary;
+    private int colorSecondary;
+    private boolean colorsLoaded = false;
+
+
     public LineNumberView(Context context) {
         super(context);
         init();
@@ -53,11 +67,17 @@ public class LineNumberView extends View {
         dividerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         dividerPaint.setColor(ContextCompat.getColor(getContext(), R.color.vcode_divider));
         dividerPaint.setStrokeWidth(DIVIDER_WIDTH_PX);
+
+        // Pre-load colors once — ContextCompat.getColor() is non-trivial
+        colorPrimary = ContextCompat.getColor(getContext(), R.color.vcode_text_primary);
+        colorSecondary = ContextCompat.getColor(getContext(), R.color.vcode_line_number_text);
+        colorsLoaded = true;
     }
 
     public void setCursorOffset(int cursorOffset) {
         if (this.cursorOffset != cursorOffset) {
             this.cursorOffset = cursorOffset;
+            cachedCursorOffset = -1; // invalidate cursor-line cache
             invalidate();
         }
     }
@@ -73,13 +93,17 @@ public class LineNumberView extends View {
         canvas.drawLine(getWidth() - DIVIDER_WIDTH_PX, 0,
                 getWidth() - DIVIDER_WIDTH_PX, getHeight(), dividerPaint);
 
-        int colorPrimary = ContextCompat.getColor(getContext(), R.color.vcode_text_primary);
-        int colorSecondary = ContextCompat.getColor(getContext(), R.color.vcode_line_number_text);
+        // Use pre-loaded colors — avoids ContextCompat.getColor() on every frame
+        int _colorPrimary = colorsLoaded ? colorPrimary : ContextCompat.getColor(getContext(), R.color.vcode_text_primary);
+        int _colorSecondary = colorsLoaded ? colorSecondary : ContextCompat.getColor(getContext(), R.color.vcode_line_number_text);
 
         float textX = getWidth() - DIVIDER_WIDTH_PX - dpToPx(4);
 
         android.text.Layout layout = editor.getLayout();
-        String text = editor.getText().toString();
+        // Perf: use CharSequence directly — avoids a full String copy of the document on every draw frame
+        CharSequence textSeq = editor.getText();
+        if (textSeq == null) return;
+        int textLen = textSeq.length();
         int paddingTop = editor.getPaddingTop();
         int scrollY = editor.getScrollY();
 
@@ -87,38 +111,56 @@ public class LineNumberView extends View {
         int firstVisibleLine = layout.getLineForVertical(scrollY);
         int lastVisibleLine = layout.getLineForVertical(scrollY + getHeight());
 
-        // Calculate the active logical line
-        int activeLogicalLine = 1;
-        for (int j = 0; j < cursorOffset && j < text.length(); j++) {
-            if (text.charAt(j) == '\n') activeLogicalLine++;
+        // Perf: cache cursor-line O(n) scan — reuse if cursorOffset hasn't changed
+        int activeLogicalLine;
+        if (cursorOffset == cachedCursorOffset) {
+            activeLogicalLine = cachedCursorLine;
+        } else {
+            activeLogicalLine = 1;
+            for (int j = 0; j < cursorOffset && j < textLen; j++) {
+                if (textSeq.charAt(j) == '\n') activeLogicalLine++;
+            }
+            cachedCursorOffset = cursorOffset;
+            cachedCursorLine = activeLogicalLine;
         }
 
+        // Perf: cache firstLine O(n) scan — reuse if firstLineStart hasn't changed
         int firstLineStart = layout.getLineStart(firstVisibleLine);
-        int logicalLine = 1;
-        for (int j = 0; j < firstLineStart && j < text.length(); j++) {
-            if (text.charAt(j) == '\n') logicalLine++;
+        int logicalLine;
+        if (firstLineStart == cachedFirstLineStart) {
+            logicalLine = cachedFirstLogicalLine;
+        } else {
+            logicalLine = 1;
+            for (int j = 0; j < firstLineStart && j < textLen; j++) {
+                if (textSeq.charAt(j) == '\n') logicalLine++;
+            }
+            cachedFirstLineStart = firstLineStart;
+            cachedFirstLogicalLine = logicalLine;
         }
 
         int scanOffset = firstLineStart;
         for (int i = firstVisibleLine; i <= lastVisibleLine; i++) {
             int lineStart = layout.getLineStart(i);
 
-            // Advance scanOffset to lineStart, counting newlines
-            while (scanOffset < lineStart && scanOffset < text.length()) {
-                if (text.charAt(scanOffset) == '\n') logicalLine++;
+            // Advance scanOffset to lineStart, counting newlines via CharSequence
+            while (scanOffset < lineStart && scanOffset < textLen) {
+                if (textSeq.charAt(scanOffset) == '\n') logicalLine++;
                 scanOffset++;
             }
 
-            boolean isNewLogicalLine = (lineStart == 0) || (lineStart > 0 && lineStart <= text.length() && text.charAt(lineStart - 1) == '\n');
+            boolean isNewLogicalLine = (lineStart == 0) || (lineStart > 0 && lineStart <= textLen && textSeq.charAt(lineStart - 1) == '\n');
 
             // Extract the baseline Y coordinate to position indices on target with editor code lines
             int baselineY = layout.getLineBaseline(i);
             float y = paddingTop + baselineY - scrollY;
 
             if (isNewLogicalLine) {
-                // Emphasize text color parameters if the index matches the active editing row
-                numberPaint.setColor(logicalLine == activeLogicalLine ? colorPrimary : colorSecondary);
-                canvas.drawText(String.valueOf(logicalLine), textX, y, numberPaint);
+                // Emphasize text color if this is the primary active line
+                boolean isActiveLine = (logicalLine == activeLogicalLine);
+                numberPaint.setColor(isActiveLine ? _colorPrimary : _colorSecondary);
+                // Perf: use char-buffer drawText to avoid String.valueOf() allocation per line
+                int _s = fillLineNum(logicalLine, lineNumBuffer);
+                canvas.drawText(lineNumBuffer, _s, lineNumBuffer.length - _s, textX, y, numberPaint);
             }
         }
     }
@@ -128,10 +170,28 @@ public class LineNumberView extends View {
      */
     public void bindEditor(CodeEditText editor) {
         this.editor = editor;
+        // Invalidate all caches when editor changes
+        cachedCursorOffset = -1;
+        cachedCursorLine = 1;
+        cachedFirstLineStart = -1;
+        cachedFirstLogicalLine = 1;
         if (editor != null && editor.getTypeface() != null) {
             numberPaint.setTypeface(editor.getTypeface());
         }
         invalidate();
+    }
+
+    /**
+     * Writes an integer into a pre-allocated char[] from the right, returning the start index.
+     * Avoids String.valueOf() + allocation per visible line in onDraw.
+     */
+    private int fillLineNum(int num, char[] buf) {
+        int pos = buf.length;
+        do {
+            buf[--pos] = (char) ('0' + (num % 10));
+            num /= 10;
+        } while (num > 0);
+        return pos;
     }
 
     public void setLineCount() {
@@ -141,6 +201,8 @@ public class LineNumberView extends View {
     public void setScrollY(int scrollY) {
         invalidate();
     }
+
+
 
     public void setLineHeight() {
         // invalidate is driven by syncComplete()

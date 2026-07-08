@@ -139,31 +139,37 @@ public class CodeFileViewer implements IFileViewer {
 
             final EditorFile capturedFile = currentFile;
             final IEditorCallback capturedCallback = editorCallback;
-            Runnable validationRunnable = () -> ExecutorProvider.getInstance().runOnIo(() -> {
-                if (capturedFile == null || capturedFile.getFile() == null) {
-                    ExecutorProvider.getInstance().runOnMain(() -> {
-                        if (codeEditText != null) codeEditText.applyDiagnostics(new java.util.ArrayList<>());
-                    });
-                    return;
-                }
-
-                java.util.List<com.cocode.vcode.ide.data.model.Problem> problems =
-                        com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(capturedFile.getFile(), text, capturedFile.getFileType());
-
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
+            Runnable validationRunnable = () -> {
+                // Perf: setDiagnosticLoading inside the runnable so UI only updates when analysis starts
+                viewModel.setDiagnosticLoading();
+                ExecutorProvider.getInstance().runOnIo(() -> {
+                    if (capturedFile == null || capturedFile.getFile() == null) {
+                        ExecutorProvider.getInstance().runOnMain(() -> {
+                            if (codeEditText != null) codeEditText.applyDiagnostics(new java.util.ArrayList<>());
+                        });
                         return;
                     }
-                    if (codeEditText != null) {
-                        codeEditText.applyDiagnostics(problems);
-                    }
-                    if (capturedCallback != null) {
-                        capturedCallback.reportProblems(capturedFile.getFile(), problems);
-                    }
+
+                    java.util.List<com.cocode.vcode.ide.data.model.Problem> problems =
+                            com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(capturedFile.getFile(), text, capturedFile.getFileType());
+
+                    ExecutorProvider.getInstance().runOnMain(() -> {
+                        if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
+                            return;
+                        }
+                        if (codeEditText != null) {
+                            codeEditText.applyDiagnostics(problems);
+                        }
+                        if (capturedCallback != null) {
+                            capturedCallback.reportProblems(capturedFile.getFile(), problems);
+                        }
+                    });
                 });
-            });
-            viewModel.setDiagnosticLoading();
-            jsonValidationHandler.postDelayed(validationRunnable, 500);
+            };
+            // Perf: adaptive delay \u2014 large files get more debounce time so diagnostics don't compete with typing
+            int contentLen = text != null ? text.length() : 0;
+            long diagDelay = contentLen > 20000 ? 1500L : 800L;
+            jsonValidationHandler.postDelayed(validationRunnable, diagDelay);
         }
     }
 }

@@ -4,6 +4,8 @@ import com.cocode.vcode.ide.git.model.BranchItem;
 import com.cocode.vcode.ide.git.model.CommitItem;
 import com.cocode.vcode.ide.git.model.GitFileItem;
 import com.cocode.vcode.ide.utils.DateUtils;
+import com.cocode.vcode.ide.VCodeApplication;
+import com.cocode.vcode.ide.git.core.SshKeyManager;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
@@ -487,11 +489,17 @@ public class GitRepository {
      * Dispatches localized branch modification revisions forward to external hosting platforms channels repositories.
      */
     public String push(String remoteUrl, String pat, String branch) throws Exception {
-        Iterable<org.eclipse.jgit.transport.PushResult> results = git.push()
-                .setRemote(remoteUrl)
-                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat, ""))
-                .add(branch)
-                .call();
+        org.eclipse.jgit.api.PushCommand pushCommand = git.push()
+                .setRemote("origin")
+                .add(branch);
+
+        if (remoteUrl != null && remoteUrl.startsWith("http")) {
+            pushCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? pat : "token", pat != null ? pat : ""));
+        } else {
+            pushCommand.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(VCodeApplication.getInstance()));
+        }
+
+        Iterable<org.eclipse.jgit.transport.PushResult> results = pushCommand.call();
 
         // JGit returns results without throwing even on rejection — inspect each ref update
         for (org.eclipse.jgit.transport.PushResult result : results) {
@@ -528,11 +536,17 @@ public class GitRepository {
     public String pull(String remoteUrl, String pat, String branch) throws Exception {
         ensureOriginConfigured(remoteUrl);
 
-        org.eclipse.jgit.api.PullResult result = git.pull()
+        org.eclipse.jgit.api.PullCommand pullCommand = git.pull()
                 .setRemote("origin")
-                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat, ""))
-                .setRemoteBranchName(branch)
-                .call();
+                .setRemoteBranchName(branch);
+
+        if (remoteUrl != null && remoteUrl.startsWith("http")) {
+            pullCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? pat : "token", pat != null ? pat : ""));
+        } else {
+            pullCommand.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(VCodeApplication.getInstance()));
+        }
+
+        org.eclipse.jgit.api.PullResult result = pullCommand.call();
 
         if (!result.isSuccessful()) {
             // Check merge conflicts
@@ -590,10 +604,17 @@ public class GitRepository {
     /** Returns a human-readable summary of what was fetched. */
     public String fetch(String remoteUrl, String pat) throws Exception {
         ensureOriginConfigured(remoteUrl);
-        org.eclipse.jgit.transport.FetchResult result = git.fetch()
-                .setRemote("origin")
-                .setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat, ""))
-                .call();
+
+        org.eclipse.jgit.api.FetchCommand fetchCommand = git.fetch()
+                .setRemote("origin");
+
+        if (remoteUrl != null && remoteUrl.startsWith("http")) {
+            fetchCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? pat : "token", pat != null ? pat : ""));
+        } else {
+            fetchCommand.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(VCodeApplication.getInstance()));
+        }
+
+        org.eclipse.jgit.transport.FetchResult result = fetchCommand.call();
 
         // Build a summary of updated tracking refs
         java.util.Collection<org.eclipse.jgit.transport.TrackingRefUpdate> updates = result.getTrackingRefUpdates();

@@ -12,6 +12,7 @@
     <color name="vcode_accent_error">#F25F5C</color>
     <color name="vcode_accent_json">#E5C07B</color>
     <color name="vcode_accent_git">#F97583</color>
+    <color name="vcode_bracket_match_bg">#264F8EF7</color>
 
     <!-- M3 On/Container colors (dark) -->
     <color name="vcode_on_primary">#00327A</color>

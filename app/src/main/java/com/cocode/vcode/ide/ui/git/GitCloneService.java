@@ -185,7 +185,7 @@ public class GitCloneService extends Service {
 
     private void performClone(String repoUrl, String projectName, File targetProjectDirectory, String gitUser, String gitToken, String projectId) {
         ExecutorProvider.getInstance().runOnIo(() -> {
-            var result = GitManager.cloneRepo(repoUrl, targetProjectDirectory, gitUser, gitToken, new GitManager.CloneProgressCallback() {
+            var result = GitManager.cloneRepo(this, repoUrl, targetProjectDirectory, gitUser, gitToken, new GitManager.CloneProgressCallback() {
                 @Override
                 public void onProgress(String task, int done, int total) {
                     int percentage = total > 0 ? (int) (((float) done / total) * 100) : 0;

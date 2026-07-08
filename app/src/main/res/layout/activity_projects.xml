@@ -40,15 +40,6 @@
 
         </LinearLayout>
 
-        <ImageView
-            android:id="@+id/icon_github_clone"
-            android:layout_width="28dp"
-            android:layout_height="28dp"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:importantForAccessibility="no"
-            android:padding="3dp"
-            android:src="@drawable/ic_triangle_merge"
-            app:tint="?attr/colorOnSurface" />
 
         <ImageView
             android:id="@+id/icon_github"

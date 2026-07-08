@@ -12,171 +12,397 @@
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal" />
 
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/card_github_logged_in"
+    <com.google.android.material.button.MaterialButtonToggleGroup
+        android:id="@+id/tab_group"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginTop="8dp"
+        android:layout_marginBottom="16dp"
+        app:checkedButton="@+id/tab_login"
+        app:selectionRequired="true"
+        app:singleSelection="true">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/tab_login"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Login"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="@color/vcode_toggle_button_text"
+            app:backgroundTint="@color/vcode_toggle_button_bg" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/tab_clone"
+            style="@style/Widget.Material3.Button.OutlinedButton"
+            android:layout_width="0dp"
+            android:layout_height="match_parent"
+            android:layout_weight="1"
+            android:text="Clone"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="@color/vcode_toggle_button_text"
+            app:backgroundTint="@color/vcode_toggle_button_bg" />
+    </com.google.android.material.button.MaterialButtonToggleGroup>
+
+    <LinearLayout
+        android:id="@+id/layout_login_container"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_margin="@dimen/vcode_app_gap_horizontal"
-        android:visibility="gone"
-        app:cardBackgroundColor="?attr/colorSurfaceContainer"
-        app:cardCornerRadius="12dp"
-        app:cardElevation="0dp"
-        app:strokeWidth="0dp"
-        tools:visibility="visible">
+        android:orientation="vertical">
 
-        <LinearLayout
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/card_github_logged_in"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="16dp">
+            android:layout_margin="@dimen/vcode_app_gap_horizontal"
+            android:visibility="gone"
+            app:cardBackgroundColor="?attr/colorSurfaceContainer"
+            app:cardCornerRadius="12dp"
+            app:cardElevation="0dp"
+            app:strokeWidth="0dp"
+            tools:visibility="visible">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                tools:ignore="UselessParent">
-
-                <ImageView
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:importantForAccessibility="no"
-                    android:src="@drawable/ic_github"
-                    app:tint="?attr/colorOnSurface" />
+                android:orientation="vertical"
+                android:padding="16dp">
 
                 <LinearLayout
-                    android:layout_width="0dp"
+                    android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_weight="1"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    tools:ignore="UselessParent">
+
+                    <ImageView
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:importantForAccessibility="no"
+                        android:src="@drawable/ic_github"
+                        app:tint="?attr/colorOnSurface" />
+
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="12dp"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
+
+                        <TextView
+                            android:id="@+id/tv_github_account"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/vcode_github_account"
+                            android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                            android:textColor="?attr/colorOnSurface"
+                            android:textSize="15sp" />
+
+                        <TextView
+                            android:id="@+id/tv_account_username"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant"
+                            tools:text="cocodestudio" />
+                    </LinearLayout>
+
+                    <ImageView
+                        android:id="@+id/btn_disconnect_github"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:importantForAccessibility="no"
+                        android:padding="6dp"
+                        android:src="@drawable/ic_right_from_bracket"
+                        app:tint="?attr/colorOnSurfaceVariant" />
+                </LinearLayout>
+
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <ImageView
+            android:id="@+id/img_github"
+            android:layout_width="35dp"
+            android:layout_height="35dp"
+            android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_github"
+            app:tint="?attr/colorOnSurface" />
+
+        <TextView
+            android:id="@+id/tv_connect_your_github"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+            android:layout_marginTop="6dp"
+            android:text="@string/vcode_connect_your_github"
+            android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+
+        <TextView
+            android:id="@+id/tv_how_to_get_github_token"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+            android:layout_marginEnd="0dp"
+            android:paddingStart="0dp"
+            android:paddingEnd="35dp"
+            android:text="@string/vcode_how_to_get_github_token"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <TextView
+            android:id="@+id/tv_pat"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+            android:layout_marginTop="24dp"
+            android:layout_marginEnd="0dp"
+            android:text="@string/vcode_pat"
+            android:textAllCaps="true"
+            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+            android:textColor="?attr/colorOnSurfaceVariant" />
+
+        <EditText
+            android:id="@+id/et_pat"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+            android:layout_marginTop="6dp"
+            android:background="?attr/colorSurfaceContainerHigh"
+            android:hint="@string/vcode_pat_hint"
+            android:imeOptions="actionDone"
+            android:importantForAutofill="no"
+            android:inputType="textPassword"
+            android:maxLines="1"
+            android:padding="14dp"
+            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:textColor="?attr/colorOnSurface"
+            android:textColorHint="?attr/colorOnSurfaceVariant" />
+
+
+        <LinearLayout
+            android:id="@+id/btns_container"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="40dp"
+            android:layout_marginBottom="20dp"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingHorizontal="@dimen/vcode_app_gap_horizontal">
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_visit_token_page"
+                style="@style/Widget.Material3.Button.OutlinedButton.Icon"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="24dp"
+                android:text="@string/vcode_visit_token_page"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                app:icon="@drawable/ic_globe" />
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1" />
+
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_connect_github"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:paddingHorizontal="24dp"
+                android:text="@string/vcode_connect"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnPrimary"
+                app:backgroundTint="?attr/colorPrimary" />
+
+        </LinearLayout>
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:id="@+id/layout_clone_container"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:visibility="gone">
+
+        <LinearLayout
+            android:id="@+id/layout_form"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="vertical"
+            android:visibility="visible">
+
+            <TextView
+                android:id="@+id/tv_clone_title"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
+                android:text="@string/vcode_clone_title"
+                android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+
+            <TextView
+                android:id="@+id/tv_clone_subtitle"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="4dp"
+                android:text="@string/vcode_enter_url_to_clone"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <androidx.core.widget.NestedScrollView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:fillViewport="true">
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
                     android:orientation="vertical">
 
                     <TextView
-                        android:id="@+id/tv_github_account"
+                        android:id="@+id/tv_repo_url_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="@string/vcode_github_account"
-                        android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
+                        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                        android:layout_marginTop="24dp"
+                        android:text="@string/vcode_repo_url_label"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <EditText
+                        android:id="@+id/et_repo_url"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                        android:layout_marginTop="6dp"
+                        android:background="?attr/colorSurfaceContainerHigh"
+                        android:hint="@string/vcode_repo_url_hint"
+                        android:imeOptions="actionNext"
+                        android:importantForAutofill="no"
+                        android:inputType="textUri"
+                        android:maxLines="1"
+                        android:minHeight="48dp"
+                        android:padding="14dp"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                         android:textColor="?attr/colorOnSurface"
-                        android:textSize="15sp" />
+                        android:textColorHint="?attr/colorOnSurfaceVariant" />
 
                     <TextView
-                        android:id="@+id/tv_account_username"
+                        android:id="@+id/tv_project_name_label"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
+                        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                        android:layout_marginTop="20dp"
+                        android:text="@string/vcode_project_display_name_label"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                        android:textColor="?attr/colorOnSurfaceVariant" />
+
+                    <EditText
+                        android:id="@+id/et_project_name"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                        android:layout_marginTop="6dp"
+                        android:background="?attr/colorSurfaceContainerHigh"
+                        android:hint="@string/vcode_project_display_name_hint"
+                        android:imeOptions="actionDone"
+                        android:importantForAutofill="no"
+                        android:inputType="text"
+                        android:maxLines="1"
+                        android:minHeight="48dp"
+                        android:padding="14dp"
                         android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                        android:textColor="?attr/colorOnSurfaceVariant"
-                        tools:text="cocodestudio" />
+                        android:textColor="?attr/colorOnSurface"
+                        android:textColorHint="?attr/colorOnSurfaceVariant" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btn_execute_clone"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:layout_gravity="end"
+                        android:layout_marginTop="40dp"
+                        android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
+                        android:layout_marginBottom="20dp"
+                        android:paddingHorizontal="24dp"
+                        android:text="@string/vcode_clone_workspace_btn"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                        android:textColor="?attr/colorOnPrimary"
+                        app:backgroundTint="?attr/colorPrimary" />
+
                 </LinearLayout>
-
-                <ImageView
-                    android:id="@+id/btn_disconnect_github"
-                    android:layout_width="32dp"
-                    android:layout_height="32dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:importantForAccessibility="no"
-                    android:padding="6dp"
-                    android:src="@drawable/ic_right_from_bracket"
-                    app:tint="?attr/colorOnSurfaceVariant" />
-            </LinearLayout>
-
+            </androidx.core.widget.NestedScrollView>
         </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
 
-    <ImageView
-        android:id="@+id/img_github"
-        android:layout_width="35dp"
-        android:layout_height="35dp"
-        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-        android:importantForAccessibility="no"
-        android:src="@drawable/ic_github"
-        app:tint="?attr/colorOnSurface" />
+        <LinearLayout
+            android:id="@+id/layout_progress"
+            android:layout_width="match_parent"
+            android:layout_height="260dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:padding="24dp"
+            android:visibility="gone"
+            tools:visibility="visible">
 
-    <TextView
-        android:id="@+id/tv_connect_your_github"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-        android:layout_marginTop="6dp"
-        android:text="@string/vcode_connect_your_github"
-        android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
+            <FrameLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content">
 
-    <TextView
-        android:id="@+id/tv_how_to_get_github_token"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
-        android:layout_marginEnd="0dp"
-        android:paddingStart="0dp"
-        android:paddingEnd="35dp"
-        android:text="@string/vcode_how_to_get_github_token"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+                <com.google.android.material.progressindicator.CircularProgressIndicator
+                    android:id="@+id/progress_indicator"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:indeterminate="true"
+                    app:indicatorColor="?attr/colorPrimary"
+                    app:indicatorSize="64dp" />
 
-    <TextView
-        android:id="@+id/tv_pat"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
-        android:layout_marginTop="24dp"
-        android:layout_marginEnd="0dp"
-        android:text="@string/vcode_pat"
-        android:textAllCaps="true"
-        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-        android:textColor="?attr/colorOnSurfaceVariant" />
+                <TextView
+                    android:id="@+id/tv_progress_percentage"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_gravity="center"
+                    android:text="0%"
+                    android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                    android:textColor="?attr/colorPrimary"
+                    tools:ignore="HardcodedText" />
+            </FrameLayout>
 
-    <EditText
-        android:id="@+id/et_pat"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-        android:layout_marginTop="6dp"
-        android:background="?attr/colorSurfaceContainerHigh"
-        android:hint="@string/vcode_pat_hint"
-        android:imeOptions="actionDone"
-        android:importantForAutofill="no"
-        android:inputType="textPassword"
-        android:maxLines="1"
-        android:padding="14dp"
-        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-        android:textColor="?attr/colorOnSurface"
-        android:textColorHint="?attr/colorOnSurfaceVariant" />
+            <TextView
+                android:id="@+id/tv_progress_task"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:gravity="center"
+                android:text="@string/vcode_initialize_remote_workspace"
+                android:textAppearance="@style/TextAppearance.Material3.TitleMedium" />
 
+            <TextView
+                android:id="@+id/tv_progress_details"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="center"
+                android:text="@string/vcode_resolving_delta_objects"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorOnSurfaceVariant" />
 
-    <LinearLayout
-        android:id="@+id/btns_container"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_marginTop="40dp"
-        android:layout_marginBottom="20dp"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/vcode_app_gap_horizontal">
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_visit_token_page"
-            style="@style/Widget.Material3.Button.OutlinedButton.Icon"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="24dp"
-            android:text="@string/vcode_visit_token_page"
-            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            app:icon="@drawable/ic_globe" />
-
-        <Space
-            android:layout_width="0dp"
-            android:layout_height="wrap_content"
-            android:layout_weight="1" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btn_connect_github"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:paddingHorizontal="24dp"
-            android:text="@string/vcode_connect"
-            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            android:textColor="?attr/colorOnPrimary"
-            app:backgroundTint="?attr/colorPrimary" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btn_run_background"
+                style="@style/Widget.Material3.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="20dp"
+                android:text="@string/vcode_run_in_background_btn"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorPrimary" />
+        </LinearLayout>
 
     </LinearLayout>
+
 </LinearLayout>

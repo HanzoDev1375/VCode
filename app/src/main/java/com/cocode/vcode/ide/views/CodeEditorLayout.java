@@ -16,7 +16,7 @@ import android.widget.LinearLayout;
  */
 public class CodeEditorLayout extends LinearLayout {
 
-    private static final long SYNC_DEBOUNCE_MS = 50;
+    private static final long SYNC_DEBOUNCE_MS = 16; // ~1 frame — enough to batch rapid text changes
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LineNumberView lineNumberView;
     private CodeEditText codeEditText;
@@ -59,9 +59,10 @@ public class CodeEditorLayout extends LinearLayout {
 
         lineNumberView.bindEditor(codeEditText);
         // Synchronize scroll shifts from the editor to the line numbers gutter
+        // Synchronize scroll shifts from the editor to the line numbers gutter.
+        // Only update scrollY — NOT cursorOffset — during scroll to avoid O(n) scan mid-fling.
         codeEditText.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             lineNumberView.setScrollY(scrollY);
-            lineNumberView.setCursorOffset(codeEditText.getSelectionStart());
         });
 
         codeEditText.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
