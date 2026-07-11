@@ -227,16 +227,34 @@ public class FindReplaceBar extends LinearLayout {
         if (editor == null || editor.getText() == null) return;
         Editable editable = editor.getText();
         clearHighlights();
+        
+        int textColor = editor.getCurrentTextColor();
 
         for (int i = 0; i < results.size(); i++) {
             SearchResult r = results.get(i);
             if (r.absoluteStart >= 0 && r.absoluteEnd <= editable.length()) {
                 if (i == currentIndex) {
-                    editable.setSpan(new ActiveHighlightSpan(activeHighlightColor), r.absoluteStart, r.absoluteEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    applySpanSafely(editable, r.absoluteStart, r.absoluteEnd, activeHighlightColor, textColor, true);
                 } else {
-                    editable.setSpan(new SearchHighlightSpan(highlightColor), r.absoluteStart, r.absoluteEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    applySpanSafely(editable, r.absoluteStart, r.absoluteEnd, highlightColor, textColor, false);
                 }
             }
+        }
+    }
+    
+    private void applySpanSafely(Editable editable, int start, int end, int color, int textColor, boolean isActive) {
+        String text = editable.subSequence(start, end).toString();
+        int currentStart = start;
+        for (int i = 0; i < text.length(); i++) {
+            if (text.charAt(i) == '\n') {
+                if (currentStart < start + i) {
+                    editable.setSpan(isActive ? new ActiveHighlightSpan(color) : new SearchHighlightSpan(color), currentStart, start + i, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                }
+                currentStart = start + i + 1;
+            }
+        }
+        if (currentStart < end) {
+            editable.setSpan(isActive ? new ActiveHighlightSpan(color) : new SearchHighlightSpan(color), currentStart, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         }
     }
 
@@ -279,15 +297,15 @@ public class FindReplaceBar extends LinearLayout {
                 ContextCompat.getColor(getContext(), active ? R.color.vcode_accent_primary : R.color.vcode_divider)));
     }
 
-    private static class SearchHighlightSpan extends BackgroundColorSpan {
-        SearchHighlightSpan(int color) {
-            super(color);
+    private static class SearchHighlightSpan extends StrokeHighlightSpan {
+        SearchHighlightSpan(int borderColor) {
+            super(borderColor);
         }
     }
 
-    private static class ActiveHighlightSpan extends BackgroundColorSpan {
-        ActiveHighlightSpan(int color) {
-            super(color);
+    private static class ActiveHighlightSpan extends StrokeHighlightSpan {
+        ActiveHighlightSpan(int borderColor) {
+            super(borderColor);
         }
     }
 }

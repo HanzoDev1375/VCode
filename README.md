@@ -104,8 +104,9 @@ VCode is open‑source and we love contributions! Here's how to get involved:
 1. **Fork** the repository.
 2. **Create** a feature branch: `git checkout -b feature/YourFeature`
 3. **Implement** your changes in **Java only** (no Kotlin). All Android resources must use the `vcode_` prefix (e.g. `@color/vcode_accent_primary`). Avoid Retrofit, Room, Hilt, and RxJava — use `HttpURLConnection` and `org.json` instead.
-4. **Build** and verify: `./gradlew assembleDebug`
-5. **Open** a Pull Request with a clear description of what you've changed and why.
+4. **Context Synchronization**: If you use an AI assistant, ensure they update `VCode_Project_Context.md` whenever adding, deleting, or refactoring files.
+5. **Build** and verify: `./gradlew assembleDebug`
+6. **Open** a Pull Request with a clear description of what you've changed and why.
 
 ---
 

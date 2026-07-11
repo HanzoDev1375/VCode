@@ -61,6 +61,8 @@ public class CodeFileViewer implements IFileViewer {
         return editorLayout;
     }
 
+
+
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
         this.currentFile = file;
@@ -140,8 +142,6 @@ public class CodeFileViewer implements IFileViewer {
             final EditorFile capturedFile = currentFile;
             final IEditorCallback capturedCallback = editorCallback;
             Runnable validationRunnable = () -> {
-                // Perf: setDiagnosticLoading inside the runnable so UI only updates when analysis starts
-                viewModel.setDiagnosticLoading();
                 ExecutorProvider.getInstance().runOnIo(() -> {
                     if (capturedFile == null || capturedFile.getFile() == null) {
                         ExecutorProvider.getInstance().runOnMain(() -> {
@@ -166,7 +166,11 @@ public class CodeFileViewer implements IFileViewer {
                     });
                 });
             };
-            // Perf: adaptive delay \u2014 large files get more debounce time so diagnostics don't compete with typing
+
+            // Set loading state immediately so the UI shows "Analyzing..." while waiting for debounce
+            viewModel.setDiagnosticLoading();
+
+            // Perf: adaptive delay — large files get more debounce time so diagnostics don't compete with typing
             int contentLen = text != null ? text.length() : 0;
             long diagDelay = contentLen > 20000 ? 1500L : 800L;
             jsonValidationHandler.postDelayed(validationRunnable, diagDelay);

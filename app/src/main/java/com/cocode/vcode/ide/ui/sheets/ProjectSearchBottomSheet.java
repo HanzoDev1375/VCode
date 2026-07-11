@@ -151,10 +151,13 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
                         FileGroup group = new FileGroup();
                         group.file = f;
                         for (SearchResult r : results) {
-                            int start = Math.max(0, r.absoluteStart - 20);
-                            int end = Math.min(content.length(), r.absoluteEnd + 40);
-                            String snippet = content.substring(start, end).replace('\n', ' ').trim();
-                            group.matches.add(new ProjectSearchResult(f, r.lineNumber, snippet));
+                            int start = Math.max(0, r.absoluteStart - 30);
+                            int end = Math.min(content.length(), r.absoluteEnd + 30);
+                            String rawSnippet = content.substring(start, end);
+                            String snippet = rawSnippet.replace('\n', ' ');
+                            int matchStart = r.absoluteStart - start;
+                            int matchEnd = r.absoluteEnd - start;
+                            group.matches.add(new ProjectSearchResult(f, r.lineNumber, snippet, matchStart, matchEnd));
                         }
                         outResults.add(group);
                         if (outResults.size() > 100) return; // limit files
@@ -173,11 +176,15 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
         File file;
         int line;
         String snippet;
+        int matchStart;
+        int matchEnd;
 
-        ProjectSearchResult(File file, int line, String snippet) {
+        ProjectSearchResult(File file, int line, String snippet, int matchStart, int matchEnd) {
             this.file = file;
             this.line = line;
             this.snippet = snippet;
+            this.matchStart = matchStart;
+            this.matchEnd = matchEnd;
         }
     }
 
@@ -266,7 +273,14 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
                 mh.binding.tvLineNumber.setText(match.line + ":");
                 mh.binding.tvLineNumber.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
 
-                mh.binding.tvSnippet.setText(match.snippet);
+                android.text.SpannableString ss = new android.text.SpannableString(match.snippet);
+                int color = androidx.core.content.ContextCompat.getColor(holder.itemView.getContext(), R.color.vcode_accent_warning);
+                ss.setSpan(new com.cocode.vcode.ide.views.StrokeHighlightSpan(color), 
+                           Math.max(0, match.matchStart), 
+                           Math.min(ss.length(), match.matchEnd), 
+                           android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                
+                mh.binding.tvSnippet.setText(ss);
                 mh.binding.tvSnippet.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
 
                 mh.itemView.setOnClickListener(v -> {
