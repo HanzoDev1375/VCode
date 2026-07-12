@@ -24,7 +24,6 @@ public class FileIconHelper {
             return;
         }
 
-        Context context = imageView.getContext();
         String ext = FileUtils.getExtension(fileName.toLowerCase());
         FileType fileType = FileType.fromExtension(ext);
 

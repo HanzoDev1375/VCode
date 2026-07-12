@@ -12,7 +12,7 @@ import java.util.List;
  */
 public enum FileType {
     // Standard Languages
-    HTML(R.drawable.ic_html_icon, R.color.vcode_lang_html, "HTML", true, "html"),
+    HTML(R.drawable.ic_html_icon, R.color.vcode_lang_html, "HTML", true, "html", "htm"),
     CSS(R.drawable.ic_css_icon, R.color.vcode_lang_css, "CSS", true, "css"),
     JAVASCRIPT(R.drawable.ic_js_icon, R.color.vcode_lang_js, "JavaScript", true, "js", "mjs", "cjs"),
     TYPESCRIPT(R.drawable.ic_typescript_icon, R.color.vcode_lang_ts, "TypeScript", true, "ts", "tsx"),
