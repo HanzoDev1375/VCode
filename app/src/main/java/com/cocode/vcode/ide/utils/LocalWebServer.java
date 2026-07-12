@@ -133,7 +133,7 @@ public class LocalWebServer {
      */
     private String getMimeType(String path) {
         path = path.toLowerCase();
-        if (path.endsWith(".html")) return "text/html";
+        if (path.endsWith(".html") || path.endsWith(".htm")) return "text/html";
         if (path.endsWith(".css")) return "text/css";
         if (path.endsWith(".js")) return "application/javascript";
         if (path.endsWith(".json")) return "application/json";
