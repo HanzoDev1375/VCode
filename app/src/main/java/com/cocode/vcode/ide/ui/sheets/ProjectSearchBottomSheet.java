@@ -275,7 +275,7 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
 
                 android.text.SpannableString ss = new android.text.SpannableString(match.snippet);
                 int color = androidx.core.content.ContextCompat.getColor(holder.itemView.getContext(), R.color.vcode_accent_warning);
-                ss.setSpan(new com.cocode.vcode.ide.views.StrokeHighlightSpan(color), 
+                ss.setSpan(new com.cocode.vcode.ide.views.SolidHighlightSpan(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 100)), 
                            Math.max(0, match.matchStart), 
                            Math.min(ss.length(), match.matchEnd), 
                            android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);

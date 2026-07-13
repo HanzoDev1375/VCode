@@ -297,15 +297,15 @@ public class FindReplaceBar extends LinearLayout {
                 ContextCompat.getColor(getContext(), active ? R.color.vcode_accent_primary : R.color.vcode_divider)));
     }
 
-    private static class SearchHighlightSpan extends StrokeHighlightSpan {
-        SearchHighlightSpan(int borderColor) {
-            super(borderColor);
+    private static class SearchHighlightSpan extends SolidHighlightSpan {
+        SearchHighlightSpan(int color) {
+            super(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 90));
         }
     }
 
-    private static class ActiveHighlightSpan extends StrokeHighlightSpan {
-        ActiveHighlightSpan(int borderColor) {
-            super(borderColor);
+    private static class ActiveHighlightSpan extends SolidHighlightSpan {
+        ActiveHighlightSpan(int color) {
+            super(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 140));
         }
     }
 }
