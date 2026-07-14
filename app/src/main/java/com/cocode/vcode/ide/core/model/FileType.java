@@ -41,7 +41,10 @@ public enum FileType {
     PDF(R.drawable.ic_pdf_icon, R.color.vcode_file_pdf, "PDF", false, "pdf"),
 
     // Fallback
-    TEXT(R.drawable.ic_file_lines, R.color.vcode_accent_primary, "Plain Text", true, "txt");
+    TEXT(R.drawable.ic_file_lines, R.color.vcode_accent_primary, "Plain Text", true, "txt"),
+
+    // Virtual Tools
+    API_TESTER(R.drawable.ic_globe, R.color.vcode_accent_primary, "API Tester", true, "api");
 
     private final int iconResId;
     private final int colorResId;

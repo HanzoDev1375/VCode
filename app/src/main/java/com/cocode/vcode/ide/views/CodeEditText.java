@@ -12,12 +12,10 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.SpannableStringBuilder;
 import android.text.TextWatcher;
-import android.text.style.BackgroundColorSpan;
 import android.util.AttributeSet;
 import android.view.KeyEvent;
 import android.view.View;
 import android.view.inputmethod.EditorInfo;
-import android.view.inputmethod.InputConnection;
 
 import androidx.annotation.NonNull;
 import androidx.appcompat.widget.AppCompatEditText;
@@ -32,7 +30,6 @@ import com.cocode.vcode.ide.core.autocomplete.JsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.JsonAutoCompleteEngine;
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.core.parser.BracketMatcher;
-import com.cocode.vcode.ide.core.parser.HtmlTagCache;
 import com.cocode.vcode.ide.core.parser.HtmlTagParser;
 import com.cocode.vcode.ide.core.parser.IndentationEngine;
 import com.cocode.vcode.ide.core.syntax.CssSyntaxHighlighter;
@@ -347,12 +344,13 @@ public class CodeEditText extends AppCompatEditText {
                 int lineStart = lineOffsets[lineIdx];
                 int lineEnd = (lineIdx + 1 < lineCount) ? lineOffsets[lineIdx + 1] - 1 : textLen;
                 int colIdx = Math.max(0, problem.getColumn() - 1);
-                
+
                 int startOff = Math.min(lineStart + colIdx, lineEnd);
                 int endOff = Math.min(startOff + Math.max(1, problem.getLength()), textLen);
                 if (startOff < 0 || startOff >= textLen) continue;
 
-                if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.INFO) continue;
+                if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.INFO)
+                    continue;
 
                 int color = infoColor;
                 if (problem.getSeverity() == com.cocode.vcode.ide.data.model.Problem.Severity.ERROR)
@@ -462,7 +460,7 @@ public class CodeEditText extends AppCompatEditText {
 
         if (newlineIndex > 0 && newlineIndex + 1 < text.length()) {
             char before = text.charAt(newlineIndex - 1);
-            char after  = text.charAt(newlineIndex + 1);
+            char after = text.charAt(newlineIndex + 1);
 
             if ((before == '{' && after == '}') ||
                     (before == '[' && after == ']') ||
@@ -662,7 +660,9 @@ public class CodeEditText extends AppCompatEditText {
         invalidate();
     }
 
-    /** Returns true if the cursor is inside a // line comment or a /* block comment. */
+    /**
+     * Returns true if the cursor is inside a // line comment or a /* block comment.
+     */
     private boolean isCursorInComment(String text, int cursor) {
         // Scan backwards for // on the same line
         int lineStart = cursor - 1;
@@ -670,25 +670,37 @@ public class CodeEditText extends AppCompatEditText {
         String lineUpToCursor = text.substring(lineStart, cursor);
 
         // Check for // line comment (not inside a string — simple heuristic)
-        boolean inStr = false; char strCh = 0;
+        boolean inStr = false;
+        char strCh = 0;
         for (int i = 0; i < lineUpToCursor.length() - 1; i++) {
             char c = lineUpToCursor.charAt(i);
-            if (inStr) { if (c == strCh && (i == 0 || lineUpToCursor.charAt(i-1) != '\\')) inStr = false; continue; }
-            if (c == '"' || c == '\'' || c == '`') { inStr = true; strCh = c; continue; }
+            if (inStr) {
+                if (c == strCh && (i == 0 || lineUpToCursor.charAt(i - 1) != '\\')) inStr = false;
+                continue;
+            }
+            if (c == '"' || c == '\'' || c == '`') {
+                inStr = true;
+                strCh = c;
+                continue;
+            }
             if (c == '/' && lineUpToCursor.charAt(i + 1) == '/') return true;
         }
 
         // Check for /* block comment: scan backwards from cursor for /* without a preceding */
         for (int i = cursor - 2; i >= 0; i--) {
             if (text.charAt(i) == '/' && text.charAt(i + 1) == '*') return true;
-            if (i + 1 < text.length() && text.charAt(i) == '*' && text.charAt(i + 1) == '/') return false;
+            if (i + 1 < text.length() && text.charAt(i) == '*' && text.charAt(i + 1) == '/')
+                return false;
         }
         return false;
     }
 
     private void rebuildLineOffsets() {
         if (!lineOffsetsDirty && cachedLineOffsets != null) return;
-        if (getText() == null) { cachedLineOffsets = null; return; }
+        if (getText() == null) {
+            cachedLineOffsets = null;
+            return;
+        }
         // Perf: use CharSequence directly — avoids full String copy every time diagnostics need line offsets
         CharSequence seq = getText();
         int len = seq.length();
@@ -1177,7 +1189,7 @@ public class CodeEditText extends AppCompatEditText {
                 | android.text.InputType.TYPE_TEXT_FLAG_MULTI_LINE;
         setInputType(suppressSuggestions
                 ? baseFlags | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
-                        | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
+                | android.text.InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD
                 : baseFlags | android.text.InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
         scheduleHighlight();
@@ -1274,9 +1286,6 @@ public class CodeEditText extends AppCompatEditText {
     public interface OnScrollChangeListener {
         void onScrollChanged(int scrollX, int scrollY);
     }
-
-
-
 
 
     private static class BracketMatchSpan extends StrokeHighlightSpan {

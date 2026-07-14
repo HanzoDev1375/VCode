@@ -74,6 +74,8 @@ public class ViewerManager {
             return new FontFileViewer();
         } else if (isPreviewMode && (type == FileType.SVG || type == FileType.CSV || type == FileType.MARKDOWN)) {
             return new WebPreviewViewer();
+        } else if (type == FileType.API_TESTER) {
+            return new ApiTesterViewer();
         } else {
             return new CodeFileViewer();
         }

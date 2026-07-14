@@ -94,6 +94,48 @@ public class BracketMatcher {
         return problems;
     }
 
+    private static boolean isInStringOrComment(String text, int pos) {
+        boolean inSingle = false, inDouble = false, inTemplate = false;
+        boolean inLineComment = false, inBlockComment = false;
+
+        for (int i = 0; i < pos && i < text.length(); i++) {
+            char c = text.charAt(i);
+            char n = i < text.length() - 1 ? text.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && n == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (!inSingle && !inDouble && !inTemplate) {
+                if (c == '/' && n == '/') {
+                    inLineComment = true;
+                    i++;
+                    continue;
+                }
+                if (c == '/' && n == '*') {
+                    inBlockComment = true;
+                    i++;
+                    continue;
+                }
+            }
+            if (c == '\\') {
+                i++;
+                continue;
+            } // skip escaped chars
+            if (c == '\'' && !inDouble && !inTemplate) inSingle = !inSingle;
+            else if (c == '"' && !inSingle && !inTemplate) inDouble = !inDouble;
+            else if (c == '`' && !inSingle && !inDouble) inTemplate = !inTemplate;
+        }
+        return inSingle || inDouble || inTemplate || inLineComment || inBlockComment;
+    }
+
     /**
      * Inspects the character directly under the cursor and tracks its matching sibling balance
      * by scanning either forward or backward through the document text.
@@ -162,15 +204,15 @@ public class BracketMatcher {
     public MatchResult findEnclosing(String text, int cursorPos) {
         if (text == null || cursorPos <= 0) return new MatchResult(-1, -1, false);
 
-        int depth_paren  = 0;
+        int depth_paren = 0;
         int depth_square = 0;
-        int depth_brace  = 0;
+        int depth_brace = 0;
 
         for (int i = cursorPos - 1; i >= 0; i--) {
             if (isInStringOrComment(text, i)) continue;
 
             char c = text.charAt(i);
-            if      (c == ')') depth_paren++;
+            if (c == ')') depth_paren++;
             else if (c == ']') depth_square++;
             else if (c == '}') depth_brace++;
             else if (c == '(') {
@@ -185,34 +227,6 @@ public class BracketMatcher {
             }
         }
         return new MatchResult(-1, -1, false);
-    }
-
-    private static boolean isInStringOrComment(String text, int pos) {
-        boolean inSingle = false, inDouble = false, inTemplate = false;
-        boolean inLineComment = false, inBlockComment = false;
-
-        for (int i = 0; i < pos && i < text.length(); i++) {
-            char c = text.charAt(i);
-            char n = i < text.length() - 1 ? text.charAt(i + 1) : '\0';
-
-            if (inLineComment) {
-                if (c == '\n') inLineComment = false;
-                continue;
-            }
-            if (inBlockComment) {
-                if (c == '*' && n == '/') { inBlockComment = false; i++; }
-                continue;
-            }
-            if (!inSingle && !inDouble && !inTemplate) {
-                if (c == '/' && n == '/') { inLineComment = true; i++; continue; }
-                if (c == '/' && n == '*') { inBlockComment = true; i++; continue; }
-            }
-            if (c == '\\') { i++; continue; } // skip escaped chars
-            if (c == '\'' && !inDouble && !inTemplate) inSingle = !inSingle;
-            else if (c == '"' && !inSingle && !inTemplate) inDouble = !inDouble;
-            else if (c == '`' && !inSingle && !inDouble) inTemplate = !inTemplate;
-        }
-        return inSingle || inDouble || inTemplate || inLineComment || inBlockComment;
     }
 
     /**

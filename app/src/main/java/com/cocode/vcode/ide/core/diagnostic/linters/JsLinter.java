@@ -1,17 +1,12 @@
 package com.cocode.vcode.ide.core.diagnostic.linters;
 
-import com.cocode.vcode.ide.core.diagnostic.util.KnownElements;
 import com.cocode.vcode.ide.core.diagnostic.util.LinterUtils;
 import com.cocode.vcode.ide.core.diagnostic.util.TokenMask;
 import com.cocode.vcode.ide.data.model.Problem;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class JsLinter {
 

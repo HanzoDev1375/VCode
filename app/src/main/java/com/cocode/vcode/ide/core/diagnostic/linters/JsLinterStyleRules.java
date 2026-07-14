@@ -6,12 +6,12 @@ import com.cocode.vcode.ide.core.diagnostic.util.TokenMask;
 import com.cocode.vcode.ide.data.model.Problem;
 
 import java.io.File;
-import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 public class JsLinterStyleRules {
     public static final Pattern PAT_TYPEOF_CMP = Pattern.compile("\\btypeof\\b[^=]*===?\\s*(undefined|null|NaN|true|false|\\d+)");
     public static final Pattern PAT_TODO = Pattern.compile("(?://|/\\*).*?(TODO|FIXME)([^\n]*)");

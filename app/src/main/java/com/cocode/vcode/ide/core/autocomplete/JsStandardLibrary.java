@@ -166,6 +166,6 @@ public class JsStandardLibrary {
         CHAIN_RETURN_TYPES.put("arrayBuffer", "promise");
         CHAIN_RETURN_TYPES.put("formData", "promise");
 
-        Collections.addAll(PROMISE_FUNCTIONS, new String[]{"fetch", "axios", "axios.get", "axios.post", "axios.put", "axios.delete"});
+        Collections.addAll(PROMISE_FUNCTIONS, "fetch", "axios", "axios.get", "axios.post", "axios.put", "axios.delete");
     }
 }

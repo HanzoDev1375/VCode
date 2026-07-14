@@ -23,28 +23,67 @@ public class HtmlTagCache {
 
     // Hardcode a tiny fallback list just in case the JSON file fails to load
     static {
-        VOID_ELEMENTS.add("img"); VOID_ELEMENTS.add("br"); VOID_ELEMENTS.add("hr");
-        VOID_ELEMENTS.add("input"); VOID_ELEMENTS.add("meta"); VOID_ELEMENTS.add("link");
-        VOID_ELEMENTS.add("area"); VOID_ELEMENTS.add("base"); VOID_ELEMENTS.add("col");
-        VOID_ELEMENTS.add("embed"); VOID_ELEMENTS.add("param"); VOID_ELEMENTS.add("source");
-        VOID_ELEMENTS.add("track"); VOID_ELEMENTS.add("wbr");
+        VOID_ELEMENTS.add("img");
+        VOID_ELEMENTS.add("br");
+        VOID_ELEMENTS.add("hr");
+        VOID_ELEMENTS.add("input");
+        VOID_ELEMENTS.add("meta");
+        VOID_ELEMENTS.add("link");
+        VOID_ELEMENTS.add("area");
+        VOID_ELEMENTS.add("base");
+        VOID_ELEMENTS.add("col");
+        VOID_ELEMENTS.add("embed");
+        VOID_ELEMENTS.add("param");
+        VOID_ELEMENTS.add("source");
+        VOID_ELEMENTS.add("track");
+        VOID_ELEMENTS.add("wbr");
 
         // Block element fallback — covers the most common cases so indent works without load()
-        BLOCK_ELEMENTS.add("div"); BLOCK_ELEMENTS.add("p"); BLOCK_ELEMENTS.add("section");
-        BLOCK_ELEMENTS.add("article"); BLOCK_ELEMENTS.add("aside"); BLOCK_ELEMENTS.add("header");
-        BLOCK_ELEMENTS.add("footer"); BLOCK_ELEMENTS.add("main"); BLOCK_ELEMENTS.add("nav");
-        BLOCK_ELEMENTS.add("ul"); BLOCK_ELEMENTS.add("ol"); BLOCK_ELEMENTS.add("li");
-        BLOCK_ELEMENTS.add("table"); BLOCK_ELEMENTS.add("thead"); BLOCK_ELEMENTS.add("tbody");
-        BLOCK_ELEMENTS.add("tr"); BLOCK_ELEMENTS.add("td"); BLOCK_ELEMENTS.add("th");
-        BLOCK_ELEMENTS.add("form"); BLOCK_ELEMENTS.add("fieldset"); BLOCK_ELEMENTS.add("figure");
-        BLOCK_ELEMENTS.add("figcaption"); BLOCK_ELEMENTS.add("details"); BLOCK_ELEMENTS.add("summary");
-        BLOCK_ELEMENTS.add("blockquote"); BLOCK_ELEMENTS.add("pre"); BLOCK_ELEMENTS.add("h1");
-        BLOCK_ELEMENTS.add("h2"); BLOCK_ELEMENTS.add("h3"); BLOCK_ELEMENTS.add("h4");
-        BLOCK_ELEMENTS.add("h5"); BLOCK_ELEMENTS.add("h6"); BLOCK_ELEMENTS.add("head");
-        BLOCK_ELEMENTS.add("body"); BLOCK_ELEMENTS.add("html"); BLOCK_ELEMENTS.add("script");
-        BLOCK_ELEMENTS.add("style"); BLOCK_ELEMENTS.add("template"); BLOCK_ELEMENTS.add("iframe");
-        BLOCK_ELEMENTS.add("canvas"); BLOCK_ELEMENTS.add("video"); BLOCK_ELEMENTS.add("audio");
-        BLOCK_ELEMENTS.add("dialog"); BLOCK_ELEMENTS.add("menu"); BLOCK_ELEMENTS.add("select");
+        BLOCK_ELEMENTS.add("div");
+        BLOCK_ELEMENTS.add("p");
+        BLOCK_ELEMENTS.add("section");
+        BLOCK_ELEMENTS.add("article");
+        BLOCK_ELEMENTS.add("aside");
+        BLOCK_ELEMENTS.add("header");
+        BLOCK_ELEMENTS.add("footer");
+        BLOCK_ELEMENTS.add("main");
+        BLOCK_ELEMENTS.add("nav");
+        BLOCK_ELEMENTS.add("ul");
+        BLOCK_ELEMENTS.add("ol");
+        BLOCK_ELEMENTS.add("li");
+        BLOCK_ELEMENTS.add("table");
+        BLOCK_ELEMENTS.add("thead");
+        BLOCK_ELEMENTS.add("tbody");
+        BLOCK_ELEMENTS.add("tr");
+        BLOCK_ELEMENTS.add("td");
+        BLOCK_ELEMENTS.add("th");
+        BLOCK_ELEMENTS.add("form");
+        BLOCK_ELEMENTS.add("fieldset");
+        BLOCK_ELEMENTS.add("figure");
+        BLOCK_ELEMENTS.add("figcaption");
+        BLOCK_ELEMENTS.add("details");
+        BLOCK_ELEMENTS.add("summary");
+        BLOCK_ELEMENTS.add("blockquote");
+        BLOCK_ELEMENTS.add("pre");
+        BLOCK_ELEMENTS.add("h1");
+        BLOCK_ELEMENTS.add("h2");
+        BLOCK_ELEMENTS.add("h3");
+        BLOCK_ELEMENTS.add("h4");
+        BLOCK_ELEMENTS.add("h5");
+        BLOCK_ELEMENTS.add("h6");
+        BLOCK_ELEMENTS.add("head");
+        BLOCK_ELEMENTS.add("body");
+        BLOCK_ELEMENTS.add("html");
+        BLOCK_ELEMENTS.add("script");
+        BLOCK_ELEMENTS.add("style");
+        BLOCK_ELEMENTS.add("template");
+        BLOCK_ELEMENTS.add("iframe");
+        BLOCK_ELEMENTS.add("canvas");
+        BLOCK_ELEMENTS.add("video");
+        BLOCK_ELEMENTS.add("audio");
+        BLOCK_ELEMENTS.add("dialog");
+        BLOCK_ELEMENTS.add("menu");
+        BLOCK_ELEMENTS.add("select");
         BLOCK_ELEMENTS.add("textarea");
     }
 

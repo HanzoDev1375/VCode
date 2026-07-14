@@ -21,6 +21,7 @@ public class EditorFile {
     private int scrollY;
     private boolean isContentLoaded = false;
     private boolean readOnly = false;
+    private boolean isVirtual = false;
 
     public EditorFile() {
     }
@@ -38,6 +39,10 @@ public class EditorFile {
             this.fileType = fileType;
         } else {
             this.fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
+        }
+        
+        if (this.fileType == FileType.API_TESTER) {
+            this.isVirtual = true;
         }
     }
 
@@ -78,6 +83,9 @@ public class EditorFile {
     }
 
     public String getFileName() {
+        if (fileType == FileType.API_TESTER) {
+            return "API Tester";
+        }
         return file != null ? file.getName() : "Untitled";
     }
 
@@ -157,5 +165,13 @@ public class EditorFile {
 
     public void setReadOnly(boolean readOnly) {
         this.readOnly = readOnly;
+    }
+
+    public boolean isVirtual() {
+        return isVirtual;
+    }
+
+    public void setVirtual(boolean virtual) {
+        isVirtual = virtual;
     }
 }

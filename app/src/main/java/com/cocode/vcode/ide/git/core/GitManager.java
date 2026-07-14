@@ -65,51 +65,51 @@ public class GitManager {
             }
 
             clone.setProgressMonitor(new org.eclipse.jgit.lib.ProgressMonitor() {
-                        private int totalWork;
-                        private int completedWork;
-                        private String currentTask;
-                        private long lastUpdateTime;
+                private int totalWork;
+                private int completedWork;
+                private String currentTask;
+                private long lastUpdateTime;
 
-                        @Override
-                        public void start(int totalTasks) {
-                        }
+                @Override
+                public void start(int totalTasks) {
+                }
 
-                        @Override
-                        public void beginTask(String title, int total) {
-                            this.currentTask = title;
-                            this.totalWork = total;
-                            this.completedWork = 0;
-                            this.lastUpdateTime = System.currentTimeMillis();
-                            if (callback != null) callback.onProgress(title, 0, total);
-                        }
+                @Override
+                public void beginTask(String title, int total) {
+                    this.currentTask = title;
+                    this.totalWork = total;
+                    this.completedWork = 0;
+                    this.lastUpdateTime = System.currentTimeMillis();
+                    if (callback != null) callback.onProgress(title, 0, total);
+                }
 
-                        @Override
-                        public void update(int completed) {
-                            this.completedWork += completed;
-                            if (callback != null) {
-                                long now = System.currentTimeMillis();
-                                if (now - lastUpdateTime > 200 || completedWork == totalWork) {
-                                    callback.onProgress(currentTask, completedWork, totalWork);
-                                    callback.onUpdate(completedWork);
-                                    lastUpdateTime = now;
-                                }
-                            }
+                @Override
+                public void update(int completed) {
+                    this.completedWork += completed;
+                    if (callback != null) {
+                        long now = System.currentTimeMillis();
+                        if (now - lastUpdateTime > 200 || completedWork == totalWork) {
+                            callback.onProgress(currentTask, completedWork, totalWork);
+                            callback.onUpdate(completedWork);
+                            lastUpdateTime = now;
                         }
+                    }
+                }
 
-                        @Override
-                        public void endTask() {
-                            if (callback != null) callback.onTaskDone();
-                        }
+                @Override
+                public void endTask() {
+                    if (callback != null) callback.onTaskDone();
+                }
 
-                        @Override
-                        public boolean isCancelled() {
-                            return false;
-                        }
+                @Override
+                public boolean isCancelled() {
+                    return false;
+                }
 
-                        @Override
-                        public void showDuration(boolean enabled) {
-                        }
-                    });
+                @Override
+                public void showDuration(boolean enabled) {
+                }
+            });
             Git result = clone.call();
             result.close(); // Clean up system descriptors immediately after completion
             return GitOperationResult.success("Repository cloned successfully");

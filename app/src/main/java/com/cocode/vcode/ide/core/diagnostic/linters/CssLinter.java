@@ -124,7 +124,7 @@ public class CssLinter {
                 declBuf.setLength(0);
                 // Reset so first declaration in this block gets its own line/col
                 declLine = LinterUtils.getLine(text, i + 1);
-                declCol  = 1;
+                declCol = 1;
 
                 if (selector.startsWith("@import")) {
                     // handled below
@@ -248,7 +248,10 @@ public class CssLinter {
 
             if (!braceStack.isEmpty()) {
                 // inside block: skip leading whitespace so declLine/declCol capture the property position
-                if (declBuf.length() == 0 && Character.isWhitespace(c)) { i++; continue; }
+                if (declBuf.length() == 0 && Character.isWhitespace(c)) {
+                    i++;
+                    continue;
+                }
                 if (declBuf.length() == 0) {
                     declLine = LinterUtils.getLine(text, i);
                     declCol = LinterUtils.getColumn(text, i);

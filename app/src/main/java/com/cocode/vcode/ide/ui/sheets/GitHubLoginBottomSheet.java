@@ -89,7 +89,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                 }
             });
         }
-        
+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
                 requestPermissions(new String[]{android.Manifest.permission.POST_NOTIFICATIONS}, 100);
@@ -221,8 +221,8 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         }
 
         if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-             Toast.makeText(getContext(), "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
-             return; // Or request permissions if needed.
+            Toast.makeText(getContext(), "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
+            return; // Or request permissions if needed.
         }
 
         setCancelable(false);

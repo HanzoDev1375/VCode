@@ -35,7 +35,6 @@ import com.cocode.vcode.ide.ui.base.BaseActivity;
 import com.cocode.vcode.ide.ui.editor.EditorActivity;
 import com.cocode.vcode.ide.ui.settings.SettingsActivity;
 import com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet;
-
 import com.cocode.vcode.ide.ui.sheets.GitHubLoginBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.NewProjectBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.RenameBottomSheet;
@@ -276,9 +275,9 @@ public class ProjectsActivity extends BaseActivity {
 
         // GitHub Authentication workflow
         binding.iconGithub.setOnClickListener(v -> GitHubLoginBottomSheet.show(getSupportFragmentManager(), () -> {
-            viewModel.loadProjects();
+                            viewModel.loadProjects();
 
-        }, (token, updater) -> ExecutorProvider.getInstance().runOnIo(() -> {
+                        }, (token, updater) -> ExecutorProvider.getInstance().runOnIo(() -> {
                             try {
                                 // Validate the provided Personal Access Token against the GitHub API
                                 GitHubApiClient client = new GitHubApiClient(token);

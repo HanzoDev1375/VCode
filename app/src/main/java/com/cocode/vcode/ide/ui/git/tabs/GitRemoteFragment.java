@@ -8,7 +8,6 @@ import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
@@ -23,8 +22,8 @@ import com.cocode.vcode.ide.git.core.GitCredentialStore;
 import com.cocode.vcode.ide.git.github.GitHubApiClient;
 import com.cocode.vcode.ide.git.model.BranchItem;
 import com.cocode.vcode.ide.git.repository.GitRepository;
-import com.cocode.vcode.ide.ui.sheets.GitConflictBottomSheet;
 import com.cocode.vcode.ide.ui.git.GitViewModel;
+import com.cocode.vcode.ide.ui.sheets.GitConflictBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.GitHubLoginBottomSheet;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FontManager;
@@ -186,51 +185,23 @@ public class GitRemoteFragment extends Fragment {
                 binding.tvTargetBranchSelector.setText(currentActive);
                 binding.tvActiveOrigin.setText("origin/".concat(currentActive));
             }
-            
+
             binding.tvTargetBranchSelector.setOnClickListener(v -> showBranchSelectionDialog(branchNames));
         });
     }
 
     private void showBranchSelectionDialog(List<String> branchNames) {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
-        View dialogView = LayoutInflater.from(requireContext()).inflate(R.layout.dialog_select_branch, null);
-        builder.setView(dialogView);
-        android.app.AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-
-        android.widget.TextView tvTitle = dialogView.findViewById(R.id.tv_dialog_title);
-        if (tvTitle != null) {
-            tvTitle.setTypeface(FontManager.getInstance().getUiSemiBold(requireContext()));
-        }
-
-        android.widget.ListView listView = dialogView.findViewById(R.id.list_branches);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, branchNames) {
-            @NonNull
-            @Override
-            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                View view = super.getView(position, convertView, parent);
-                android.widget.TextView tv = view.findViewById(android.R.id.text1);
-                if (tv != null) {
-                    tv.setTypeface(FontManager.getInstance().getUiMedium(getContext()));
+        String currentSelection = binding.tvTargetBranchSelector.getText().toString();
+        com.cocode.vcode.ide.ui.dialogs.CustomListDialog.show(
+                requireContext(),
+                "Select Target Branch",
+                branchNames,
+                currentSelection,
+                selected -> {
+                    binding.tvTargetBranchSelector.setText(selected);
+                    binding.tvActiveOrigin.setText("origin/".concat(selected));
                 }
-                return view;
-            }
-        };
-        listView.setAdapter(adapter);
-
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            String selected = branchNames.get(position);
-            binding.tvTargetBranchSelector.setText(selected);
-            binding.tvActiveOrigin.setText("origin/".concat(selected));
-            dialog.dismiss();
-        });
-
-        com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(R.id.btn_cancel);
-        btnCancel.setTypeface(FontManager.getInstance().getUiMedium(requireContext()));
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-        dialog.show();
+        );
     }
 
     /**

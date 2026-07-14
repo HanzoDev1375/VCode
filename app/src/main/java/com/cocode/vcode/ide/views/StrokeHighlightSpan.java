@@ -2,10 +2,8 @@ package com.cocode.vcode.ide.views;
 
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.text.Layout;
 import android.text.Spanned;
 import android.text.style.LineBackgroundSpan;
-import android.widget.TextView;
 
 /**
  * A LineBackgroundSpan that draws a stroke (border outline) around the matched text.

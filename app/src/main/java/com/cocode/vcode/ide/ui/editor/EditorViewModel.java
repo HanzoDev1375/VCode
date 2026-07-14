@@ -189,6 +189,13 @@ public class EditorViewModel extends ViewModel {
         this.projectRoot = root;
         this.projectId = pId;
         this.projectName = pName;
+        
+        // Cleanup legacy virtual files that may have been written to disk previously
+        File legacyApiFile = new File(projectRoot, "vcode_api_tester.api");
+        if (legacyApiFile.exists() && legacyApiFile.isFile()) {
+            legacyApiFile.delete();
+        }
+        
         refreshFileTree();
         isEditorLoadingLiveData.setValue(true);
 
@@ -232,12 +239,14 @@ public class EditorViewModel extends ViewModel {
             List<EditorFile> restoredFiles = new ArrayList<>();
             for (String relativePath : paths) {
                 File file = new File(projectRoot, relativePath);
-                if (file.exists() && file.isFile()) {
+                boolean isVirtual = state.getVirtualFiles() != null && state.getVirtualFiles().containsKey(relativePath);
+                if (isVirtual || (file.exists() && file.isFile())) {
                     try {
                         FileType fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
                         EditorFile ef = new EditorFile(UUID.randomUUID().toString(), file, "", fileType);
                         ef.setCursorPosition(state.getCursorFor(relativePath));
                         ef.setScrollY(state.getScrollFor(relativePath));
+                        if (isVirtual) ef.setVirtual(true);
                         ef.setContentLoaded(false);
                         restoredFiles.add(ef);
                     } catch (Exception ignored) {
@@ -252,7 +261,12 @@ public class EditorViewModel extends ViewModel {
 
             if (targetTab >= 0) {
                 EditorFile active = restoredFiles.get(targetTab);
-                if (!active.isBinaryAsset()) {
+                if (active.isVirtual()) {
+                    String relativePath = active.getRelativePath(projectRoot);
+                    String content = state.getVirtualFile(relativePath);
+                    active.setContent(content != null ? content : "");
+                    active.markSaved();
+                } else if (!active.isBinaryAsset()) {
                     try {
                         active.setContent(FileUtils.readFile(active.getFile()));
                         active.markSaved();
@@ -278,7 +292,12 @@ public class EditorViewModel extends ViewModel {
             boolean updated = false;
             for (EditorFile ef : files) {
                 if (!ef.isContentLoaded()) {
-                    if (!ef.isBinaryAsset()) {
+                    if (ef.isVirtual()) {
+                        String relativePath = ef.getRelativePath(projectRoot);
+                        String content = currentState != null ? currentState.getVirtualFile(relativePath) : null;
+                        ef.setContent(content != null ? content : "");
+                        ef.markSaved();
+                    } else if (!ef.isBinaryAsset()) {
                         try {
                             String content = FileUtils.readFile(ef.getFile());
                             ef.setContent(content);
@@ -455,7 +474,7 @@ public class EditorViewModel extends ViewModel {
                 String relPath = getRelativePath(newFile);
                 if (relPath.endsWith(".html")) {
                     String currentMain = getMainFileFromMeta();
-                    if (currentMain == null || currentMain.isEmpty()) {
+                    if (currentMain.isEmpty()) {
                         updateMainFileInMeta(relPath);
                     }
                 }
@@ -571,7 +590,11 @@ public class EditorViewModel extends ViewModel {
                 String content = "";
 
                 if (fileType == null || fileType.isTextBased()) {
-                    content = FileUtils.readFile(file);
+                    if (file.exists()) {
+                        content = FileUtils.readFile(file);
+                    } else {
+                        content = ""; // Empty content for new/virtual files
+                    }
                 }
 
                 EditorFile newFile = new EditorFile(UUID.randomUUID().toString(), file, content, fileType);
@@ -604,6 +627,41 @@ public class EditorViewModel extends ViewModel {
             } catch (Exception ignored) {
             }
         });
+    }
+
+    /**
+     * Opens the integrated API Tester tool as a dedicated virtual file tab.
+     */
+    public void openApiTester() {
+        if (projectRoot == null) return;
+        String virtualName = "vcode_api_tester.api";
+        File virtualFile = new File(projectRoot, virtualName);
+        
+        List<EditorFile> currentDocs = getOpenFilesList();
+        for (int i = 0; i < currentDocs.size(); i++) {
+            if (currentDocs.get(i).getFile().getAbsolutePath().equals(virtualFile.getAbsolutePath())) {
+                activeTabIndexLiveData.setValue(i);
+                return;
+            }
+        }
+        
+        EditorFile newFile = new EditorFile(UUID.randomUUID().toString(), virtualFile, "", FileType.API_TESTER);
+        newFile.setVirtual(true);
+        if (currentState != null) {
+            String relativePath = newFile.getRelativePath(projectRoot);
+            String content = currentState.getVirtualFile(relativePath);
+            newFile.setContent(content != null ? content : "");
+            newFile.setCursorPosition(currentState.getCursorFor(relativePath));
+            newFile.setScrollY(currentState.getScrollFor(relativePath));
+        }
+        newFile.markSaved();
+        newFile.setContentLoaded(true);
+        
+        List<EditorFile> updated = new ArrayList<>(currentDocs);
+        updated.add(newFile);
+        openFilesLiveData.setValue(updated);
+        activeTabIndexLiveData.setValue(updated.size() - 1);
+        persistStateAsync();
     }
 
     /**
@@ -726,8 +784,20 @@ public class EditorViewModel extends ViewModel {
             return;
         }
 
+        if (ef.isVirtual()) {
+            ef.markSaved();
+            openFilesLiveData.setValue(new ArrayList<>(docs));
+            ProjectState state = projectStateLiveData.getValue();
+            if (state != null) {
+                state.setVirtualFile(ef.getRelativePath(projectRoot), ef.getContent());
+                persistStateAsync();
+            }
+            if (onComplete != null) onComplete.run();
+            return;
+        }
+
         androidx.lifecycle.LiveData<com.cocode.vcode.ide.data.model.Result<Boolean>> liveData = fileRepo.writeFile(ef.getFile(), ef.getContent());
-        liveData.observeForever(new androidx.lifecycle.Observer<com.cocode.vcode.ide.data.model.Result<Boolean>>() {
+        liveData.observeForever(new androidx.lifecycle.Observer<>() {
             @Override
             public void onChanged(com.cocode.vcode.ide.data.model.Result<Boolean> result) {
                 liveData.removeObserver(this);
@@ -778,12 +848,20 @@ public class EditorViewModel extends ViewModel {
 
             for (EditorFile ef : docs) {
                 if (ef.isDirty() && !ef.isBinaryAsset()) {
-                    try {
-                        fileRepo.writeFileSync(ef.getFile(), ef.getContent());
+                    if (ef.isVirtual()) {
                         ef.markSaved();
+                        if (currentState != null) {
+                            currentState.setVirtualFile(ef.getRelativePath(projectRoot), ef.getContent());
+                        }
                         anySaved = true;
-                    } catch (Exception e) {
-                        allSuccess = false;
+                    } else {
+                        try {
+                            fileRepo.writeFileSync(ef.getFile(), ef.getContent());
+                            ef.markSaved();
+                            anySaved = true;
+                        } catch (Exception e) {
+                            allSuccess = false;
+                        }
                     }
                 }
             }
@@ -857,11 +935,19 @@ public class EditorViewModel extends ViewModel {
 
         for (EditorFile ef : docs) {
             if (ef.isDirty() && !ef.isBinaryAsset()) {
-                try {
-                    fileRepo.writeFileSync(ef.getFile(), ef.getContent());
+                if (ef.isVirtual()) {
                     ef.markSaved();
+                    if (currentState != null) {
+                        currentState.setVirtualFile(ef.getRelativePath(projectRoot), ef.getContent());
+                    }
                     anySaved = true;
-                } catch (Exception ignored) {
+                } else {
+                    try {
+                        fileRepo.writeFileSync(ef.getFile(), ef.getContent());
+                        ef.markSaved();
+                        anySaved = true;
+                    } catch (Exception ignored) {
+                    }
                 }
             }
         }

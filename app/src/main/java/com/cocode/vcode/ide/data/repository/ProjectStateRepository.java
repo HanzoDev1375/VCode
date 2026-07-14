@@ -151,6 +151,18 @@ public class ProjectStateRepository {
         }
         root.put("previewStates", previews);
 
+        // Map collection layout recording virtual files
+        JSONObject virtuals = new JSONObject();
+        Map<String, String> virtualMap = state.getVirtualFiles();
+        if (virtualMap != null) {
+            for (Map.Entry<String, String> entry : virtualMap.entrySet()) {
+                if (entry.getKey() != null && entry.getValue() != null) {
+                    virtuals.put(entry.getKey(), entry.getValue());
+                }
+            }
+        }
+        root.put("virtualFiles", virtuals);
+
         File sessionFile = getSessionFile(projectDir);
         try (BufferedWriter writer = new BufferedWriter(
                 new OutputStreamWriter(new FileOutputStream(sessionFile), StandardCharsets.UTF_8))) {
@@ -224,16 +236,23 @@ public class ProjectStateRepository {
         state.setScrollPositions(scrollMap);
 
         // Restore preview states
-        JSONObject previews = root.optJSONObject("previewStates");
-        Map<String, Boolean> previewMap = new HashMap<>();
-        if (previews != null) {
+        if (root.has("previewStates")) {
+            JSONObject previews = root.getJSONObject("previewStates");
             Iterator<String> keys = previews.keys();
             while (keys.hasNext()) {
-                String key = keys.next();
-                previewMap.put(key, previews.optBoolean(key, false));
+                String k = keys.next();
+                state.setPreviewStateFor(k, previews.getBoolean(k));
             }
         }
-        state.setPreviewStates(previewMap);
+
+        if (root.has("virtualFiles")) {
+            JSONObject virtuals = root.getJSONObject("virtualFiles");
+            Iterator<String> keys = virtuals.keys();
+            while (keys.hasNext()) {
+                String k = keys.next();
+                state.setVirtualFile(k, virtuals.getString(k));
+            }
+        }
 
         return state;
     }

@@ -7,7 +7,6 @@ import org.json.JSONObject;
 
 import java.io.File;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
@@ -64,6 +63,7 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
     private int lastTextHash = 0;
     private List<JsScopeParser.ScopeBlock> documentScopes = new ArrayList<>();
     private File currentFile;
+
     public JsAutoCompleteEngine(Context context) {
         super(context);
         loadKeywords();
@@ -395,7 +395,8 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                             "Directory", CompletionItem.Type.FOLDER, 0));
                 } else if (isJsLike(name) || typedPath.isEmpty()) {
                     if (name.equals("project_meta.json") || name.equals("session.json")) continue;
-                    if (currentFile != null && f.getAbsolutePath().equals(currentFile.getAbsolutePath())) continue;
+                    if (currentFile != null && f.getAbsolutePath().equals(currentFile.getAbsolutePath()))
+                        continue;
 
                     items.add(new CompletionItem(name, name, "File", CompletionItem.Type.FILE, 0));
                 }
@@ -619,7 +620,8 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
             int depth = 1, pos = bodyStart + 1;
             while (pos < text.length() && depth > 0) {
                 char c = text.charAt(pos);
-                if (c == '{') depth++; else if (c == '}') depth--;
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
                 pos++;
             }
             String body = text.substring(bodyStart + 1, pos - 1);
@@ -630,7 +632,10 @@ public class JsAutoCompleteEngine extends AutoCompleteEngine {
                     .matcher(body);
             while (mMethod.find()) {
                 String name = mMethod.group(1);
-                if (name.equals("constructor") || seen.contains(name)) { seen.add(name); continue; }
+                if (name.equals("constructor") || seen.contains(name)) {
+                    seen.add(name);
+                    continue;
+                }
                 seen.add(name);
                 members.add(new CompletionItem(name + "(|)", name, className + " method", CompletionItem.Type.FUNCTION, 0));
             }

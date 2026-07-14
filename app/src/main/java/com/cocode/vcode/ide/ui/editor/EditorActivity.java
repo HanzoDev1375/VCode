@@ -384,16 +384,16 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     binding.viewerContainer.setVisibility(View.VISIBLE);
                 }
                 binding.tabBar.setVisibility(View.VISIBLE);
-                binding.breadcrumb.setVisibility(View.VISIBLE);
                 binding.tabBar.setTabs(files, activeIndex);
+                updateBreadcrumbVisibility();
             } else {
                 if (!isLoading) {
                     binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
                     binding.viewerContainer.setVisibility(View.GONE);
                 }
                 binding.tabBar.setVisibility(View.GONE);
-                binding.breadcrumb.setVisibility(View.GONE);
                 binding.diagnosticBar.setVisibility(View.GONE);
+                updateBreadcrumbVisibility();
 
                 // Hide keyboard
                 InputMethodManager imm = (InputMethodManager) getSystemService(INPUT_METHOD_SERVICE);
@@ -414,7 +414,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 binding.tabBar.setActiveTab(index);
 
                 String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
-                binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
+                updateBreadcrumbVisibility();
 
                 boolean isPreview = viewModel.getPreviewState(relPath);
                 // Don't default to preview mode for empty files (freshly created)
@@ -444,6 +444,24 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 binding.diagnosticBar.setLoading();
             }
         });
+    }
+
+    private void updateBreadcrumbVisibility() {
+        if (viewModel == null || binding == null) return;
+        List<EditorFile> files = viewModel.getOpenFiles().getValue();
+        Integer index = viewModel.getActiveTabIndex().getValue();
+        if (files != null && !files.isEmpty() && index != null && index >= 0 && index < files.size()) {
+            EditorFile activeFile = files.get(index);
+            if (activeFile.getFileType() == FileType.API_TESTER) {
+                binding.breadcrumb.setVisibility(View.GONE);
+            } else {
+                binding.breadcrumb.setVisibility(View.VISIBLE);
+                String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
+                binding.breadcrumb.setPath(viewModel.getProjectName(), relPath);
+            }
+        } else {
+            binding.breadcrumb.setVisibility(View.GONE);
+        }
     }
 
     private boolean isFileDiagnosable(EditorFile file) {
@@ -544,9 +562,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
         boolean showTextEditingOptions = false;
-        EditorFile activeFile = files.get(activeIndex);
+        EditorFile activeFile = hasOpenFile ? files.get(activeIndex) : null;
 
-        if (hasOpenFile) {
+        if (hasOpenFile && activeFile != null) {
             FileType type = activeFile.getFileType();
             boolean isBinary = activeFile.isBinaryAsset();
 
@@ -573,6 +591,10 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
+
+        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_globe, "API Tester", () -> {
+            viewModel.openApiTester();
+        });
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);

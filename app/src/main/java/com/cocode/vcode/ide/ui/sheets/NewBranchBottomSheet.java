@@ -4,7 +4,6 @@ import android.os.Bundle;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
-import android.widget.ArrayAdapter;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -85,50 +84,20 @@ public class NewBranchBottomSheet extends BottomSheetDialogFragment {
             if (!names.isEmpty() && binding.tvCreateFromSelector.getText().toString().isEmpty()) {
                 binding.tvCreateFromSelector.setText(names.get(0));
             }
-            
+
             binding.tvCreateFromSelector.setOnClickListener(v -> showBranchSelectionDialog(names));
         });
     }
 
     private void showBranchSelectionDialog(List<String> branchNames) {
-        android.app.AlertDialog.Builder builder = new android.app.AlertDialog.Builder(requireContext());
-        View dialogView = LayoutInflater.from(requireContext()).inflate(com.cocode.vcode.ide.R.layout.dialog_select_branch, null);
-        builder.setView(dialogView);
-        android.app.AlertDialog dialog = builder.create();
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawableResource(android.R.color.transparent);
-        }
-
-        android.widget.TextView tvTitle = dialogView.findViewById(com.cocode.vcode.ide.R.id.tv_dialog_title);
-        if (tvTitle != null) {
-            tvTitle.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiSemiBold(requireContext()));
-        }
-
-        android.widget.ListView listView = dialogView.findViewById(com.cocode.vcode.ide.R.id.list_branches);
-        ArrayAdapter<String> adapter = new ArrayAdapter<>(requireContext(), android.R.layout.simple_list_item_1, branchNames) {
-            @NonNull
-            @Override
-            public View getView(int position, @Nullable View convertView, @NonNull ViewGroup parent) {
-                View view = super.getView(position, convertView, parent);
-                android.widget.TextView tv = view.findViewById(android.R.id.text1);
-                if (tv != null) {
-                    tv.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiMedium(getContext()));
-                }
-                return view;
-            }
-        };
-        listView.setAdapter(adapter);
-
-        listView.setOnItemClickListener((parent, view, position, id) -> {
-            String selected = branchNames.get(position);
-            binding.tvCreateFromSelector.setText(selected);
-            dialog.dismiss();
-        });
-
-        com.google.android.material.button.MaterialButton btnCancel = dialogView.findViewById(com.cocode.vcode.ide.R.id.btn_cancel);
-        btnCancel.setTypeface(com.cocode.vcode.ide.utils.FontManager.getInstance().getUiMedium(requireContext()));
-        btnCancel.setOnClickListener(v -> dialog.dismiss());
-        dialog.show();
+        String currentSelection = binding.tvCreateFromSelector.getText().toString();
+        com.cocode.vcode.ide.ui.dialogs.CustomListDialog.show(
+                requireContext(),
+                "Select Base Branch",
+                branchNames,
+                currentSelection,
+                selected -> binding.tvCreateFromSelector.setText(selected)
+        );
     }
 
     @Override

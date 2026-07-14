@@ -9,10 +9,9 @@ import android.widget.LinearLayout;
 
 import androidx.annotation.Nullable;
 
+import com.cocode.vcode.ide.databinding.ViewDiagnosticBarBinding;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
-
-import com.cocode.vcode.ide.databinding.ViewDiagnosticBarBinding;
 
 public class DiagnosticBar extends LinearLayout {
 

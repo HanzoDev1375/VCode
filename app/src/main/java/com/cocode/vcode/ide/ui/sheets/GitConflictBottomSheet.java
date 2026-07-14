@@ -93,7 +93,10 @@ public class GitConflictBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void resolveWith(boolean ours) {
-        if (repository == null || conflictingFiles == null) { dismiss(); return; }
+        if (repository == null || conflictingFiles == null) {
+            dismiss();
+            return;
+        }
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 for (String path : conflictingFiles) {
@@ -117,7 +120,10 @@ public class GitConflictBottomSheet extends BottomSheetDialogFragment {
     }
 
     private void abortMerge() {
-        if (repository == null) { dismiss(); return; }
+        if (repository == null) {
+            dismiss();
+            return;
+        }
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 repository.hardReset("ORIG_HEAD");
@@ -146,9 +152,13 @@ public class GitConflictBottomSheet extends BottomSheetDialogFragment {
 
     private static class FilesAdapter extends RecyclerView.Adapter<FilesAdapter.VH> {
         private final List<String> files;
-        FilesAdapter(List<String> files) { this.files = files; }
 
-        @NonNull @Override
+        FilesAdapter(List<String> files) {
+            this.files = files;
+        }
+
+        @NonNull
+        @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             return new VH(LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_conflict_file, parent, false));
@@ -159,11 +169,18 @@ public class GitConflictBottomSheet extends BottomSheetDialogFragment {
             h.tv.setText(files.get(pos));
         }
 
-        @Override public int getItemCount() { return files != null ? files.size() : 0; }
+        @Override
+        public int getItemCount() {
+            return files != null ? files.size() : 0;
+        }
 
         static class VH extends RecyclerView.ViewHolder {
             final TextView tv;
-            VH(@NonNull View v) { super(v); tv = v.findViewById(R.id.tv_conflict_file_name); }
+
+            VH(@NonNull View v) {
+                super(v);
+                tv = v.findViewById(R.id.tv_conflict_file_name);
+            }
         }
     }
 }

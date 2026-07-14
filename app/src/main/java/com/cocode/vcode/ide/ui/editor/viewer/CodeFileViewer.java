@@ -62,7 +62,6 @@ public class CodeFileViewer implements IFileViewer {
     }
 
 
-
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
         this.currentFile = file;
@@ -145,7 +144,8 @@ public class CodeFileViewer implements IFileViewer {
                 ExecutorProvider.getInstance().runOnIo(() -> {
                     if (capturedFile == null || capturedFile.getFile() == null) {
                         ExecutorProvider.getInstance().runOnMain(() -> {
-                            if (codeEditText != null) codeEditText.applyDiagnostics(new java.util.ArrayList<>());
+                            if (codeEditText != null)
+                                codeEditText.applyDiagnostics(new java.util.ArrayList<>());
                         });
                         return;
                     }

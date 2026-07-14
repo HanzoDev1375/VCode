@@ -22,16 +22,17 @@
             android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
             android:layout_marginEnd="0dp"
             android:layout_marginBottom="16dp"
-            android:text="@string/vcode_select_target_branch_hint"
+            android:text="Select Option"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="?attr/colorOnSurface" />
 
-        <ListView
-            android:id="@+id/list_branches"
+        <androidx.recyclerview.widget.RecyclerView
+            android:id="@+id/rv_options"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="24dp"
+            android:layout_marginBottom="16dp"
             android:clipToPadding="false"
+            app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
             android:scrollbars="vertical" />
 
         <LinearLayout

@@ -89,7 +89,8 @@ public class CssSyntaxHighlighter extends SyntaxHighlighter {
         boolean[] inComment = new boolean[code.length()];
         Matcher cm = PAT_COMMENT.matcher(code);
         while (cm.find()) {
-            for (int ci = cm.start(); ci < cm.end() && ci < inComment.length; ci++) inComment[ci] = true;
+            for (int ci = cm.start(); ci < cm.end() && ci < inComment.length; ci++)
+                inComment[ci] = true;
         }
         // Also mask // line comments
         for (int ci = 0; ci < code.length() - 1; ci++) {

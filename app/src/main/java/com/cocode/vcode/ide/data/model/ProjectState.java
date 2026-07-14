@@ -18,6 +18,7 @@ public class ProjectState {
     private Map<String, Integer> cursorPositions; // Maps file paths to their last caret offset index
     private Map<String, Integer> scrollPositions; // Maps file paths to their vertical scroll viewport pixel positions
     private Map<String, Boolean> previewStates; // Maps file paths to their toggle preview state (true = preview, false = text)
+    private Map<String, String> virtualFiles; // Maps virtual file paths to their persisted content
 
     /**
      * Initializes blank tracking parameters for view tracking containers.
@@ -27,6 +28,7 @@ public class ProjectState {
         this.cursorPositions = new HashMap<>();
         this.scrollPositions = new HashMap<>();
         this.previewStates = new HashMap<>();
+        this.virtualFiles = new HashMap<>();
         this.activeTabIndex = 0;
     }
 
@@ -86,6 +88,18 @@ public class ProjectState {
 
     public boolean hasExplicitPreviewState(String relativePath) {
         return relativePath != null && previewStates.containsKey(relativePath);
+    }
+
+    public Map<String, String> getVirtualFiles() {
+        return virtualFiles;
+    }
+
+    public void setVirtualFile(String relativePath, String content) {
+        if (relativePath != null) virtualFiles.put(relativePath, content);
+    }
+
+    public String getVirtualFile(String relativePath) {
+        return relativePath != null ? virtualFiles.get(relativePath) : null;
     }
 
     public String getProjectId() {

@@ -1,11 +1,11 @@
 package com.cocode.vcode.ide.git.repository;
 
+import com.cocode.vcode.ide.VCodeApplication;
+import com.cocode.vcode.ide.git.core.SshKeyManager;
 import com.cocode.vcode.ide.git.model.BranchItem;
 import com.cocode.vcode.ide.git.model.CommitItem;
 import com.cocode.vcode.ide.git.model.GitFileItem;
 import com.cocode.vcode.ide.utils.DateUtils;
-import com.cocode.vcode.ide.VCodeApplication;
-import com.cocode.vcode.ide.git.core.SshKeyManager;
 
 import org.eclipse.jgit.api.Git;
 import org.eclipse.jgit.api.ListBranchCommand;
@@ -510,29 +510,31 @@ public class GitRepository {
                     // success — continue
                 } else if (status == org.eclipse.jgit.transport.RemoteRefUpdate.Status.REJECTED_NONFASTFORWARD) {
                     throw new Exception(
-                        "Push rejected: remote has changes your local branch doesn't have.\n" +
-                        "Pull first to integrate remote changes, then push again.\n" +
-                        "(Hint: Go to the Remote tab → Pull → then try Push again)");
+                            "Push rejected: remote has changes your local branch doesn't have.\n" +
+                                    "Pull first to integrate remote changes, then push again.\n" +
+                                    "(Hint: Go to the Remote tab → Pull → then try Push again)");
                 } else if (status == org.eclipse.jgit.transport.RemoteRefUpdate.Status.REJECTED_REMOTE_CHANGED) {
                     throw new Exception(
-                        "Push rejected: the remote ref changed while preparing the push.\n" +
-                        "Pull first, then try again.");
+                            "Push rejected: the remote ref changed while preparing the push.\n" +
+                                    "Pull first, then try again.");
                 } else if (status == org.eclipse.jgit.transport.RemoteRefUpdate.Status.REJECTED_OTHER_REASON) {
                     String reason = update.getMessage() != null ? update.getMessage() : "unknown reason";
                     throw new Exception("Push rejected by remote: " + reason);
                 } else if (status == org.eclipse.jgit.transport.RemoteRefUpdate.Status.NON_EXISTING) {
                     throw new Exception("Push failed: branch '" + branch + "' does not exist on remote.\n" +
-                        "Use 'Push' on an existing branch or create it on GitHub first.");
+                            "Use 'Push' on an existing branch or create it on GitHub first.");
                 } else if (status != null && status.name().startsWith("REJECTED")) {
                     throw new Exception("Push rejected (" + status.name().toLowerCase().replace('_', ' ') + "): "
-                        + (update.getMessage() != null ? update.getMessage() : "see remote logs"));
+                            + (update.getMessage() != null ? update.getMessage() : "see remote logs"));
                 }
             }
         }
         return "Push completed successfully.";
     }
 
-    /** Pulls and returns a human-readable summary. Throws GitConflictException on conflicts. */
+    /**
+     * Pulls and returns a human-readable summary. Throws GitConflictException on conflicts.
+     */
     public String pull(String remoteUrl, String pat, String branch) throws Exception {
         ensureOriginConfigured(remoteUrl);
 
@@ -582,26 +584,20 @@ public class GitRepository {
         return "Already up to date.";
     }
 
-    /** Checkout a specific version of a conflicting file (ours=true → keep local, ours=false → use theirs). */
+    /**
+     * Checkout a specific version of a conflicting file (ours=true → keep local, ours=false → use theirs).
+     */
     public void checkoutConflictFile(String path, boolean ours) throws Exception {
         git.checkout()
                 .setStage(ours ? org.eclipse.jgit.api.CheckoutCommand.Stage.OURS
-                               : org.eclipse.jgit.api.CheckoutCommand.Stage.THEIRS)
+                        : org.eclipse.jgit.api.CheckoutCommand.Stage.THEIRS)
                 .addPath(path)
                 .call();
     }
 
-    /** Thrown when a pull results in unresolved merge conflicts. */
-    public static class GitConflictException extends Exception {
-        private final List<String> conflictingFiles;
-        public GitConflictException(String message, List<String> conflictingFiles) {
-            super(message);
-            this.conflictingFiles = conflictingFiles;
-        }
-        public List<String> getConflictingFiles() { return conflictingFiles; }
-    }
-
-    /** Returns a human-readable summary of what was fetched. */
+    /**
+     * Returns a human-readable summary of what was fetched.
+     */
     public String fetch(String remoteUrl, String pat) throws Exception {
         ensureOriginConfigured(remoteUrl);
 
@@ -626,9 +622,9 @@ public class GitRepository {
             String branch = org.eclipse.jgit.lib.Repository.shortenRefName(u.getLocalName());
             String type;
             org.eclipse.jgit.lib.RefUpdate.Result r = u.getResult();
-            if (r == org.eclipse.jgit.lib.RefUpdate.Result.NEW)            type = "new branch";
+            if (r == org.eclipse.jgit.lib.RefUpdate.Result.NEW) type = "new branch";
             else if (r == org.eclipse.jgit.lib.RefUpdate.Result.FAST_FORWARD) type = "updated";
-            else if (r == org.eclipse.jgit.lib.RefUpdate.Result.FORCED)    type = "forced";
+            else if (r == org.eclipse.jgit.lib.RefUpdate.Result.FORCED) type = "forced";
             else if (r == org.eclipse.jgit.lib.RefUpdate.Result.NO_CHANGE) type = "up to date";
             else type = r != null ? r.name().toLowerCase().replace('_', ' ') : "updated";
             if (sb.length() > 0) sb.append("\n");
@@ -637,7 +633,9 @@ public class GitRepository {
         return "Fetched " + updates.size() + " ref(s):\n" + sb;
     }
 
-    /** Ensures the 'origin' remote in .git/config points to the given URL. */
+    /**
+     * Ensures the 'origin' remote in .git/config points to the given URL.
+     */
     private void ensureOriginConfigured(String remoteUrl) throws Exception {
         if (remoteUrl == null || remoteUrl.trim().isEmpty()) return;
         StoredConfig config = git.getRepository().getConfig();
@@ -697,5 +695,21 @@ public class GitRepository {
             treeParser.reset(reader, head);
         }
         return treeParser;
+    }
+
+    /**
+     * Thrown when a pull results in unresolved merge conflicts.
+     */
+    public static class GitConflictException extends Exception {
+        private final List<String> conflictingFiles;
+
+        public GitConflictException(String message, List<String> conflictingFiles) {
+            super(message);
+            this.conflictingFiles = conflictingFiles;
+        }
+
+        public List<String> getConflictingFiles() {
+            return conflictingFiles;
+        }
     }
 }

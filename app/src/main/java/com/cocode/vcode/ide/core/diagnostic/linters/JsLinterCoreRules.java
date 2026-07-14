@@ -1,17 +1,14 @@
 package com.cocode.vcode.ide.core.diagnostic.linters;
 
-import com.cocode.vcode.ide.core.diagnostic.util.KnownElements;
 import com.cocode.vcode.ide.core.diagnostic.util.LinterUtils;
 import com.cocode.vcode.ide.core.diagnostic.util.TokenMask;
 import com.cocode.vcode.ide.data.model.Problem;
 
 import java.io.File;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+
 public class JsLinterCoreRules {
     public static final Pattern PAT_VAR = Pattern.compile("\\bvar\\s+([a-zA-Z_$][\\w$]*)");
     public static final Pattern PAT_CONSOLE = Pattern.compile("\\bconsole\\.(\\w+)");
@@ -28,6 +25,7 @@ public class JsLinterCoreRules {
     public static final Pattern PAT_CATCH_CHAIN = Pattern.compile("\\.catch\\s*\\(");
     public static final Pattern PAT_AWAIT_CALL = Pattern.compile("\\b(fetch|(?:\\w+\\.)?(?:json|text|arrayBuffer|blob|formData))\\s*\\(");
     public static final Pattern PAT_ASYNC_FN = Pattern.compile("\\basync\\s+function\\s*(\\w*)|\\basync\\s*\\(|\\basync\\s+([a-zA-Z_$][\\w$]*)\\s*=>");
+
     public static void checkVarUsage(File file, String text, String[] lines, TokenMask mask, List<Problem> out) {
         Matcher m = PAT_VAR.matcher(text);
         while (m.find()) {

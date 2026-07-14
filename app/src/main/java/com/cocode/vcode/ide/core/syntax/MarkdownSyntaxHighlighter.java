@@ -88,7 +88,7 @@ public class MarkdownSyntaxHighlighter extends SyntaxHighlighter {
             String lang = m.group(1).toLowerCase();
             int blockStart = m.start(2);
             int blockEnd = m.end(2);
-            
+
             if (blockEnd > start && blockStart < end) {
                 if (lang.equals("css")) {
                     int hlStart = Math.max(blockStart, start) - blockStart;

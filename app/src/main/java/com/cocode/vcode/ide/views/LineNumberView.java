@@ -19,22 +19,21 @@ import com.cocode.vcode.ide.R;
 public class LineNumberView extends View {
 
     private static final int DIVIDER_WIDTH_PX = 1;
+    private final int currentLine = 1;
+    // Perf: reuse char buffer to avoid String alloc per line in draw loop
+    private final char[] lineNumBuffer = new char[6];
     private Paint numberPaint;
     private Paint bgPaint;
     private Paint dividerPaint;
-    private final int currentLine = 1;
     private int gutterWidth = 0;
     private CodeEditText editor;
     private int cursorOffset = 0;
-
     // Perf: cache cursor-line scan result to avoid O(n) scan every draw frame
     private int cachedCursorOffset = -1;
     private int cachedCursorLine = 1;
     // Perf: cache firstLine scan result
     private int cachedFirstLineStart = -1;
     private int cachedFirstLogicalLine = 1;
-    // Perf: reuse char buffer to avoid String alloc per line in draw loop
-    private final char[] lineNumBuffer = new char[6];
     // Perf: cache color lookups (ContextCompat.getColor is not free)
     private int colorPrimary;
     private int colorSecondary;
@@ -201,7 +200,6 @@ public class LineNumberView extends View {
     public void setScrollY(int scrollY) {
         invalidate();
     }
-
 
 
     public void setLineHeight() {

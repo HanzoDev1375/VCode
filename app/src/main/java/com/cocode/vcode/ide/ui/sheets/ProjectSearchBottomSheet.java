@@ -197,9 +197,8 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
     private class SearchAdapter extends RecyclerView.Adapter<RecyclerView.ViewHolder> {
         private static final int TYPE_FILE = 0;
         private static final int TYPE_MATCH = 1;
-
-        private List<FileGroup> fileGroups = new ArrayList<>();
         private final List<Object> flattenedItems = new ArrayList<>();
+        private List<FileGroup> fileGroups = new ArrayList<>();
 
         @SuppressLint("NotifyDataSetChanged")
         void setResults(List<FileGroup> newItems) {
@@ -275,11 +274,11 @@ public class ProjectSearchBottomSheet extends BottomSheetDialogFragment {
 
                 android.text.SpannableString ss = new android.text.SpannableString(match.snippet);
                 int color = androidx.core.content.ContextCompat.getColor(holder.itemView.getContext(), R.color.vcode_accent_warning);
-                ss.setSpan(new com.cocode.vcode.ide.views.SolidHighlightSpan(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 100)), 
-                           Math.max(0, match.matchStart), 
-                           Math.min(ss.length(), match.matchEnd), 
-                           android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                
+                ss.setSpan(new com.cocode.vcode.ide.views.SolidHighlightSpan(androidx.core.graphics.ColorUtils.setAlphaComponent(color, 100)),
+                        Math.max(0, match.matchStart),
+                        Math.min(ss.length(), match.matchEnd),
+                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+
                 mh.binding.tvSnippet.setText(ss);
                 mh.binding.tvSnippet.setTypeface(FontManager.getInstance().getCodeFont(holder.itemView.getContext()));
 

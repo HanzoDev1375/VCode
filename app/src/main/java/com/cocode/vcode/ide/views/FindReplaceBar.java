@@ -6,7 +6,6 @@ import android.os.Looper;
 import android.text.Editable;
 import android.text.Spanned;
 import android.text.TextWatcher;
-import android.text.style.BackgroundColorSpan;
 import android.util.AttributeSet;
 import android.view.LayoutInflater;
 import android.view.ViewGroup;
@@ -227,7 +226,7 @@ public class FindReplaceBar extends LinearLayout {
         if (editor == null || editor.getText() == null) return;
         Editable editable = editor.getText();
         clearHighlights();
-        
+
         int textColor = editor.getCurrentTextColor();
 
         for (int i = 0; i < results.size(); i++) {
@@ -241,7 +240,7 @@ public class FindReplaceBar extends LinearLayout {
             }
         }
     }
-    
+
     private void applySpanSafely(Editable editable, int start, int end, int color, int textColor, boolean isActive) {
         String text = editable.subSequence(start, end).toString();
         int currentStart = start;

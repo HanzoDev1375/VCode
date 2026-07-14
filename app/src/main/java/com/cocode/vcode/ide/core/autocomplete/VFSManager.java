@@ -54,7 +54,8 @@ public class VFSManager {
         List<File> cachedList = new ArrayList<>();
         for (File child : children) {
             String name = child.getName();
-            if (name.startsWith(".") || name.equals("session.json") || name.equals("project_meta.json")) continue; // Skip hidden/git and meta files
+            if (name.startsWith(".") || name.equals("session.json") || name.equals("project_meta.json"))
+                continue; // Skip hidden/git and meta files
             cachedList.add(child);
 
             // Also add sub-directories to the queue

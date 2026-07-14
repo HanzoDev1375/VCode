@@ -78,11 +78,17 @@ public class GitStashFragment extends Fragment {
     private class StashAdapter extends RecyclerView.Adapter<StashAdapter.VH> {
         private List<StashItem> items;
 
-        StashAdapter(List<StashItem> items) { this.items = items; }
+        StashAdapter(List<StashItem> items) {
+            this.items = items;
+        }
 
-        void updateData(List<StashItem> data) { this.items = data; notifyDataSetChanged(); }
+        void updateData(List<StashItem> data) {
+            this.items = data;
+            notifyDataSetChanged();
+        }
 
-        @NonNull @Override
+        @NonNull
+        @Override
         public VH onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             return new VH(LayoutInflater.from(parent.getContext())
                     .inflate(R.layout.item_stash, parent, false));
@@ -97,7 +103,10 @@ public class GitStashFragment extends Fragment {
             h.btnDrop.setOnClickListener(v -> viewModel.stashDrop(item.getId()));
         }
 
-        @Override public int getItemCount() { return items != null ? items.size() : 0; }
+        @Override
+        public int getItemCount() {
+            return items != null ? items.size() : 0;
+        }
 
         class VH extends RecyclerView.ViewHolder {
             TextView tvName, tvMsg;
@@ -105,10 +114,10 @@ public class GitStashFragment extends Fragment {
 
             VH(@NonNull View v) {
                 super(v);
-                tvName   = v.findViewById(R.id.tv_stash_name);
-                tvMsg    = v.findViewById(R.id.tv_stash_message);
+                tvName = v.findViewById(R.id.tv_stash_name);
+                tvMsg = v.findViewById(R.id.tv_stash_message);
                 btnApply = v.findViewById(R.id.btn_apply_stash);
-                btnDrop  = v.findViewById(R.id.btn_drop_stash);
+                btnDrop = v.findViewById(R.id.btn_drop_stash);
                 FontManager fm = FontManager.getInstance();
                 tvName.setTypeface(fm.getUiSemiBold(v.getContext()));
                 tvMsg.setTypeface(fm.getUiMedium(v.getContext()));

@@ -33,12 +33,6 @@ public class ProjectSymbolIndex {
     private static final Pattern PAT_JS_EXPORT_BLOCK = Pattern.compile("export\\s*\\{\\s*([^}]+)\\s*\\}");
     private static final Pattern PAT_JS_EXPORT_DESTRUCT = Pattern.compile("export\\s+(?:const|let|var)\\s*\\{\\s*([^}]+)\\s*\\}");
     private static final Pattern PAT_MODULE_EXPORTS = Pattern.compile("module\\.exports\\s*=\\s*(?:[a-zA-Z_$][\\w$]*|\\{([^}]+)\\})");
-    // Maps class name → list of member CompletionItems (methods + properties)
-    private final Map<String, List<CompletionItem>> classMembers = new HashMap<>();
-
-    // Also maps absolute file path → class members for cross-file class resolution
-    private final Map<String, Map<String, List<CompletionItem>>> fileClassMembers = new HashMap<>();
-
     private static final Pattern PAT_CLASS_DECL = Pattern.compile(
             "(?:export\\s+)?(?:default\\s+)?class\\s+([a-zA-Z_$][\\w$]*)(?:\\s+extends\\s+([a-zA-Z_$][\\w$]*))?");
     private static final Pattern PAT_CLASS_METHOD = Pattern.compile(
@@ -48,6 +42,10 @@ public class ProjectSymbolIndex {
     private static final Pattern PAT_FUNC_SIG = Pattern.compile("(?:export\\s+)?(?:default\\s+)?function\\s+([a-zA-Z_$][\\w$]*)\\s*(\\([^)]*\\))");
     private static final Pattern PAT_ARROW_FUNC = Pattern.compile("(?:export\\s+)?(?:const|let|var)\\s+([a-zA-Z_$][\\w$]*)\\s*=\\s*(\\([^)]*\\)|[a-zA-Z_$][\\w$]*)\\s*=>");
     private static ProjectSymbolIndex instance;
+    // Maps class name → list of member CompletionItems (methods + properties)
+    private final Map<String, List<CompletionItem>> classMembers = new HashMap<>();
+    // Also maps absolute file path → class members for cross-file class resolution
+    private final Map<String, Map<String, List<CompletionItem>>> fileClassMembers = new HashMap<>();
     private final ExecutorService executor = Executors.newSingleThreadExecutor();
     private final List<CompletionItem> cssClassItems = new ArrayList<>();
     private final List<CompletionItem> cssIdItems = new ArrayList<>();
@@ -292,7 +290,8 @@ public class ProjectSymbolIndex {
             int depth = 1, pos = bodyStart + 1;
             while (pos < content.length() && depth > 0) {
                 char c = content.charAt(pos);
-                if (c == '{') depth++; else if (c == '}') depth--;
+                if (c == '{') depth++;
+                else if (c == '}') depth--;
                 pos++;
             }
             String body = content.substring(bodyStart + 1, pos - 1);
@@ -302,7 +301,10 @@ public class ProjectSymbolIndex {
             while (mMethod.find()) {
                 String name = mMethod.group(1);
                 String params = mMethod.group(2);
-                if (name.equals("constructor") || seen.contains(name)) { seen.add(name); continue; }
+                if (name.equals("constructor") || seen.contains(name)) {
+                    seen.add(name);
+                    continue;
+                }
                 seen.add(name);
                 members.add(new CompletionItem(name + "(" + params + ")", name, className + " method", CompletionItem.Type.FUNCTION, 0));
             }

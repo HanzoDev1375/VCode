@@ -181,6 +181,9 @@ public class TabBar extends HorizontalScrollView {
      */
     @Nullable
     private String getFileName(EditorFile file) {
+        if (file.getFileType() == FileType.API_TESTER) {
+            return "API Tester";
+        }
         String displayFileName = file.getFileName();
         if (displayFileName != null && displayFileName.length() > 12) {
             int dotIndex = displayFileName.lastIndexOf('.');
