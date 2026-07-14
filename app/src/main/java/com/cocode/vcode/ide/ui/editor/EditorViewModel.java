@@ -239,10 +239,11 @@ public class EditorViewModel extends ViewModel {
             List<EditorFile> restoredFiles = new ArrayList<>();
             for (String relativePath : paths) {
                 File file = new File(projectRoot, relativePath);
-                boolean isVirtual = state.getVirtualFiles() != null && state.getVirtualFiles().containsKey(relativePath);
+                FileType fileType = FileType.fromExtension(com.cocode.vcode.ide.utils.FileUtils.getExtension(file.getName()));
+                boolean isVirtual = (state.getVirtualFiles() != null && state.getVirtualFiles().containsKey(relativePath)) || fileType == FileType.API_TESTER;
+                
                 if (isVirtual || (file.exists() && file.isFile())) {
                     try {
-                        FileType fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
                         EditorFile ef = new EditorFile(UUID.randomUUID().toString(), file, "", fileType);
                         ef.setCursorPosition(state.getCursorFor(relativePath));
                         ef.setScrollY(state.getScrollFor(relativePath));
@@ -389,48 +390,56 @@ public class EditorViewModel extends ViewModel {
             List<EditorFile> currentDocs = getOpenFilesList();
             if (currentDocs.isEmpty()) return;
 
-            List<EditorFile> updatedDocs = new ArrayList<>();
-            boolean altered = false;
-            int activeIndex = getActiveTabIndexValue();
-            int newActiveIndex = activeIndex;
+            java.util.Set<String> missingPaths = new java.util.HashSet<>();
+            java.util.Map<String, String> updatedContent = new java.util.HashMap<>();
 
-            for (int i = 0; i < currentDocs.size(); i++) {
-                EditorFile doc = currentDocs.get(i);
+            for (EditorFile doc : currentDocs) {
+                if (doc.isVirtual()) continue;
+                
                 File fileOnDisk = doc.getFile();
-
                 if (!fileOnDisk.exists()) {
-                    // File no longer exists; mark as altered to trigger a UI cleanup
-                    altered = true;
-                    if (i <= activeIndex && newActiveIndex > 0) {
-                        newActiveIndex--;
-                    }
-                } else {
+                    missingPaths.add(fileOnDisk.getAbsolutePath());
+                } else if (!doc.isBinaryAsset()) {
                     try {
-                        // Check if text content has diverged from disk
-                        if (!doc.isBinaryAsset()) {
-                            String diskContent = FileUtils.readFile(fileOnDisk);
-                            if (!diskContent.equals(doc.getContent())) {
-                                doc.setContent(diskContent);
-                                doc.markSaved(); // Reset dirty state on external reload
-                                altered = true;
-                            }
+                        String diskContent = com.cocode.vcode.ide.utils.FileUtils.readFile(fileOnDisk);
+                        if (!diskContent.equals(doc.getContent())) {
+                            updatedContent.put(fileOnDisk.getAbsolutePath(), diskContent);
                         }
-                        updatedDocs.add(doc);
-                    } catch (Exception ignored) {
-                        updatedDocs.add(doc);
-                    }
+                    } catch (Exception ignored) {}
                 }
             }
 
-            // Only notify the UI if an actual change in the open file set occurred
-            if (altered) {
-                final List<EditorFile> finalDocs = updatedDocs;
-                final int finalActiveIndex = finalDocs.isEmpty() ? -1 : Math.min(newActiveIndex, finalDocs.size() - 1);
+            if (!missingPaths.isEmpty() || !updatedContent.isEmpty()) {
                 ExecutorProvider.getInstance().runOnMain(() -> {
-                    openFilesLiveData.setValue(finalDocs);
-                    activeTabIndexLiveData.setValue(finalActiveIndex);
-                    updateCurrentStateObject();
-                    persistStateAsync();
+                    List<EditorFile> latestDocs = new java.util.ArrayList<>(getOpenFilesList());
+                    boolean actuallyAltered = false;
+                    int activeIndex = getActiveTabIndexValue();
+                    
+                    java.util.Iterator<EditorFile> iterator = latestDocs.iterator();
+                    int i = 0;
+                    while (iterator.hasNext()) {
+                        EditorFile doc = iterator.next();
+                        String path = doc.getFile().getAbsolutePath();
+                        if (missingPaths.contains(path)) {
+                            iterator.remove();
+                            actuallyAltered = true;
+                            if (i <= activeIndex && activeIndex > 0) activeIndex--;
+                        } else {
+                            if (updatedContent.containsKey(path)) {
+                                doc.setContent(updatedContent.get(path));
+                                doc.markSaved();
+                                actuallyAltered = true;
+                            }
+                            i++;
+                        }
+                    }
+
+                    if (actuallyAltered) {
+                        openFilesLiveData.setValue(latestDocs);
+                        activeTabIndexLiveData.setValue(latestDocs.isEmpty() ? -1 : Math.min(activeIndex, latestDocs.size() - 1));
+                        updateCurrentStateObject();
+                        persistStateAsync();
+                    }
                 });
             }
         });

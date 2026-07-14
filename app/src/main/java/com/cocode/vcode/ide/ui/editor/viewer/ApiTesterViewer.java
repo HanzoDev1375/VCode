@@ -92,6 +92,7 @@ public class ApiTesterViewer implements IFileViewer {
         binding.btnAddBody.setTypeface(fontManager.getUiSemiBold(context));
         binding.tvResponseLabel.setTypeface(fontManager.getUiSemiBold(context));
         binding.tvResponseStatus.setTypeface(fontManager.getUiSemiBold(context));
+        binding.tvResponse.setTypeface(fontManager.getCodeFont(context));
         binding.tvTimeBadge.setTypeface(fontManager.getUiMedium(context));
         binding.tvSizeBadge.setTypeface(fontManager.getUiMedium(context));
 

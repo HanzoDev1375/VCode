@@ -253,8 +253,8 @@
                             android:minHeight="256dp"
                             android:padding="12dp"
                             android:textIsSelectable="true"
-                            android:fontFamily="monospace"
-                            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                            android:background="?attr/colorSurfaceContainer"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                             android:textColor="?attr/colorOnSurface" />
 
                         <com.google.android.material.progressindicator.CircularProgressIndicator
