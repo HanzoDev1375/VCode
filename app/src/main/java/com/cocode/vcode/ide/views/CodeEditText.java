@@ -32,6 +32,7 @@ import com.cocode.vcode.ide.core.autocomplete.CssAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.HtmlAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.JsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.autocomplete.JsonAutoCompleteEngine;
+import com.cocode.vcode.ide.core.autocomplete.TsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.editor.highlight.HighlightToken;
 import com.cocode.vcode.ide.core.editor.text.Content;
 import com.cocode.vcode.ide.core.editor.text.ContentChangeListener;
@@ -44,8 +45,10 @@ import com.cocode.vcode.ide.core.parser.IndentationEngine;
 import com.cocode.vcode.ide.core.search.SearchResult;
 import com.cocode.vcode.ide.core.syntax.HtmlSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.JsSyntaxHighlighter;
+import com.cocode.vcode.ide.core.syntax.CssSyntaxHighlighter;
+import com.cocode.vcode.ide.core.syntax.TsSyntaxHighlighter;
+import com.cocode.vcode.ide.core.syntax.JsonSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.MarkdownSyntaxHighlighter;
-import com.cocode.vcode.ide.core.syntax.ScssSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.SvgSyntaxHighlighter;
 import com.cocode.vcode.ide.core.syntax.SyntaxHighlighter;
 import com.cocode.vcode.ide.data.model.AppSettings;
@@ -1582,12 +1585,6 @@ public class CodeEditText extends View {
                     if (currentFile != null) cssEngine.setCurrentFile(currentFile);
                     this.autoCompleteEngine = cssEngine;
                     break;
-                case SCSS:
-                    this.syntaxHighlighter = new ScssSyntaxHighlighter(ctx);
-                    CssAutoCompleteEngine scssEngine = new CssAutoCompleteEngine(ctx);
-                    if (currentFile != null) scssEngine.setCurrentFile(currentFile);
-                    this.autoCompleteEngine = scssEngine;
-                    break;
                 case JAVASCRIPT:
                     this.syntaxHighlighter = new JsSyntaxHighlighter(ctx);
                     JsAutoCompleteEngine jsEngine = new JsAutoCompleteEngine(ctx);
@@ -1596,8 +1593,7 @@ public class CodeEditText extends View {
                     break;
                 case TYPESCRIPT:
                     this.syntaxHighlighter = new TsSyntaxHighlighter(ctx);
-                    com.cocode.vcode.ide.core.autocomplete.TsAutoCompleteEngine tsEngine =
-                            new com.cocode.vcode.ide.core.autocomplete.TsAutoCompleteEngine(ctx);
+                    TsAutoCompleteEngine tsEngine = new TsAutoCompleteEngine(ctx);
                     if (currentFile != null) tsEngine.setCurrentFile(currentFile);
                     this.autoCompleteEngine = tsEngine;
                     break;
