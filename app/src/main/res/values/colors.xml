@@ -19,7 +19,13 @@
     <color name="vcode_bracket_3">#1E90FF</color> <!-- DodgerBlue -->
     <color name="vcode_bracket_4">#00FA9A</color> <!-- MediumSpringGreen -->
 
-    <!-- M3 On/Container colors (light) -->
+    <!-- Rainbow Brackets -->
+    <color name="vcode_rainbow_1">#FFD700</color> <!-- Gold -->
+    <color name="vcode_rainbow_2">#DA70D6</color> <!-- Orchid -->
+    <color name="vcode_rainbow_3">#87CEFA</color> <!-- Light Sky Blue -->
+    <color name="vcode_rainbow_4">#FF8C00</color> <!-- Dark Orange -->
+    
+    <!-- Code Editor Specific Colors -->
     <color name="vcode_on_primary">#FFFFFF</color>
     <color name="vcode_primary_container">#D6E4FF</color>
     <color name="vcode_on_primary_container">#001A41</color>

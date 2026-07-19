@@ -16,6 +16,9 @@ import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
 
 import com.cocode.vcode.ide.R;
+import com.cocode.vcode.ide.core.editor.text.Content;
+import com.cocode.vcode.ide.core.editor.text.ContentPosition;
+import com.cocode.vcode.ide.core.editor.highlight.HighlightToken;
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.databinding.ViewerApiTesterBinding;
@@ -387,7 +390,10 @@ public class ApiTesterViewer implements IFileViewer {
             state.put("headers_obj", getHeadersJson());
             state.put("body_obj", getBodyJson());
 
-            viewModel.updateActiveFileContent(state.toString(), 0, 0);
+            currentFile.setContent(state.toString());
+            currentFile.setDirty(true);
+            viewModel.notifyFileDirtyStatusChanged();
+            viewModel.triggerAutoSave();
         } catch (JSONException ignored) {
         }
     }

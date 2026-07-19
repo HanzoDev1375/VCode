@@ -1,41 +1,26 @@
 package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
-import android.text.SpannableStringBuilder;
 
-import java.util.regex.Pattern;
+import java.util.Arrays;
+import java.util.HashSet;
+import java.util.Set;
 
 public class TsSyntaxHighlighter extends JsSyntaxHighlighter {
 
-    private static final Pattern PAT_TS_KEYWORDS = Pattern.compile(
-            "\\b(interface|type|enum|as|readonly|implements|declare|namespace|module|any|string|number|boolean|symbol|unknown|never|public|private|protected|abstract|override)\\b");
+    private static final Set<String> TS_KEYWORDS = new HashSet<>(Arrays.asList(
+            "type", "interface", "implements", "public", "private", "protected",
+            "readonly", "enum", "declare", "namespace", "module", "any", "number",
+            "boolean", "string", "symbol", "unknown", "never", "as", "is", "keyof",
+            "infer", "abstract", "get", "set"
+    ));
 
     public TsSyntaxHighlighter(Context context) {
         super(context);
     }
 
     @Override
-    public SpannableStringBuilder highlight(String code) {
-        if (code == null || code.isEmpty())
-            return new SpannableStringBuilder(code != null ? code : "");
-        SpannableStringBuilder ssb = new SpannableStringBuilder(code);
-
-        apply(ssb, PAT_OPERATORS, code, colorOperator);
-        apply(ssb, PAT_NUMBER, code, colorNumber);
-        apply(ssb, PAT_FUNC_NAME, code, colorFunc);
-        apply(ssb, PAT_BUILTINS, code, colorBuiltin);
-        apply(ssb, PAT_BOOL_NULL, code, colorBoolean);
-        apply(ssb, PAT_KEYWORDS, code, colorKeyword);
-        apply(ssb, PAT_TS_KEYWORDS, code, colorKeyword); // TS specific keywords
-        apply(ssb, PAT_STRING_DQ, code, colorString);
-        apply(ssb, PAT_STRING_SQ, code, colorString);
-        apply(ssb, PAT_TEMPLATE_LIT, code, colorString);
-        apply(ssb, PAT_COMMENT_SL, code, colorComment);
-        apply(ssb, PAT_COMMENT_ML, code, colorComment);
-
-        applyLinks(ssb, code);
-        applyBrackets(ssb, code);
-
-        return ssb;
+    protected boolean isKeyword(String word) {
+        return super.isKeyword(word) || TS_KEYWORDS.contains(word);
     }
 }

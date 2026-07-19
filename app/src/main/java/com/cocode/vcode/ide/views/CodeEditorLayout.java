@@ -20,6 +20,7 @@ public class CodeEditorLayout extends LinearLayout {
     private final Handler handler = new Handler(Looper.getMainLooper());
     private LineNumberView lineNumberView;
     private CodeEditText codeEditText;
+    private SelectionToolbar selectionToolbar;
     private final Runnable syncRunnable = this::syncLineNumberView;
 
     public CodeEditorLayout(Context context) {
@@ -41,7 +42,7 @@ public class CodeEditorLayout extends LinearLayout {
         setOrientation(HORIZONTAL);
 
         lineNumberView = new LineNumberView(context);
-        codeEditText = new CodeEditText(context);
+        codeEditText   = new CodeEditText(context);
 
         LayoutParams lineParams = new LayoutParams(
                 LayoutParams.WRAP_CONTENT, LayoutParams.MATCH_PARENT);
@@ -58,12 +59,25 @@ public class CodeEditorLayout extends LinearLayout {
         addView(codeEditText);
 
         lineNumberView.bindEditor(codeEditText);
-        // Synchronize scroll shifts from the editor to the line numbers gutter
+
+        // Set up SelectionToolbar (Phase 4)
+        selectionToolbar = new SelectionToolbar(context);
+        selectionToolbar.bindEditor(codeEditText);
+        selectionToolbar.hide();
+
+        // Wire selection changes to show/hide the toolbar
+        codeEditText.setOnSelectionChangeListener(hasSelection -> {
+            if (hasSelection) {
+                selectionToolbar.show();
+            } else {
+                selectionToolbar.hide();
+            }
+        });
+
         // Synchronize scroll shifts from the editor to the line numbers gutter.
         // Only update scrollY — NOT cursorOffset — during scroll to avoid O(n) scan mid-fling.
-        codeEditText.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
-            lineNumberView.setScrollY(scrollY);
-        });
+        codeEditText.setOnScrollChangeListener((scrollX, scrollY) ->
+                lineNumberView.setScrollY(scrollY));
 
         codeEditText.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
                 syncLineNumberView());
@@ -71,20 +85,7 @@ public class CodeEditorLayout extends LinearLayout {
         codeEditText.setOnClickListener(v -> syncLineNumberView());
 
         // Update gutter measurements in response to typing additions (debounced)
-        codeEditText.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                scheduleSyncLineNumberView();
-            }
-        });
+        codeEditText.addContentChangeListener(this::scheduleSyncLineNumberView);
     }
 
     private void scheduleSyncLineNumberView() {
@@ -96,7 +97,7 @@ public class CodeEditorLayout extends LinearLayout {
      * Pumps positioning coordinates and line metrics state values from the editor canvas into the side gutter view.
      */
     private void syncLineNumberView() {
-        int lineCount = codeEditText.getLineCount();
+        int lineCount = codeEditText.getLogicalLineCount();
 
         lineNumberView.setLineCount();
         lineNumberView.setLineHeight();
@@ -120,6 +121,15 @@ public class CodeEditorLayout extends LinearLayout {
 
     public LineNumberView getLineNumberView() {
         return lineNumberView;
+    }
+
+    /**
+     * Returns the {@link SelectionToolbar} bound to this editor layout.
+     * Callers may add {@code getSelectionToolbar().getView()} to their own layout
+     * (e.g. at the bottom of the activity's container) to display it.
+     */
+    public SelectionToolbar getSelectionToolbar() {
+        return selectionToolbar;
     }
 
     @Override

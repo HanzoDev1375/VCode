@@ -19,58 +19,77 @@ import com.cocode.vcode.ide.views.CodeEditorLayout;
 public class CodeFileViewer implements IFileViewer {
 
     private final Handler jsonValidationHandler = new Handler(Looper.getMainLooper());
+    private FrameLayout viewContainer;
     private CodeEditorLayout editorLayout;
     private CodeEditText codeEditText;
     private EditorFile currentFile;
     private EditorViewModel viewModel;
     private IEditorCallback editorCallback;
-    private final TextWatcher editorTextWatcher = new TextWatcher() {
-        @Override
-        public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+    public void flushContentToViewModel() {
+        if (currentFile != null && codeEditText != null) {
+            currentFile.setContent(codeEditText.getTextAsString());
+            currentFile.setCursorPosition(codeEditText.getSelectionStart());
+            currentFile.setScrollY(codeEditText.getScrollY());
         }
-
-        @Override
-        public void onTextChanged(CharSequence s, int start, int before, int count) {
-        }
-
-        @Override
-        public void afterTextChanged(Editable s) {
-            if (codeEditText != null && currentFile != null && viewModel != null) {
-                String content = s.toString();
-                viewModel.updateActiveFileContent(content, codeEditText.getSelectionStart(), codeEditText.getScrollY());
-                validateCodeIfRequired(content);
-            }
-        }
-    };
+    }
 
     @Override
     public View getView(Context context, ViewGroup parent) {
         if (editorLayout == null) {
+            // Outer FrameLayout — holds the editor + the floating selection toolbar
+            FrameLayout container = new FrameLayout(context);
+            container.setLayoutParams(new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.MATCH_PARENT));
+
             editorLayout = new CodeEditorLayout(context);
             editorLayout.setLayoutParams(new FrameLayout.LayoutParams(
                     ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.MATCH_PARENT));
 
+            container.addView(editorLayout);
+
+            // Pin the SelectionToolbar to the bottom of the container (Phase 4)
+            View toolbarView = editorLayout.getSelectionToolbar().getView();
+            FrameLayout.LayoutParams tbParams = new FrameLayout.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    android.view.Gravity.BOTTOM);
+            toolbarView.setLayoutParams(tbParams);
+            container.addView(toolbarView);
+
+            this.viewContainer = container;
             codeEditText = editorLayout.getCodeEditText();
-            codeEditText.addTextChangedListener(editorTextWatcher);
+            codeEditText.addContentChangeListener(() -> {
+                if (currentFile != null && viewModel != null) {
+                    if (!currentFile.isDirty()) {
+                        currentFile.setDirty(true);
+                        viewModel.notifyFileDirtyStatusChanged();
+                    }
+                    validateCodeIfRequired();
+                }
+            });
 
             if (context instanceof IEditorCallback) {
                 editorCallback = (IEditorCallback) context;
             }
         }
-        return editorLayout;
+        return viewContainer;
     }
 
 
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
+        if (codeEditText != null) {
+            // We must flush the PREVIOUS file's state to the model before switching!
+            // Do this BEFORE updating this.currentFile, otherwise we overwrite the NEW file with the old (or empty) editor content!
+            flushContentToViewModel();
+        }
+
         this.currentFile = file;
         this.viewModel = viewModel;
 
         if (codeEditText == null) return;
-
-        // Remove listener temporarily to avoid triggering changes during load
-        codeEditText.removeTextChangedListener(editorTextWatcher);
 
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
         if (settings != null) {
@@ -80,7 +99,7 @@ public class CodeFileViewer implements IFileViewer {
             editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
         }
 
-        codeEditText.setHorizontallyScrolling(false);
+        // Horizontal scrolling is managed internally by CodeEditText (View-based OverScroller)
 
         codeEditText.setTag(file.getId());
         codeEditText.setCurrentFile(file.getFile());
@@ -97,14 +116,13 @@ public class CodeFileViewer implements IFileViewer {
             codeEditText.scrollTo(0, file.getScrollY());
         }
 
-        codeEditText.addTextChangedListener(editorTextWatcher);
-        validateCodeIfRequired(file.getContent());
+        validateCodeIfRequired();
     }
 
     @Override
     public void onResume() {
         if (currentFile != null && codeEditText != null) {
-            validateCodeIfRequired(codeEditText.getText().toString());
+            validateCodeIfRequired();
         }
     }
 
@@ -117,7 +135,7 @@ public class CodeFileViewer implements IFileViewer {
     public void destroy() {
         onPause();
         if (codeEditText != null) {
-            codeEditText.removeTextChangedListener(editorTextWatcher);
+            // Nothing to remove for lambdas since we just clear the reference
         }
         editorLayout = null;
         codeEditText = null;
@@ -131,7 +149,7 @@ public class CodeFileViewer implements IFileViewer {
         return codeEditText;
     }
 
-    private void validateCodeIfRequired(String text) {
+    private void validateCodeIfRequired() {
         if (editorCallback == null || currentFile == null || viewModel == null) return;
 
         AppSettings settings = viewModel.getSettingsLiveData().getValue();
@@ -140,6 +158,11 @@ public class CodeFileViewer implements IFileViewer {
 
             final EditorFile capturedFile = currentFile;
             final IEditorCallback capturedCallback = editorCallback;
+
+            // Capture UI state on main thread
+            final int cursor = codeEditText.getSelectionStart();
+            final int scrollY = codeEditText.getScrollY();
+
             Runnable validationRunnable = () -> {
                 ExecutorProvider.getInstance().runOnIo(() -> {
                     if (capturedFile == null || capturedFile.getFile() == null) {
@@ -150,6 +173,23 @@ public class CodeFileViewer implements IFileViewer {
                         return;
                     }
 
+                    // 1. Safely allocate the large document string on the background thread!
+                    String text = "";
+                    if (codeEditText != null) {
+                        text = codeEditText.getTextAsString();
+                    }
+
+                    // 2. Update EditorFile with latest state so AutoSave will pick it up
+                    capturedFile.setContent(text);
+                    capturedFile.setCursorPosition(cursor);
+                    capturedFile.setScrollY(scrollY);
+
+                    // 3. Trigger AutoSave on Main Thread
+                    if (settings.autoSave) {
+                        ExecutorProvider.getInstance().runOnMain(() -> viewModel.triggerAutoSave());
+                    }
+
+                    // 4. Run language diagnostics
                     java.util.List<com.cocode.vcode.ide.data.model.Problem> problems =
                             com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(capturedFile.getFile(), text, capturedFile.getFileType());
 
@@ -171,7 +211,7 @@ public class CodeFileViewer implements IFileViewer {
             viewModel.setDiagnosticLoading();
 
             // Perf: adaptive delay — large files get more debounce time so diagnostics don't compete with typing
-            int contentLen = text != null ? text.length() : 0;
+            int contentLen = codeEditText != null ? codeEditText.length() : 0;
             long diagDelay = contentLen > 20000 ? 1500L : 800L;
             jsonValidationHandler.postDelayed(validationRunnable, diagDelay);
         }

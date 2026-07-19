@@ -37,7 +37,7 @@ import java.util.List;
 public class AutoCompletePopup {
 
     private static final int WIDTH_DP = 280;
-    private static final int MAX_VISIBLE_ITEMS = 5;
+    private static final int MAX_VISIBLE_ITEMS = 4;
     private static final int ITEM_HEIGHT_DP = 38;
 
     private final Context context;
@@ -87,43 +87,35 @@ public class AutoCompletePopup {
         popupWindow.setWidth(popupWidth);
 
         int itemCount = Math.min(items.size(), MAX_VISIBLE_ITEMS);
-        int estimatedHeight = itemCount * UiUtils.dpToPx(context, ITEM_HEIGHT_DP);
+        int popupHeight = itemCount * UiUtils.dpToPx(context, ITEM_HEIGHT_DP);
+        int estimatedHeight = popupHeight;
 
-        if (items.size() > MAX_VISIBLE_ITEMS) {
-            popupWindow.setHeight(UiUtils.dpToPx(context, MAX_VISIBLE_ITEMS * ITEM_HEIGHT_DP));
-        } else {
-            popupWindow.setHeight(ViewGroup.LayoutParams.WRAP_CONTENT);
+        popupWindow.setHeight(popupHeight);
+
+        // AD-2: getCursorScreenCoords() already returns window-absolute pixel coordinates
+        // (it calls getLocationInWindow() internally and factors in scroll + padding).
+        // We must NOT convert back to view-local then re-add editorLocation — that would
+        // double-subtract getScrollX/Y which are already baked in.
+        int windowX = 0;
+        int windowYTop = 0;
+        int windowYBottom = 0;
+
+        if (editorView instanceof CodeEditText) {
+            CodeEditText codeEditor = (CodeEditText) editorView;
+            int[] coords = codeEditor.getCursorScreenCoords(cursorOffset);
+            // coords[0] = window-absolute X, coords[1] = window-absolute top Y, coords[2] = bottom Y
+            windowX       = coords[0];
+            windowYTop    = coords[1];
+            windowYBottom = coords[2];
         }
 
-        int[] editorLocation = new int[2];
-        editorView.getLocationInWindow(editorLocation);
-
-        float cursorX = 0;
-        float cursorYBottom = 0;
-        float cursorYTop = 0;
-        int paddingTop = 0;
-        int scrollY = 0;
-
-        if (editorView instanceof android.widget.EditText) {
-            android.widget.EditText et = (android.widget.EditText) editorView;
-            paddingTop = et.getTotalPaddingTop();
-            scrollY = et.getScrollY();
-
-            if (et.getLayout() != null && cursorOffset >= 0 && cursorOffset <= et.getText().length()) {
-                cursorX = et.getLayout().getPrimaryHorizontal(cursorOffset);
-                int line = et.getLayout().getLineForOffset(cursorOffset);
-                cursorYBottom = et.getLayout().getLineBottom(line);
-                cursorYTop = et.getLayout().getLineTop(line);
-            }
-        }
-
-        int x = editorLocation[0] + (int) cursorX - editorView.getScrollX();
+        int x = windowX;
 
         android.graphics.Rect visibleFrame = new android.graphics.Rect();
         editorView.getWindowVisibleDisplayFrame(visibleFrame);
 
-        int yBelow = editorLocation[1] + paddingTop + (int) cursorYBottom - scrollY + UiUtils.dpToPx(context, 4);
-        int yAbove = editorLocation[1] + paddingTop + (int) cursorYTop - scrollY - estimatedHeight - UiUtils.dpToPx(context, 4);
+        int yBelow = windowYBottom + UiUtils.dpToPx(context, 4);
+        int yAbove = windowYTop - estimatedHeight - UiUtils.dpToPx(context, 4);
 
         int y;
         if (yBelow + estimatedHeight > visibleFrame.bottom) {
@@ -138,7 +130,7 @@ public class AutoCompletePopup {
         x = Math.max(0, x);
 
         if (popupWindow.isShowing()) {
-            popupWindow.update(x, y, popupWidth, -1);
+            popupWindow.update(x, y, popupWidth, popupHeight);
         } else {
             popupWindow.showAtLocation(editorView, Gravity.NO_GRAVITY, x, y);
         }

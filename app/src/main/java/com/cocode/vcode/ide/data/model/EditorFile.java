@@ -22,6 +22,7 @@ public class EditorFile {
     private boolean isContentLoaded = false;
     private boolean readOnly = false;
     private boolean isVirtual = false;
+    private boolean manuallyDirty = false;
 
     public EditorFile() {
     }
@@ -61,6 +62,10 @@ public class EditorFile {
         this.fileType = fileType;
     }
 
+    public void setDirty(boolean dirty) {
+        this.manuallyDirty = dirty;
+    }
+
     /**
      * Compares active working text lines against disk persistence states to look for unsaved edits.
      * Prevents tracking mutations on external asset models.
@@ -70,6 +75,7 @@ public class EditorFile {
     public boolean isDirty() {
         if (isBinaryAsset())
             return false; // Binary assets edited externally cannot be "dirty" in our text editor
+        if (manuallyDirty) return true;
         if (content == null && savedContent == null) return false;
         if (content == null || savedContent == null) return true;
         return !content.equals(savedContent);
@@ -80,6 +86,7 @@ public class EditorFile {
      */
     public void markSaved() {
         this.savedContent = this.content;
+        this.manuallyDirty = false;
     }
 
     public String getFileName() {

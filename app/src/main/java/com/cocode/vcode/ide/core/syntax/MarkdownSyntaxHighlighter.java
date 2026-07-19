@@ -1,140 +1,240 @@
 package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.views.ColorPreviewSpan;
-import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
+import com.cocode.vcode.ide.core.editor.highlight.HighlightToken;
+import com.cocode.vcode.ide.core.editor.text.ContentLine;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
 public class MarkdownSyntaxHighlighter extends SyntaxHighlighter {
-
-    private static final Pattern PAT_HEADER = Pattern.compile("^#{1,6}\\s+.*$", Pattern.MULTILINE);
-    private static final Pattern PAT_BOLD = Pattern.compile("(\\*\\*|__)(.*?)\\1");
-    private static final Pattern PAT_ITALIC = Pattern.compile("(?<!\\w)(\\*|_)(?![\\s*_*])(.*?)(?<!\\s)\\1(?!\\w)");
-    private static final Pattern PAT_STRIKETHROUGH = Pattern.compile("~~(.*?)~~");
-    private static final Pattern PAT_CODE_BLOCK = Pattern.compile("```[\\s\\S]*?```");
-    private static final Pattern PAT_CODE_BLOCK_LANG = Pattern.compile("```([a-z]+)[ \\t]*\\n([\\s\\S]*?)```", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PAT_INLINE_CODE = Pattern.compile("`[^`]+`");
-    private static final Pattern PAT_QUOTE = Pattern.compile("^>.*$", Pattern.MULTILINE);
-    private static final Pattern PAT_LIST = Pattern.compile("^[ \\t]*([*+-]|\\d+\\.)\\s", Pattern.MULTILINE);
-    private static final Pattern PAT_LINK = Pattern.compile("!?\\[(.*?)\\]\\((.*?)\\)");
 
     private final int colorHeader;
     private final int colorBold;
     private final int colorItalic;
-    private final int colorStrikethrough;
     private final int colorCode;
     private final int colorQuote;
     private final int colorList;
     private final int colorLink;
+    private final int colorStrikethrough;
 
     private final HtmlSyntaxHighlighter htmlHighlighter;
-    private final CssSyntaxHighlighter cssHighlighter;
+
+    // States for multi-line code blocks (``` fences)
+    private static final int STATE_NORMAL = 0;
+    private static final int STATE_FENCE  = 1; // inside ``` block
 
     public MarkdownSyntaxHighlighter(Context context) {
         super(context);
-        colorHeader = getColor(R.color.vcode_color_md_header);
-        colorBold = getColor(R.color.vcode_color_md_bold);
-        colorItalic = getColor(R.color.vcode_color_md_italic);
+        colorHeader        = getColor(R.color.vcode_color_md_header);
+        colorBold          = getColor(R.color.vcode_color_md_bold);
+        colorItalic        = getColor(R.color.vcode_color_md_italic);
+        colorCode          = getColor(R.color.vcode_color_md_code);
+        colorQuote         = getColor(R.color.vcode_color_md_quote);
+        colorList          = getColor(R.color.vcode_color_md_list);
+        colorLink          = getColor(R.color.vcode_color_md_link);
         colorStrikethrough = getColor(R.color.vcode_color_md_strikethrough);
-        colorCode = getColor(R.color.vcode_color_md_code);
-        colorQuote = getColor(R.color.vcode_color_md_quote);
-        colorList = getColor(R.color.vcode_color_md_list);
-        colorLink = getColor(R.color.vcode_color_md_link);
-
-        htmlHighlighter = new HtmlSyntaxHighlighter(context);
-        cssHighlighter = new CssSyntaxHighlighter(context);
+        htmlHighlighter    = new HtmlSyntaxHighlighter(context);
     }
 
     @Override
-    public SpannableStringBuilder highlight(String code) {
-        if (code == null || code.isEmpty())
-            return new SpannableStringBuilder(code != null ? code : "");
-        return highlightRange(code, 0, code.length());
-    }
+    public List<HighlightToken> tokenizeLine(String lineStr, int lineIndex, int startState) {
+        List<HighlightToken> tokens = new ArrayList<>();
+        int len = lineStr.length();
+        int state = startState;
 
-    @Override
-    public SpannableStringBuilder highlightRange(String fullCode, int rangeStart, int rangeEnd) {
-        if (fullCode == null || fullCode.isEmpty()) return new SpannableStringBuilder("");
-        int start = Math.max(0, rangeStart);
-        int end = Math.min(fullCode.length(), rangeEnd);
-        if (start >= end) return new SpannableStringBuilder("");
+        // ── Fenced code block ────────────────────────────────────────────────
+        if (state == STATE_FENCE) {
+            int i = 0;
+            while (i < len && lineStr.charAt(i) == '`') i++;
+            tokens.add(new HighlightToken(lineIndex, 0, len, colorCode, false));
+            lastLineState = (i >= 3) ? STATE_NORMAL : STATE_FENCE;
+            return tokens;
+        }
 
-        String sub = fullCode.substring(start, end);
-        SpannableStringBuilder ssb = new SpannableStringBuilder(sub);
+        // ── Opening fence ────────────────────────────────────────────────────
+        if (len >= 3 && lineStr.charAt(0) == '`' && lineStr.charAt(1) == '`' && lineStr.charAt(2) == '`') {
+            tokens.add(new HighlightToken(lineIndex, 0, len, colorCode, false));
+            lastLineState = STATE_FENCE;
+            return tokens;
+        }
 
-        apply(ssb, PAT_CODE_BLOCK, sub, colorCode);
-        apply(ssb, PAT_INLINE_CODE, sub, colorCode);
-        apply(ssb, PAT_HEADER, sub, colorHeader);
-        apply(ssb, PAT_QUOTE, sub, colorQuote);
-        apply(ssb, PAT_LIST, sub, colorList);
-        apply(ssb, PAT_LINK, sub, colorLink);
-        apply(ssb, PAT_BOLD, sub, colorBold);
-        apply(ssb, PAT_ITALIC, sub, colorItalic);
-        apply(ssb, PAT_STRIKETHROUGH, sub, colorStrikethrough);
+        // ── Blank line ───────────────────────────────────────────────────────
+        if (len == 0) {
+            lastLineState = STATE_NORMAL;
+            return tokens;
+        }
 
-        // Apply HTML highlighter for raw HTML/CSS mixed in markdown
-        SpannableStringBuilder htmlSsb = htmlHighlighter.highlightRange(fullCode, start, end);
-        mergeSpans(ssb, htmlSsb, 0);
+        int i = 0;
 
-        // Additionally highlight specific code blocks for CSS explicitly
-        Matcher m = PAT_CODE_BLOCK_LANG.matcher(fullCode);
-        while (m.find()) {
-            String lang = m.group(1).toLowerCase();
-            int blockStart = m.start(2);
-            int blockEnd = m.end(2);
+        // ── ATX Header: # ## ### ─────────────────────────────────────────────
+        if (lineStr.charAt(0) == '#') {
+            tokens.add(new HighlightToken(lineIndex, 0, len, colorHeader, false));
+            lastLineState = STATE_NORMAL;
+            return tokens;
+        }
 
-            if (blockEnd > start && blockStart < end) {
-                if (lang.equals("css")) {
-                    int hlStart = Math.max(blockStart, start) - blockStart;
-                    int hlEnd = Math.min(blockEnd, end) - blockStart;
-                    if (hlStart < hlEnd) {
-                        String visibleInner = m.group(2).substring(hlStart, hlEnd);
-                        SpannableStringBuilder innerSsb = cssHighlighter.highlight(visibleInner);
-                        int offset = Math.max(blockStart, start) - start;
-                        mergeSpans(ssb, innerSsb, offset);
+        // ── Block quote: > ────────────────────────────────────────────────────
+        if (lineStr.charAt(0) == '>') {
+            tokens.add(new HighlightToken(lineIndex, 0, len, colorQuote, false));
+            lastLineState = STATE_NORMAL;
+            return tokens;
+        }
+
+        // ── HTML block: line starts with < (an HTML tag) ─────────────────────
+        // Delegate the entire line to the HTML highlighter.
+        if (lineStr.charAt(0) == '<') {
+            List<HighlightToken> htmlTokens = htmlHighlighter.tokenizeLine(lineStr, lineIndex, 0);
+            tokens.addAll(htmlTokens);
+            lastLineState = STATE_NORMAL;
+            return tokens;
+        }
+
+        // ── Unordered list: - * + ─────────────────────────────────────────────
+        if ((lineStr.charAt(0) == '-' || lineStr.charAt(0) == '*' || lineStr.charAt(0) == '+')
+                && len > 1 && lineStr.charAt(1) == ' ') {
+            tokens.add(new HighlightToken(lineIndex, 0, 1, colorList, false));
+            i = 1;
+        }
+
+        // ── Ordered list: 1. 2. ───────────────────────────────────────────────
+        if (i == 0 && Character.isDigit(lineStr.charAt(0))) {
+            int j = 0;
+            while (j < len && Character.isDigit(lineStr.charAt(j))) j++;
+            if (j < len && lineStr.charAt(j) == '.') {
+                tokens.add(new HighlightToken(lineIndex, 0, j + 1, colorList, false));
+                i = j + 1;
+            }
+        }
+
+        // ── Inline scanning ───────────────────────────────────────────────────
+        while (i < len) {
+            char c = lineStr.charAt(i);
+
+            // Inline code: `...`
+            if (c == '`') {
+                int j = i + 1;
+                while (j < len && lineStr.charAt(j) != '`') j++;
+                if (j < len) j++; // include closing `
+                tokens.add(new HighlightToken(lineIndex, i, j, colorCode, false));
+                i = j;
+                continue;
+            }
+
+            // Inline HTML: <tag ...> — delegate the tag substring to HtmlSyntaxHighlighter
+            if (c == '<') {
+                // Find the closing '>' (handle attributes with quoted '>' inside them)
+                int j = i + 1;
+                boolean inQuote = false;
+                char quoteChar = 0;
+                while (j < len) {
+                    char ch = lineStr.charAt(j);
+                    if (inQuote) {
+                        if (ch == quoteChar) inQuote = false;
+                    } else {
+                        if (ch == '"' || ch == '\'') { inQuote = true; quoteChar = ch; }
+                        else if (ch == '>') { j++; break; }
                     }
+                    j++;
+                }
+                // Tokenize the tag substring with the HTML highlighter
+                String tagSub = lineStr.substring(i, Math.min(j, len));
+                List<HighlightToken> htmlTokens = htmlHighlighter.tokenizeLine(tagSub, lineIndex, 0);
+                for (HighlightToken t : htmlTokens) {
+                    t.startCol += i;
+                    t.endCol   += i;
+                    tokens.add(t);
+                }
+                i = Math.min(j, len);
+                continue;
+            }
+
+            // Bold+italic: ***text*** or ___text___
+            if ((c == '*' || c == '_') && i + 2 < len && lineStr.charAt(i + 1) == c && lineStr.charAt(i + 2) == c) {
+                char delim = c;
+                String closing = "" + delim + delim + delim;
+                int j = lineStr.indexOf(closing, i + 3);
+                if (j != -1) {
+                    tokens.add(new HighlightToken(lineIndex, i, j + 3, colorBold, false));
+                    i = j + 3;
+                    continue;
                 }
             }
-        }
 
-        return ssb;
-    }
-
-    private void apply(SpannableStringBuilder ssb, Pattern pattern, String code, int color) {
-        Matcher m = pattern.matcher(code);
-        while (m.find()) {
-            applySpan(ssb, m.start(), m.end(), color);
-        }
-    }
-
-    private void mergeSpans(SpannableStringBuilder target, SpannableStringBuilder source, int offset) {
-        if (source == null || offset < 0) return;
-
-        SyntaxHighlightSpan[] spans = source.getSpans(0, source.length(), SyntaxHighlightSpan.class);
-        for (SyntaxHighlightSpan span : spans) {
-            int s = source.getSpanStart(span) + offset;
-            int e = source.getSpanEnd(span) + offset;
-            applySpan(target, s, e, span.getForegroundColor(), span.isUnderline());
-        }
-
-        ColorPreviewSpan[] colorSpans = source.getSpans(0, source.length(), ColorPreviewSpan.class);
-        for (ColorPreviewSpan span : colorSpans) {
-            int s = source.getSpanStart(span) + offset;
-            int e = source.getSpanEnd(span) + offset;
-            if (s >= 0 && e <= target.length()) {
-                target.setSpan(
-                        new ColorPreviewSpan(span.getPreviewColor(), span.getTextColor()),
-                        s,
-                        e,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
+            // Bold: **text** or __text__
+            if ((c == '*' || c == '_') && i + 1 < len && lineStr.charAt(i + 1) == c) {
+                char delim = c;
+                String closing = "" + delim + delim;
+                int j = lineStr.indexOf(closing, i + 2);
+                if (j != -1) {
+                    tokens.add(new HighlightToken(lineIndex, i, j + 2, colorBold, false));
+                    i = j + 2;
+                    continue;
+                }
             }
+
+            // Italic: *text* or _text_
+            if (c == '*' || c == '_') {
+                char delim = c;
+                int j = i + 1;
+                while (j < len && lineStr.charAt(j) != delim) j++;
+                if (j < len) {
+                    tokens.add(new HighlightToken(lineIndex, i, j + 1, colorItalic, false));
+                    i = j + 1;
+                    continue;
+                }
+            }
+
+            // Strikethrough: ~~text~~
+            if (c == '~' && i + 1 < len && lineStr.charAt(i + 1) == '~') {
+                int j = lineStr.indexOf("~~", i + 2);
+                if (j != -1) {
+                    tokens.add(new HighlightToken(lineIndex, i, j + 2, colorStrikethrough, false));
+                    i = j + 2;
+                    continue;
+                }
+            }
+
+            // Link/image: [text](url) or ![text](url)
+            if (c == '[' || (c == '!' && i + 1 < len && lineStr.charAt(i + 1) == '[')) {
+                int start = i;
+                if (c == '!') i++;
+                int closeBracket = lineStr.indexOf(']', i + 1);
+                if (closeBracket != -1 && closeBracket + 1 < len && lineStr.charAt(closeBracket + 1) == '(') {
+                    int closeParen = lineStr.indexOf(')', closeBracket + 2);
+                    if (closeParen != -1) {
+                        tokens.add(new HighlightToken(lineIndex, start, closeParen + 1, colorLink, false));
+                        i = closeParen + 1;
+                        continue;
+                    }
+                }
+                i = start + 1;
+                continue;
+            }
+
+            i++;
         }
+
+        lastLineState = STATE_NORMAL;
+        return tokens;
+    }
+
+    @Override
+    public int computeEndState(ContentLine line, int startState) {
+        int len = line.length();
+
+        if (startState == STATE_FENCE) {
+            int i = 0;
+            while (i < len && line.charAt(i) == '`') i++;
+            return (i >= 3) ? STATE_NORMAL : STATE_FENCE;
+        }
+
+        if (len >= 3 && line.charAt(0) == '`' && line.charAt(1) == '`' && line.charAt(2) == '`') {
+            return STATE_FENCE;
+        }
+
+        return STATE_NORMAL;
     }
 }

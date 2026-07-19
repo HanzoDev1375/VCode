@@ -6,7 +6,7 @@ import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
-import android.text.Layout;
+
 import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
@@ -191,6 +191,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         binding.ivTogglePreview.setOnClickListener(v -> toggleInlinePreview());
 
         binding.btnSaveCurrent.setOnClickListener(v -> {
+            if (activeViewer instanceof com.cocode.vcode.ide.ui.editor.viewer.CodeFileViewer) {
+                ((com.cocode.vcode.ide.ui.editor.viewer.CodeFileViewer) activeViewer).flushContentToViewModel();
+            }
             Integer activeIndex = viewModel.getActiveTabIndex().getValue();
             if (activeIndex != null && activeIndex >= 0) {
                 viewModel.saveActiveFile();
@@ -295,7 +298,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
             binding.btnUndo.setVisibility(View.VISIBLE);
             binding.btnRedo.setVisibility(View.VISIBLE);
-            binding.btnSaveCurrent.setVisibility(View.VISIBLE);
+            AppSettings settings = viewModel.getSettingsLiveData().getValue();
+            boolean autoSave = settings != null && settings.autoSave;
+            binding.btnSaveCurrent.setVisibility(autoSave ? View.GONE : View.VISIBLE);
         } else {
             binding.btnUndo.setVisibility(View.GONE);
             binding.btnRedo.setVisibility(View.GONE);
@@ -355,6 +360,8 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     activeViewer.bindFile(files.get(activeIndex), viewModel);
                 }
             }
+            binding.tabBar.setAutoSaveOn(settings.autoSave);
+            updateToolbarVisibility();
         });
 
         viewModel.getIsEditorLoading().observe(this, isLoading -> {
@@ -425,7 +432,15 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     }
                 }
                 updateActiveViewer(activeFile, isPreview);
-                binding.diagnosticBar.setVisibility(isFileDiagnosable(activeFile) ? View.VISIBLE : View.GONE);
+                boolean isEmpty = false;
+                if (activeViewer != null && activeViewer.getCodeEditor() != null) {
+                    isEmpty = activeViewer.getCodeEditor().length() == 0;
+                } else {
+                    String content = activeFile.getContent();
+                    isEmpty = (content == null || content.trim().isEmpty());
+                }
+                boolean showDiagnostic = isFileDiagnosable(activeFile) && !isEmpty;
+                binding.diagnosticBar.setVisibility(showDiagnostic ? View.VISIBLE : View.GONE);
             }
             updateToolbarVisibility();
         });
@@ -437,6 +452,20 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 binding.diagnosticBar.setVisibility(View.GONE);
                 return;
             }
+            
+            boolean isEmpty = false;
+            if (activeViewer != null && activeViewer.getCodeEditor() != null) {
+                isEmpty = activeViewer.getCodeEditor().length() == 0;
+            } else {
+                String content = files.get(idx).getContent();
+                isEmpty = (content == null || content.trim().isEmpty());
+            }
+            
+            if (isEmpty) {
+                binding.diagnosticBar.setVisibility(View.GONE);
+                return;
+            }
+
             binding.diagnosticBar.setVisibility(View.VISIBLE);
             if (counts != null) {
                 binding.diagnosticBar.update(counts[0], counts[1], counts[2]);
@@ -578,16 +607,20 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
 
         if (showTextEditingOptions) {
-            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
-            addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
-                isReadOnly = !isReadOnly;
-                applyReadOnlyState();
-            });
+            boolean isVirtual = activeFile != null && activeFile.isVirtual();
+            if (!isVirtual) {
+                addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
+                addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
+                    isReadOnly = !isReadOnly;
+                    applyReadOnlyState();
+                });
+            }
             if (CodeFormatter.isFormatSupported(files.get(activeIndex).getFileType())) {
                 addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
             }
-            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
-
+            if (!isVirtual) {
+                addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
+            }
         }
 
         addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
@@ -611,7 +644,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
         }));
 
-        if (hasOpenFile) {
+        AppSettings settingsForMenu = viewModel.getSettingsLiveData().getValue();
+        boolean autoSave = settingsForMenu != null && settingsForMenu.autoSave;
+        if (hasOpenFile && !autoSave) {
             addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_floppy_disk, "Save All", () -> {
                 viewModel.saveAll();
                 Toast.makeText(this, "Saving all files...", Toast.LENGTH_SHORT).show();
@@ -720,32 +755,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
     public void jumpToLine(int line) {
         CodeEditText codeEditText = getActiveCodeEditor();
-        if (codeEditText == null || codeEditText.getText() == null) return;
-
-        int targetLineIndex = line - 1;
-        String text = codeEditText.getText().toString();
-
-        // 1. Find exact character offset for the LOGICAL line
-        int currentLine = 0;
-        int offset = 0;
-        for (int i = 0; i < text.length(); i++) {
-            if (currentLine == targetLineIndex) {
-                offset = i;
-                break;
-            }
-            if (text.charAt(i) == '\n') currentLine++;
-        }
-
-        // 2. Set the cursor there
-        codeEditText.setSelection(offset);
-
-        // 3. Scroll to the VISUAL layout line that corresponds to this offset
-        Layout layout = codeEditText.getLayout();
-        if (layout != null) {
-            int visualLine = layout.getLineForOffset(offset);
-            int y = layout.getLineTop(visualLine);
-            codeEditText.scrollTo(0, Math.max(0, y - codeEditText.getPaddingTop()));
-        }
+        if (codeEditText == null) return;
+        // goToLine() handles clamping, cursor update, and scroll — O(log n) via Content.positionAt()
+        codeEditText.goToLine(line);
     }
 
     private void formatCurrentFile() {

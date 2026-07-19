@@ -1,331 +1,456 @@
 package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
 
 import com.cocode.vcode.ide.R;
-import com.cocode.vcode.ide.views.ColorPreviewSpan;
-import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
+import com.cocode.vcode.ide.core.editor.highlight.HighlightToken;
+import com.cocode.vcode.ide.core.editor.text.ContentLine;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
-/**
- * Hybrid syntax highlighter coordinator for HTML source code.
- * Parses general markup tokens while embedding dedicated sub-highlighters to handle
- * inline JavaScript script scopes and CSS design block sections seamlessly.
- */
 public class HtmlSyntaxHighlighter extends SyntaxHighlighter {
 
-    // Regular Expression patterns isolating explicit markup syntax boundaries
-    private static final Pattern PAT_COMMENT = Pattern.compile("<!--[\\s\\S]*?-->", Pattern.DOTALL);
-    private static final Pattern PAT_DOCTYPE = Pattern.compile("<!DOCTYPE[^>]*>", Pattern.CASE_INSENSITIVE);
-    private static final Pattern PAT_TAG_NAME = Pattern.compile("(?<=</?)[\\w-]+");
-    private static final Pattern PAT_BRACKET = Pattern.compile("</?|/?>|>");
-    private static final Pattern PAT_ATTR_NAME = Pattern.compile("\\s([\\w:-]+)(?=\\s*=)");
-    private static final Pattern PAT_ATTR_VAL = Pattern.compile("=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')");
-    private static final Pattern PAT_ENTITY = Pattern.compile("&[#\\w]+;");
-
-    // Scopes extracted for nested multi-language engine delegation processing
-    private static final Pattern PAT_SCRIPT = Pattern.compile(
-            "<script[^>]*>([\\s\\S]*?)</script>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-    private static final Pattern PAT_STYLE = Pattern.compile(
-            "<style[^>]*>([\\s\\S]*?)</style>", Pattern.CASE_INSENSITIVE | Pattern.DOTALL);
-
-    private final JsSyntaxHighlighter jsHighlighter;
-    private final CssSyntaxHighlighter cssHighlighter;
-
-    private final int colorComment;
-    private final int colorBracket;
     private final int colorTag;
-    private final int colorAttrName;
-    private final int colorAttrVal;
-    private final int colorEntity;
+    private final int colorAttribute;
+    private final int colorValue;
+    private final int colorBracket;
+    private final int colorHtmlComment;
+
+    private final CssSyntaxHighlighter cssHighlighter;
+    private final JsSyntaxHighlighter jsHighlighter;
+
+    private static final int STATE_NORMAL = 0;
+    private static final int STATE_COMMENT = 1;
+    private static final int STATE_TAG = 2;
+    private static final int STATE_STRING_DOUBLE = 3;
+    private static final int STATE_STRING_SINGLE = 4;
+    private static final int STATE_STYLE_CONTENT = 5;
+    private static final int STATE_SCRIPT_CONTENT = 6;
+    private static final int STATE_TAG_PENDING_STYLE = 7;
+    private static final int STATE_TAG_PENDING_SCRIPT = 8;
+    private static final int STATE_STRING_DOUBLE_PENDING_STYLE = 9;
+    private static final int STATE_STRING_SINGLE_PENDING_STYLE = 10;
+    private static final int STATE_STRING_DOUBLE_PENDING_SCRIPT = 11;
+    private static final int STATE_STRING_SINGLE_PENDING_SCRIPT = 12;
 
     public HtmlSyntaxHighlighter(Context context) {
         super(context);
-        jsHighlighter = new JsSyntaxHighlighter(context);
-        cssHighlighter = new CssSyntaxHighlighter(context);
-
-        colorComment = getColor(R.color.vcode_color_comment);
-        colorBracket = getColor(R.color.vcode_color_html_bracket);
         colorTag = getColor(R.color.vcode_color_html_tag);
-        colorAttrName = getColor(R.color.vcode_color_html_attribute);
-        colorAttrVal = getColor(R.color.vcode_color_html_value);
-        colorEntity = getColor(R.color.vcode_color_html_attribute);
+        colorAttribute = getColor(R.color.vcode_color_html_attribute);
+        colorValue = getColor(R.color.vcode_color_html_value);
+        colorBracket = getColor(R.color.vcode_color_html_bracket);
+        colorHtmlComment = getColor(R.color.vcode_color_comment);
+        cssHighlighter = new CssSyntaxHighlighter(context);
+        jsHighlighter = new JsSyntaxHighlighter(context);
+    }
+
+    private static int outerState(int combined) { return combined & 0xF; }
+    private static int innerState(int combined) { return combined >>> 4; }
+    private static int pack(int outer, int inner) { return (inner << 4) | outer; }
+
+    private static int stringState(int tagOuter, boolean isDouble) {
+        if (tagOuter == STATE_TAG_PENDING_STYLE) return isDouble ? STATE_STRING_DOUBLE_PENDING_STYLE : STATE_STRING_SINGLE_PENDING_STYLE;
+        if (tagOuter == STATE_TAG_PENDING_SCRIPT) return isDouble ? STATE_STRING_DOUBLE_PENDING_SCRIPT : STATE_STRING_SINGLE_PENDING_SCRIPT;
+        return isDouble ? STATE_STRING_DOUBLE : STATE_STRING_SINGLE;
+    }
+
+    private static int tagReturnState(int stringOuter) {
+        switch (stringOuter) {
+            case STATE_STRING_DOUBLE_PENDING_STYLE:
+            case STATE_STRING_SINGLE_PENDING_STYLE:
+                return STATE_TAG_PENDING_STYLE;
+            case STATE_STRING_DOUBLE_PENDING_SCRIPT:
+            case STATE_STRING_SINGLE_PENDING_SCRIPT:
+                return STATE_TAG_PENDING_SCRIPT;
+            default:
+                return STATE_TAG;
+        }
+    }
+
+    private static int indexOfIgnoreCase(String haystack, String needle, int from) {
+        int hLen = haystack.length();
+        int nLen = needle.length();
+        for (int i = Math.max(0, from); i <= hLen - nLen; i++) {
+            boolean match = true;
+            for (int j = 0; j < nLen; j++) {
+                if (Character.toLowerCase(haystack.charAt(i + j)) != needle.charAt(j)) { match = false; break; }
+            }
+            if (match) return i;
+        }
+        return -1;
+    }
+
+    private static int indexOfIgnoreCase(ContentLine line, String needle, int from, int len) {
+        int nLen = needle.length();
+        for (int i = Math.max(0, from); i <= len - nLen; i++) {
+            boolean match = true;
+            for (int k = 0; k < nLen; k++) {
+                if (Character.toLowerCase(line.charAt(i + k)) != needle.charAt(k)) { match = false; break; }
+            }
+            if (match) return i;
+        }
+        return -1;
+    }
+
+    private static boolean equalsIgnoreCaseAt(ContentLine line, int start, String word) {
+        for (int k = 0; k < word.length(); k++) {
+            if (Character.toLowerCase(line.charAt(start + k)) != word.charAt(k)) return false;
+        }
+        return true;
     }
 
     @Override
-    public SpannableStringBuilder highlight(String code) {
-        if (code == null || code.isEmpty())
-            return new SpannableStringBuilder(code != null ? code : "");
-        SpannableStringBuilder ssb = new SpannableStringBuilder(code);
+    public List<HighlightToken> tokenizeLine(String lineStr, int lineIndex, int startState) {
+        List<HighlightToken> tokens = new ArrayList<>();
+        int len = lineStr.length();
+        int outer = outerState(startState);
+        int inner = innerState(startState);
+        int i = 0;
+        boolean isFirstWord = false;
+        boolean isClosingTag = false;
 
-        // Collect embedded block ranges so HTML patterns can skip them
-        List<int[]> embeddedRanges = new ArrayList<>();
+        while (i < len) {
 
-        // Pass 1: Delegate internal <script> content blocks to JavaScript highlighter
-        Matcher scriptMatcher = PAT_SCRIPT.matcher(code);
-        while (scriptMatcher.find()) {
-            int groupStart = scriptMatcher.start(1);
-            int groupEnd = scriptMatcher.end(1);
-            String inner = scriptMatcher.group(1);
-            if (inner != null && !inner.isEmpty()) {
-                embeddedRanges.add(new int[]{groupStart, groupEnd});
-                SpannableStringBuilder innerSsb = jsHighlighter.highlight(inner);
-                mergeSpans(ssb, innerSsb, groupStart);
+            if (outer == STATE_STYLE_CONTENT || outer == STATE_SCRIPT_CONTENT) {
+                String needle = (outer == STATE_STYLE_CONTENT) ? "</style" : "</script";
+                int closeIdx = indexOfIgnoreCase(lineStr, needle, i);
+                int contentEnd = (closeIdx == -1) ? len : closeIdx;
+                if (contentEnd > i) {
+                    SyntaxHighlighter embedded = (outer == STATE_STYLE_CONTENT) ? cssHighlighter : jsHighlighter;
+                    List<HighlightToken> embeddedTokens = embedded.tokenizeLine(lineStr.substring(i, contentEnd), lineIndex, inner);
+                    for (HighlightToken t : embeddedTokens) {
+                        t.startCol += i;
+                        t.endCol += i;
+                        tokens.add(t);
+                    }
+                    inner = embedded.getLastLineState();
+                }
+                if (closeIdx == -1) {
+                    i = len;
+                } else {
+                    i = closeIdx;
+                    outer = STATE_NORMAL;
+                    inner = 0;
+                }
+                continue;
             }
-        }
 
-        // Pass 2: Delegate internal <style> design blocks to CSS highlighter
-        Matcher styleMatcher = PAT_STYLE.matcher(code);
-        while (styleMatcher.find()) {
-            int groupStart = styleMatcher.start(1);
-            int groupEnd = styleMatcher.end(1);
-            String inner = styleMatcher.group(1);
-            if (inner != null && !inner.isEmpty()) {
-                embeddedRanges.add(new int[]{groupStart, groupEnd});
-                SpannableStringBuilder innerSsb = cssHighlighter.highlight(inner);
-                mergeSpans(ssb, innerSsb, groupStart);
+            char c = lineStr.charAt(i);
+
+            if (outer == STATE_COMMENT) {
+                int commentEnd = lineStr.indexOf("-->", i);
+                if (commentEnd != -1) {
+                    tokens.add(new HighlightToken(lineIndex, i, commentEnd + 3, colorHtmlComment, false));
+                    i = commentEnd + 3;
+                    outer = STATE_NORMAL;
+                } else {
+                    tokens.add(new HighlightToken(lineIndex, i, len, colorHtmlComment, false));
+                    i = len;
+                }
+                continue;
             }
-        }
 
-        // Pass 3: Comments (highest priority)
-        applySkippingRanges(ssb, PAT_COMMENT, code, colorComment, embeddedRanges);
-
-        // Pass 4: DOCTYPE
-        applySkippingRanges(ssb, PAT_DOCTYPE, code, colorTag, embeddedRanges);
-
-        // Pass 5: Tag names
-        applySkippingRanges(ssb, PAT_TAG_NAME, code, colorTag, embeddedRanges);
-
-        // Pass 6: Brackets
-        applySkippingRanges(ssb, PAT_BRACKET, code, colorBracket, embeddedRanges);
-
-        // Pass 7: Attribute names
-        Matcher attrMatcher = PAT_ATTR_NAME.matcher(code);
-        while (attrMatcher.find()) {
-            int s = attrMatcher.start(1);
-            int e = attrMatcher.end(1);
-            if (!isInsideEmbeddedRange(s, e, embeddedRanges)) {
-                applySpan(ssb, s, e, colorAttrName);
+            if (outer == STATE_STRING_DOUBLE || outer == STATE_STRING_SINGLE
+                    || outer == STATE_STRING_DOUBLE_PENDING_STYLE || outer == STATE_STRING_SINGLE_PENDING_STYLE
+                    || outer == STATE_STRING_DOUBLE_PENDING_SCRIPT || outer == STATE_STRING_SINGLE_PENDING_SCRIPT) {
+                boolean isDouble = (outer == STATE_STRING_DOUBLE || outer == STATE_STRING_DOUBLE_PENDING_STYLE || outer == STATE_STRING_DOUBLE_PENDING_SCRIPT);
+                char quote = isDouble ? '"' : '\'';
+                int j = i;
+                while (j < len) {
+                    if (lineStr.charAt(j) == quote) { j++; break; }
+                    j++;
+                }
+                tokens.add(new HighlightToken(lineIndex, i, j, colorValue, false));
+                if (j > i && lineStr.charAt(j - 1) == quote) {
+                    outer = tagReturnState(outer);
+                }
+                i = j;
+                continue;
             }
-        }
 
-        // Pass 8: Attribute values
-        Matcher valMatcher = PAT_ATTR_VAL.matcher(code);
-        while (valMatcher.find()) {
-            if (valMatcher.group(1) != null) {
-                int s = valMatcher.start(1);
-                int e = valMatcher.end(1);
-                if (!isInsideEmbeddedRange(s, e, embeddedRanges)) {
-                    applySpan(ssb, s, e, colorAttrVal);
+            if (outer == STATE_NORMAL) {
+                if (c == '<') {
+                    if (i + 3 < len && lineStr.charAt(i + 1) == '!' && lineStr.charAt(i + 2) == '-' && lineStr.charAt(i + 3) == '-') {
+                        outer = STATE_COMMENT;
+                        int commentEnd = lineStr.indexOf("-->", i + 4);
+                        if (commentEnd != -1) {
+                            tokens.add(new HighlightToken(lineIndex, i, commentEnd + 3, colorHtmlComment, false));
+                            i = commentEnd + 3;
+                            outer = STATE_NORMAL;
+                        } else {
+                            tokens.add(new HighlightToken(lineIndex, i, len, colorHtmlComment, false));
+                            i = len;
+                        }
+                        continue;
+                    } else {
+                        outer = STATE_TAG;
+                        isFirstWord = true;
+                        if (i + 1 < len && lineStr.charAt(i + 1) == '/') {
+                            isClosingTag = true;
+                            tokens.add(new HighlightToken(lineIndex, i, i + 2, colorBracket, false));
+                            i += 2;
+                        } else {
+                            isClosingTag = false;
+                            tokens.add(new HighlightToken(lineIndex, i, i + 1, colorBracket, false));
+                            i++;
+                        }
+                        continue;
+                    }
+                } else {
+                    i++;
+                    continue;
                 }
             }
-        }
 
-        // Pass 9: Entities
-        applySkippingRanges(ssb, PAT_ENTITY, code, colorEntity, embeddedRanges);
-
-        // Pass 10: Inline CSS Colors
-        applyInlineColors(ssb, code, embeddedRanges, 0);
-
-        applyLinks(ssb, code);
-        applyBrackets(ssb, code);
-
-        return ssb;
-    }
-
-    /**
-     * Highlights a visible range while still correctly detecting embedded style/script blocks
-     * in the full document.
-     */
-    @Override
-    public SpannableStringBuilder highlightRange(String fullCode, int rangeStart, int rangeEnd) {
-        if (fullCode == null || fullCode.isEmpty()) return new SpannableStringBuilder("");
-        int start = Math.max(0, rangeStart);
-        int end = Math.min(fullCode.length(), rangeEnd);
-        if (start >= end) return new SpannableStringBuilder("");
-
-        String sub = fullCode.substring(start, end);
-        SpannableStringBuilder ssb = new SpannableStringBuilder(sub);
-
-        // Collect embedded block ranges from the FULL document
-        List<int[]> embeddedRanges = new ArrayList<>();
-
-        // Find all <script> blocks in full code and highlight those overlapping visible range
-        Matcher scriptMatcher = PAT_SCRIPT.matcher(fullCode);
-        while (scriptMatcher.find()) {
-            int groupStart = scriptMatcher.start(1);
-            int groupEnd = scriptMatcher.end(1);
-            String inner = scriptMatcher.group(1);
-            if (inner == null || inner.isEmpty()) continue;
-            embeddedRanges.add(new int[]{groupStart, groupEnd});
-            if (groupEnd > start && groupStart < end) {
-                int hlStart = Math.max(groupStart, start) - groupStart;
-                int hlEnd = Math.min(groupEnd, end) - groupStart;
-                if (hlStart < hlEnd) {
-                    String visibleInner = inner.substring(hlStart, hlEnd);
-                    SpannableStringBuilder innerSsb = jsHighlighter.highlight(visibleInner);
-                    int offset = Math.max(groupStart, start) - start;
-                    mergeSpans(ssb, innerSsb, offset);
+            boolean inTagBody = (outer == STATE_TAG || outer == STATE_TAG_PENDING_STYLE || outer == STATE_TAG_PENDING_SCRIPT);
+            if (inTagBody) {
+                if (c == '>') {
+                    tokens.add(new HighlightToken(lineIndex, i, i + 1, colorBracket, false));
+                    if (isClosingTag) {
+                        outer = STATE_NORMAL;
+                    } else if (outer == STATE_TAG_PENDING_STYLE) {
+                        outer = STATE_STYLE_CONTENT; inner = 0;
+                    } else if (outer == STATE_TAG_PENDING_SCRIPT) {
+                        outer = STATE_SCRIPT_CONTENT; inner = 0;
+                    } else {
+                        outer = STATE_NORMAL;
+                    }
+                    i++;
+                    continue;
                 }
-            }
-        }
-
-        // Find all <style> blocks in full code and highlight those overlapping visible range
-        Matcher styleMatcher = PAT_STYLE.matcher(fullCode);
-        while (styleMatcher.find()) {
-            int groupStart = styleMatcher.start(1);
-            int groupEnd = styleMatcher.end(1);
-            String inner = styleMatcher.group(1);
-            if (inner == null || inner.isEmpty()) continue;
-            embeddedRanges.add(new int[]{groupStart, groupEnd});
-            if (groupEnd > start && groupStart < end) {
-                int hlStart = Math.max(groupStart, start) - groupStart;
-                int hlEnd = Math.min(groupEnd, end) - groupStart;
-                if (hlStart < hlEnd) {
-                    String visibleInner = inner.substring(hlStart, hlEnd);
-                    SpannableStringBuilder innerSsb = cssHighlighter.highlight(visibleInner);
-                    int offset = Math.max(groupStart, start) - start;
-                    mergeSpans(ssb, innerSsb, offset);
+                if (c == '/' && i + 1 < len && lineStr.charAt(i + 1) == '>') {
+                    tokens.add(new HighlightToken(lineIndex, i, i + 2, colorBracket, false));
+                    outer = STATE_NORMAL;
+                    i += 2;
+                    continue;
                 }
-            }
-        }
-
-        // Apply HTML patterns only outside embedded ranges (adjusted to substring coordinates)
-        applySkippingRangesForRange(ssb, PAT_COMMENT, sub, colorComment, embeddedRanges, start);
-        applySkippingRangesForRange(ssb, PAT_DOCTYPE, sub, colorTag, embeddedRanges, start);
-        applySkippingRangesForRange(ssb, PAT_TAG_NAME, sub, colorTag, embeddedRanges, start);
-        applySkippingRangesForRange(ssb, PAT_BRACKET, sub, colorBracket, embeddedRanges, start);
-
-        Matcher attrMatcher = PAT_ATTR_NAME.matcher(sub);
-        while (attrMatcher.find()) {
-            int s = attrMatcher.start(1);
-            int e = attrMatcher.end(1);
-            if (!isInsideEmbeddedRange(s + start, e + start, embeddedRanges)) {
-                applySpan(ssb, s, e, colorAttrName);
-            }
-        }
-
-        Matcher valMatcher = PAT_ATTR_VAL.matcher(sub);
-        while (valMatcher.find()) {
-            if (valMatcher.group(1) != null) {
-                int s = valMatcher.start(1);
-                int e = valMatcher.end(1);
-                if (!isInsideEmbeddedRange(s + start, e + start, embeddedRanges)) {
-                    applySpan(ssb, s, e, colorAttrVal);
+                if (c == '"') {
+                    int j = i + 1;
+                    while (j < len && lineStr.charAt(j) != '"') j++;
+                    boolean closed = (j < len && lineStr.charAt(j) == '"');
+                    if (closed) j++;
+                    tokens.add(new HighlightToken(lineIndex, i, j, colorValue, false));
+                    if (!closed) outer = stringState(outer, true);
+                    i = j;
+                    continue;
                 }
-            }
-        }
-
-        applySkippingRangesForRange(ssb, PAT_ENTITY, sub, colorEntity, embeddedRanges, start);
-
-        applyInlineColors(ssb, sub, embeddedRanges, start);
-
-        applyLinks(ssb, sub);
-
-        return ssb;
-    }
-
-    /**
-     * Applies pattern matches but skips any match that falls inside an embedded range.
-     */
-    private void applySkippingRanges(SpannableStringBuilder ssb, Pattern pattern,
-                                     String code, int color, List<int[]> embeddedRanges) {
-        Matcher m = pattern.matcher(code);
-        while (m.find()) {
-            if (!isInsideEmbeddedRange(m.start(), m.end(), embeddedRanges)) {
-                applySpan(ssb, m.start(), m.end(), color);
-            }
-        }
-    }
-
-    /**
-     * Applies pattern matches on a substring, skipping matches inside embedded ranges.
-     * The embeddedRanges are in full-document coordinates; rangeOffset converts.
-     */
-    private void applySkippingRangesForRange(SpannableStringBuilder ssb, Pattern pattern,
-                                             String sub, int color, List<int[]> embeddedRanges,
-                                             int rangeOffset) {
-        Matcher m = pattern.matcher(sub);
-        while (m.find()) {
-            int absStart = m.start() + rangeOffset;
-            int absEnd = m.end() + rangeOffset;
-            if (!isInsideEmbeddedRange(absStart, absEnd, embeddedRanges)) {
-                applySpan(ssb, m.start(), m.end(), color);
-            }
-        }
-    }
-
-    /**
-     * Checks if a match region overlaps with any embedded script/style content range.
-     */
-    private boolean isInsideEmbeddedRange(int start, int end, List<int[]> ranges) {
-        for (int[] range : ranges) {
-            if (start >= range[0] && end <= range[1]) return true;
-        }
-        return false;
-    }
-
-    private void applyInlineColors(SpannableStringBuilder ssb, String sub, List<int[]> embeddedRanges, int rangeOffset) {
-        Matcher styleAttrMatcher = Pattern.compile("(?i)style\\s*=\\s*(\"(?:[^\"\\\\]|\\\\.)*\"|'(?:[^'\\\\]|\\\\.)*')").matcher(sub);
-        while (styleAttrMatcher.find()) {
-            if (styleAttrMatcher.group(1) != null) {
-                int valStart = styleAttrMatcher.start(1);
-                String valStr = styleAttrMatcher.group(1);
-
-                Matcher m = Pattern.compile("(#(?:[0-9a-fA-F]{3,4}){1,2}\\b|\\b(?:rgb|hsl)a?\\([^)]+\\)|\\b(?i)(?:aliceblue|antiquewhite|aqua|aquamarine|azure|beige|bisque|black|blanchedalmond|blue|blueviolet|brown|burlywood|cadetblue|chartreuse|chocolate|coral|cornflowerblue|cornsilk|crimson|cyan|darkblue|darkcyan|darkgoldenrod|darkgray|darkgreen|darkgrey|darkkhaki|darkmagenta|darkolivegreen|darkorange|darkorchid|darkred|darksalmon|darkseagreen|darkslateblue|darkslategray|darkslategrey|darkturquoise|darkviolet|deeppink|deepskyblue|dimgray|dimgrey|dodgerblue|firebrick|floralwhite|forestgreen|fuchsia|gainsboro|ghostwhite|gold|goldenrod|gray|green|greenyellow|grey|honeydew|hotpink|indianred|indigo|ivory|khaki|lavender|lavenderblush|lawngreen|lemonchiffon|lightblue|lightcoral|lightcyan|lightgoldenrodyellow|lightgray|lightgreen|lightgrey|lightpink|lightsalmon|lightseagreen|lightskyblue|lightslategray|lightslategrey|lightsteelblue|lightyellow|lime|limegreen|linen|magenta|maroon|mediumaquamarine|mediumblue|mediumorchid|mediumpurple|mediumseagreen|mediumslateblue|mediumspringgreen|mediumturquoise|mediumvioletred|midnightblue|mintcream|mistyrose|moccasin|navajowhite|navy|oldlace|olive|olivedrab|orange|orangered|orchid|palegoldenrod|palegreen|paleturquoise|palevioletred|papayawhip|peachpuff|peru|pink|plum|powderblue|purple|rebeccapurple|red|rosybrown|royalblue|saddlebrown|salmon|sandybrown|seagreen|seashell|sienna|silver|skyblue|slateblue|slategray|slategrey|snow|springgreen|steelblue|tan|teal|thistle|tomato|transparent|turquoise|violet|wheat|white|whitesmoke|yellow|yellowgreen)\\b)").matcher(valStr);
-                while (m.find()) {
-                    int absStart = valStart + m.start();
-                    int absEnd = valStart + m.end();
-                    if (!isInsideEmbeddedRange(absStart + rangeOffset, absEnd + rangeOffset, embeddedRanges)) {
-                        Integer colorVal = com.cocode.vcode.ide.utils.ColorParser.parse(m.group());
-                        if (colorVal != null && absStart < absEnd) {
-                            ssb.setSpan(
-                                    new ColorPreviewSpan(colorVal, colorAttrVal),
-                                    absStart,
-                                    absStart + 1,
-                                    Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                            );
+                if (c == '\'') {
+                    int j = i + 1;
+                    while (j < len && lineStr.charAt(j) != '\'') j++;
+                    boolean closed = (j < len && lineStr.charAt(j) == '\'');
+                    if (closed) j++;
+                    tokens.add(new HighlightToken(lineIndex, i, j, colorValue, false));
+                    if (!closed) outer = stringState(outer, false);
+                    i = j;
+                    continue;
+                }
+                if (c == '=') {
+                    tokens.add(new HighlightToken(lineIndex, i, i + 1, colorBracket, false));
+                    i++;
+                    continue;
+                }
+                if (Character.isLetter(c) || c == '!' || c == '-' || c == '_' || c == ':' || Character.isDigit(c)) {
+                    int j = i;
+                    while (j < len) {
+                        char ch = lineStr.charAt(j);
+                        if (Character.isLetter(ch) || Character.isDigit(ch) || ch == '-' || ch == '_' || ch == ':' || ch == '!') {
+                            j++;
+                        } else {
+                            break;
                         }
                     }
+                    if (isFirstWord) {
+                        tokens.add(new HighlightToken(lineIndex, i, j, colorTag, false));
+                        isFirstWord = false;
+                        if (!isClosingTag) {
+                            String word = lineStr.substring(i, j);
+                            if (word.equalsIgnoreCase("style")) outer = STATE_TAG_PENDING_STYLE;
+                            else if (word.equalsIgnoreCase("script")) outer = STATE_TAG_PENDING_SCRIPT;
+                        }
+                    } else {
+                        tokens.add(new HighlightToken(lineIndex, i, j, colorAttribute, false));
+                    }
+                    i = j;
+                    continue;
+                }
+
+                i++;
+            }
+        }
+        lastLineState = pack(outer, inner);
+        return tokens;
+    }
+
+    @Override
+    public int computeEndState(ContentLine line, int startState) {
+        int len = line.length();
+        int outer = outerState(startState);
+        int inner = innerState(startState);
+        int i = 0;
+        boolean isFirstWord = false;
+        boolean isClosingTag = false;
+
+        while (i < len) {
+
+            if (outer == STATE_STYLE_CONTENT || outer == STATE_SCRIPT_CONTENT) {
+                String needle = (outer == STATE_STYLE_CONTENT) ? "</style" : "</script";
+                int closeIdx = indexOfIgnoreCase(line, needle, i, len);
+                int contentEnd = (closeIdx == -1) ? len : closeIdx;
+                if (contentEnd > i) {
+                    SyntaxHighlighter embedded = (outer == STATE_STYLE_CONTENT) ? cssHighlighter : jsHighlighter;
+                    int count = contentEnd - i;
+                    char[] buf = new char[count];
+                    line.getChars(i, contentEnd, buf, 0);
+                    ContentLine sub = new ContentLine(new String(buf));
+                    inner = embedded.computeEndState(sub, inner);
+                }
+                if (closeIdx == -1) {
+                    i = len;
+                } else {
+                    i = closeIdx;
+                    outer = STATE_NORMAL;
+                    inner = 0;
+                }
+                continue;
+            }
+
+            char c = line.charAt(i);
+
+            if (outer == STATE_COMMENT) {
+                int commentEnd = -1;
+                for (int k = i; k <= len - 3; k++) {
+                    if (line.charAt(k) == '-' && line.charAt(k + 1) == '-' && line.charAt(k + 2) == '>') {
+                        commentEnd = k;
+                        break;
+                    }
+                }
+                if (commentEnd != -1) {
+                    i = commentEnd + 3;
+                    outer = STATE_NORMAL;
+                } else {
+                    i = len;
+                }
+                continue;
+            }
+
+            if (outer == STATE_STRING_DOUBLE || outer == STATE_STRING_SINGLE
+                    || outer == STATE_STRING_DOUBLE_PENDING_STYLE || outer == STATE_STRING_SINGLE_PENDING_STYLE
+                    || outer == STATE_STRING_DOUBLE_PENDING_SCRIPT || outer == STATE_STRING_SINGLE_PENDING_SCRIPT) {
+                boolean isDouble = (outer == STATE_STRING_DOUBLE || outer == STATE_STRING_DOUBLE_PENDING_STYLE || outer == STATE_STRING_DOUBLE_PENDING_SCRIPT);
+                char quote = isDouble ? '"' : '\'';
+                int j = i;
+                while (j < len) {
+                    if (line.charAt(j) == quote) { j++; break; }
+                    j++;
+                }
+                if (j > i && line.charAt(j - 1) == quote) {
+                    outer = tagReturnState(outer);
+                }
+                i = j;
+                continue;
+            }
+
+            if (outer == STATE_NORMAL) {
+                if (c == '<') {
+                    if (i + 3 < len && line.charAt(i + 1) == '!' && line.charAt(i + 2) == '-' && line.charAt(i + 3) == '-') {
+                        outer = STATE_COMMENT;
+                        int commentEnd = -1;
+                        for (int k = i + 4; k <= len - 3; k++) {
+                            if (line.charAt(k) == '-' && line.charAt(k + 1) == '-' && line.charAt(k + 2) == '>') {
+                                commentEnd = k;
+                                break;
+                            }
+                        }
+                        if (commentEnd != -1) {
+                            i = commentEnd + 3;
+                            outer = STATE_NORMAL;
+                        } else {
+                            i = len;
+                        }
+                        continue;
+                    } else {
+                        outer = STATE_TAG;
+                        isFirstWord = true;
+                        if (i + 1 < len && line.charAt(i + 1) == '/') {
+                            isClosingTag = true;
+                            i += 2;
+                        } else {
+                            isClosingTag = false;
+                            i++;
+                        }
+                        continue;
+                    }
+                } else {
+                    i++;
+                    continue;
                 }
             }
-        }
-    }
 
-    /**
-     * Merges syntax spans from a sub-highlighter into the target buffer at the given offset.
-     */
-    private void mergeSpans(SpannableStringBuilder target,
-                            SpannableStringBuilder source, int offset) {
-        if (source == null || offset < 0) return;
+            boolean inTagBody = (outer == STATE_TAG || outer == STATE_TAG_PENDING_STYLE || outer == STATE_TAG_PENDING_SCRIPT);
+            if (inTagBody) {
+                if (c == '>') {
+                    if (isClosingTag) {
+                        outer = STATE_NORMAL;
+                    } else if (outer == STATE_TAG_PENDING_STYLE) {
+                        outer = STATE_STYLE_CONTENT; inner = 0;
+                    } else if (outer == STATE_TAG_PENDING_SCRIPT) {
+                        outer = STATE_SCRIPT_CONTENT; inner = 0;
+                    } else {
+                        outer = STATE_NORMAL;
+                    }
+                    i++;
+                    continue;
+                }
+                if (c == '/' && i + 1 < len && line.charAt(i + 1) == '>') {
+                    outer = STATE_NORMAL;
+                    i += 2;
+                    continue;
+                }
+                if (c == '"') {
+                    int j = i + 1;
+                    while (j < len && line.charAt(j) != '"') j++;
+                    boolean closed = (j < len && line.charAt(j) == '"');
+                    if (closed) j++;
+                    if (!closed) outer = stringState(outer, true);
+                    i = j;
+                    continue;
+                }
+                if (c == '\'') {
+                    int j = i + 1;
+                    while (j < len && line.charAt(j) != '\'') j++;
+                    boolean closed = (j < len && line.charAt(j) == '\'');
+                    if (closed) j++;
+                    if (!closed) outer = stringState(outer, false);
+                    i = j;
+                    continue;
+                }
+                if (Character.isLetter(c) || c == '!' || c == '-' || c == '_' || c == ':' || Character.isDigit(c)) {
+                    int j = i;
+                    while (j < len) {
+                        char ch = line.charAt(j);
+                        if (Character.isLetter(ch) || Character.isDigit(ch) || ch == '-' || ch == '_' || ch == ':' || ch == '!') {
+                            j++;
+                        } else {
+                            break;
+                        }
+                    }
+                    if (isFirstWord) {
+                        isFirstWord = false;
+                        int wordLen = j - i;
+                        if (!isClosingTag) {
+                            if (wordLen == 5 && equalsIgnoreCaseAt(line, i, "style")) outer = STATE_TAG_PENDING_STYLE;
+                            else if (wordLen == 6 && equalsIgnoreCaseAt(line, i, "script")) outer = STATE_TAG_PENDING_SCRIPT;
+                        }
+                    }
+                    i = j;
+                    continue;
+                }
 
-        SyntaxHighlightSpan[] spans =
-                source.getSpans(0, source.length(), SyntaxHighlightSpan.class);
-        for (SyntaxHighlightSpan span : spans) {
-            int s = source.getSpanStart(span) + offset;
-            int e = source.getSpanEnd(span) + offset;
-            applySpan(target, s, e, span.getForegroundColor(), span.isUnderline());
-        }
-
-        ColorPreviewSpan[] colorSpans =
-                source.getSpans(0, source.length(), ColorPreviewSpan.class);
-        for (ColorPreviewSpan span : colorSpans) {
-            int s = source.getSpanStart(span) + offset;
-            int e = source.getSpanEnd(span) + offset;
-            if (s >= 0 && e <= target.length()) {
-                target.setSpan(
-                        new ColorPreviewSpan(span.getPreviewColor(), span.getTextColor()),
-                        s,
-                        e,
-                        Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
+                i++;
             }
         }
+        return pack(outer, inner);
     }
+
 }

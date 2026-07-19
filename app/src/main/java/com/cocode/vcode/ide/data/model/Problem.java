@@ -9,6 +9,7 @@ public class Problem {
     private final int length;
     private final String message;
     private final Severity severity;
+    private android.graphics.Path cachedPath;
 
     public Problem(File file, int line, int column, int length, String message, Severity severity) {
         this.file = file;
@@ -49,5 +50,13 @@ public class Problem {
 
     public enum Severity {
         ERROR, WARNING, INFO
+    }
+
+    public android.graphics.Path getCachedPath() {
+        return cachedPath;
+    }
+
+    public void setCachedPath(android.graphics.Path cachedPath) {
+        this.cachedPath = cachedPath;
     }
 }

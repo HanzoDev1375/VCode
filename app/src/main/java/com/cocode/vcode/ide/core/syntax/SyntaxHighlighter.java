@@ -1,97 +1,337 @@
 package com.cocode.vcode.ide.core.syntax;
 
 import android.content.Context;
-import android.text.SpannableStringBuilder;
-import android.text.Spanned;
-
 import androidx.core.content.ContextCompat;
 
-import com.cocode.vcode.ide.views.SyntaxHighlightSpan;
+import com.cocode.vcode.ide.R;
+import com.cocode.vcode.ide.core.editor.highlight.HighlightToken;
+import com.cocode.vcode.ide.core.editor.text.Content;
+import com.cocode.vcode.ide.utils.ColorParser;
 
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
+import java.util.ArrayList;
+import java.util.List;
 
-/**
- * Base abstract class for real-time code token styling engine.
- * Provides utility helpers to extract resource theme colors and safely apply
- * text styling spans to document ranges without risking index out of bounds exceptions.
- */
-public abstract class SyntaxHighlighter {
-
-    protected static final Pattern PAT_LINK = Pattern.compile("(?i)(https?://[^\\s\"'<>]+|(?:[.]{1,2}/)+[a-zA-Z0-9_.-/]+|\\b[a-zA-Z0-9_-]+/[a-zA-Z0-9_.-/]+\\.[a-zA-Z0-9]{2,5}\\b|\\b[a-zA-Z0-9_.-]+\\.(?:html|css|js|json|xml|png|jpg|jpeg|gif|svg|ico|webp|mp4|webm|wav|mp3|ogg|ttf|woff|woff2|eot|otf)\\b)");
+public class SyntaxHighlighter {
 
     protected final Context context;
+    protected final int colorComment;
+    protected final int colorString;
+    protected final int colorKeyword;
+    protected final int colorNumber;
 
     public SyntaxHighlighter(Context context) {
-        // Prevent context memory leaks by binding to the application scope
         this.context = context.getApplicationContext();
+        colorComment = getColor(R.color.vcode_color_comment);
+        colorString = getColor(R.color.vcode_color_js_string);
+        colorKeyword = getColor(R.color.vcode_color_js_keyword);
+        colorNumber = getColor(R.color.vcode_color_js_number);
     }
 
-    /**
-     * Parses a raw code string into a styled Spannable representation matching language grammar patterns.
-     *
-     * @param code The unstyled source code text character sequence.
-     * @return A SpannableStringBuilder containing structural color spans applied to text ranges.
-     */
-    public abstract SpannableStringBuilder highlight(String code);
-
-    /**
-     * Highlights only a range of the document, returning spans with offsets relative to the full text.
-     * The range is expanded to line boundaries for correctness.
-     *
-     * @param fullCode   The full document text.
-     * @param rangeStart Start character offset of the visible region.
-     * @param rangeEnd   End character offset of the visible region.
-     * @return A SpannableStringBuilder of the substring with spans positioned relative to rangeStart.
-     */
-    public SpannableStringBuilder highlightRange(String fullCode, int rangeStart, int rangeEnd) {
-        if (fullCode == null || fullCode.isEmpty()) return new SpannableStringBuilder("");
-        // Clamp
-        int start = Math.max(0, rangeStart);
-        int end = Math.min(fullCode.length(), rangeEnd);
-        if (start >= end) return new SpannableStringBuilder("");
-        String sub = fullCode.substring(start, end);
-        return highlight(sub);
-    }
-
-    /**
-     * Injects a syntax styling span across a precise structural region of the text buffer.
-     * Incorporates safety boundary filtering checks to discard invalid or overlapping range requests.
-     */
-    protected void applySpan(SpannableStringBuilder ssb, int start, int end, int color) {
-        applySpan(ssb, start, end, color, false);
-    }
-
-    protected void applySpan(SpannableStringBuilder ssb, int start, int end, int color, boolean underline) {
-        if (ssb == null || start < 0 || end > ssb.length() || start >= end) return;
-        ssb.setSpan(
-                new SyntaxHighlightSpan(color, underline),
-                start,
-                end,
-                Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-        );
-    }
-
-    protected void applyLinks(SpannableStringBuilder ssb, String code) {
-        Matcher m = PAT_LINK.matcher(code);
-        while (m.find()) {
-            applySpan(ssb, m.start(), m.end(), 0, true);
+    public android.text.SpannableStringBuilder highlight(String code) {
+        android.text.SpannableStringBuilder ssb = new android.text.SpannableStringBuilder(code);
+        String[] lines = code.split("\n", -1);
+        int state = 0;
+        int offset = 0;
+        for (String lineStr : lines) {
+            List<HighlightToken> tokens = tokenizeLine(lineStr, 0, state);
+            state = lastLineState;
+            for (HighlightToken t : tokens) {
+                ssb.setSpan(new com.cocode.vcode.ide.views.SyntaxHighlightSpan(t.color, t.underline),
+                        offset + t.startCol, offset + t.endCol, android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            }
+            offset += lineStr.length() + 1;
         }
+        return ssb;
     }
 
-    protected void applyBrackets(SpannableStringBuilder ssb, String code) {
-        int[] bracketColors = new int[]{
-                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_1),
-                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_2),
-                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_3),
-                getColor(com.cocode.vcode.ide.R.color.vcode_bracket_4)
-        };
-        com.cocode.vcode.ide.core.parser.BracketMatcher.applyRainbowBrackets(ssb, code, bracketColors);
+    public List<HighlightToken> highlightLines(Content content, int startLine, int endLine) {
+        if (content == null) return new ArrayList<>();
+
+        int lineCount = content.lineCount();
+        int safeStart = Math.max(0, startLine);
+        int safeEnd   = Math.min(lineCount - 1, endLine);
+        if (safeStart > safeEnd) return new ArrayList<>();
+
+        List<HighlightToken> allTokens = new ArrayList<>();
+
+        int state = 0;
+        if (safeStart > 0) {
+            state = content.getLine(safeStart - 1).getTokenizerEndState();
+        }
+
+        for (int i = safeStart; i <= safeEnd; i++) {
+            List<HighlightToken> lineTokens = tokenizeLine(content.getLine(i).toLineString(), i, state);
+            allTokens.addAll(lineTokens);
+            content.getLine(i).setTokenizerEndState(lastLineState);
+            state = lastLineState;
+        }
+
+        return allTokens;
+    }
+    
+    protected int lastLineState = 0;
+    
+    public int getLastLineState() {
+        return lastLineState;
     }
 
-    /**
-     * Resolves an internal application theme color resource identifier to its hex integer value.
-     */
+    public List<HighlightToken> tokenizeLine(String lineStr, int lineIndex, int startState) {
+        List<HighlightToken> tokens = new ArrayList<>();
+        int len = lineStr.length();
+        int state = startState;
+        int i = 0;
+        
+        while (i < len) {
+            char c = lineStr.charAt(i);
+            
+            if (state == 1) { 
+                int commentEnd = lineStr.indexOf("*/", i);
+                if (commentEnd != -1) {
+                    tokens.add(new HighlightToken(lineIndex, i, commentEnd + 2, colorComment, false));
+                    i = commentEnd + 2;
+                    state = 0;
+                } else {
+                    tokens.add(new HighlightToken(lineIndex, i, len, colorComment, false));
+                    i = len;
+                }
+                continue;
+            }
+            
+            if (state == 2 || state == 3 || state == 4) { 
+                char quote = (state == 2) ? '"' : (state == 3) ? '\'' : '`';
+                int j = i;
+                while (j < len) {
+                    if (lineStr.charAt(j) == '\\') {
+                        j += 2;
+                        continue;
+                    }
+                    if (lineStr.charAt(j) == quote) {
+                        j++;
+                        break;
+                    }
+                    j++;
+                }
+                tokens.add(new HighlightToken(lineIndex, i, Math.min(j, len), colorString, false));
+                if (j < len || (j == len && lineStr.charAt(len-1) == quote && (len < 2 || lineStr.charAt(len-2) != '\\'))) {
+                    state = 0;
+                }
+                i = j;
+                continue;
+            }
+            
+            if (c == '/' && i + 1 < len) {
+                if (lineStr.charAt(i + 1) == '*') {
+                    state = 1;
+                    int commentEnd = lineStr.indexOf("*/", i + 2);
+                    if (commentEnd != -1) {
+                        tokens.add(new HighlightToken(lineIndex, i, commentEnd + 2, colorComment, false));
+                        i = commentEnd + 2;
+                        state = 0;
+                    } else {
+                        tokens.add(new HighlightToken(lineIndex, i, len, colorComment, false));
+                        i = len;
+                    }
+                    continue;
+                } else if (lineStr.charAt(i + 1) == '/') {
+                    tokens.add(new HighlightToken(lineIndex, i, len, colorComment, false));
+                    i = len;
+                    continue;
+                }
+            }
+            
+            if (c == '"' || c == '\'' || c == '`') {
+                int quote = c;
+                int j = i + 1;
+                while (j < len) {
+                    if (lineStr.charAt(j) == '\\') {
+                        j += 2;
+                        continue;
+                    }
+                    if (lineStr.charAt(j) == quote) {
+                        j++;
+                        break;
+                    }
+                    j++;
+                }
+                tokens.add(new HighlightToken(lineIndex, i, Math.min(j, len), colorString, false));
+                if (j < len || (j == len && lineStr.charAt(len-1) == quote && (len < 2 || lineStr.charAt(len-2) != '\\'))) {
+                    state = 0;
+                } else {
+                    state = (c == '"') ? 2 : (c == '\'') ? 3 : 4;
+                }
+                i = j;
+                continue;
+            }
+            
+            if (c == '#') {
+                int j = i + 1;
+                while (j < len && isHex(lineStr.charAt(j))) j++;
+                if (j - i == 4 || j - i == 7 || j - i == 9) {
+                    Integer colorVal = ColorParser.parse(lineStr.substring(i, j));
+                    if (colorVal != null) {
+                        tokens.add(new HighlightToken(lineIndex, i, j, colorNumber, false, true, colorVal));
+                    } else {
+                        tokens.add(new HighlightToken(lineIndex, i, j, colorNumber, false));
+                    }
+                    i = j;
+                    continue;
+                }
+            }
+
+            if (Character.isDigit(c)) {
+                int j = i;
+                while (j < len && (Character.isLetterOrDigit(lineStr.charAt(j)) || lineStr.charAt(j) == '.')) {
+                    j++;
+                }
+                tokens.add(new HighlightToken(lineIndex, i, j, colorNumber, false));
+                i = j;
+                continue;
+            }
+            
+            if (Character.isLetter(c) || c == '_' || c == '$') {
+                int j = i;
+                while (j < len && (Character.isLetterOrDigit(lineStr.charAt(j)) || lineStr.charAt(j) == '_' || lineStr.charAt(j) == '$')) {
+                    j++;
+                }
+                String word = lineStr.substring(i, j);
+                if (isKeyword(word)) {
+                    tokens.add(new HighlightToken(lineIndex, i, j, colorKeyword, false));
+                } else {
+                    Integer cssColor = ColorParser.parse(word);
+                    if (cssColor != null) {
+                        tokens.add(new HighlightToken(lineIndex, i, j, colorNumber, false, true, cssColor));
+                    } else if ((word.equals("rgb") || word.equals("rgba") || word.equals("hsl") || word.equals("hsla")) && j < len && lineStr.charAt(j) == '(') {
+                        int closeIdx = lineStr.indexOf(')', j);
+                        if (closeIdx != -1) {
+                            Integer fnColor = ColorParser.parse(lineStr.substring(i, closeIdx + 1));
+                            if (fnColor != null) {
+                                tokens.add(new HighlightToken(lineIndex, i, closeIdx + 1, colorNumber, false, true, fnColor));
+                                j = closeIdx + 1;
+                            }
+                        }
+                    }
+                }
+                i = j;
+                continue;
+            }
+
+            i++;
+        }
+        
+        lastLineState = state;
+        return tokens;
+    }
+    
+    public int computeEndState(com.cocode.vcode.ide.core.editor.text.ContentLine line, int startState) {
+        int len = line.length();
+        int state = startState;
+        int i = 0;
+        while (i < len) {
+            char c = line.charAt(i);
+            if (state == 1) { 
+                int commentEnd = -1;
+                for (int k = i; k < len - 1; k++) {
+                    if (line.charAt(k) == '*' && line.charAt(k+1) == '/') {
+                        commentEnd = k;
+                        break;
+                    }
+                }
+                if (commentEnd != -1) {
+                    i = commentEnd + 2;
+                    state = 0;
+                } else {
+                    i = len;
+                }
+                continue;
+            }
+            if (state == 2 || state == 3 || state == 4) { 
+                char quote = (state == 2) ? '"' : (state == 3) ? '\'' : '`';
+                int j = i;
+                while (j < len) {
+                    if (line.charAt(j) == '\\') {
+                        j += 2;
+                        continue;
+                    }
+                    if (line.charAt(j) == quote) {
+                        j++;
+                        break;
+                    }
+                    j++;
+                }
+                if (j < len || (j == len && line.charAt(len-1) == quote && (len < 2 || line.charAt(len-2) != '\\'))) {
+                    state = 0;
+                }
+                i = j;
+                continue;
+            }
+            if (c == '/' && i + 1 < len) {
+                if (line.charAt(i + 1) == '*') {
+                    state = 1;
+                    int commentEnd = -1;
+                    for (int k = i + 2; k < len - 1; k++) {
+                        if (line.charAt(k) == '*' && line.charAt(k+1) == '/') {
+                            commentEnd = k;
+                            break;
+                        }
+                    }
+                    if (commentEnd != -1) {
+                        i = commentEnd + 2;
+                        state = 0;
+                    } else {
+                        i = len;
+                    }
+                    continue;
+                } else if (line.charAt(i + 1) == '/') {
+                    i = len;
+                    continue;
+                }
+            }
+            if (c == '"' || c == '\'' || c == '`') {
+                int quote = c;
+                int j = i + 1;
+                while (j < len) {
+                    if (line.charAt(j) == '\\') {
+                        j += 2;
+                        continue;
+                    }
+                    if (line.charAt(j) == quote) {
+                        j++;
+                        break;
+                    }
+                    j++;
+                }
+                if (j < len || (j == len && line.charAt(len-1) == quote && (len < 2 || line.charAt(len-2) != '\\'))) {
+                    state = 0;
+                } else {
+                    state = (c == '"') ? 2 : (c == '\'') ? 3 : 4;
+                }
+                i = j;
+                continue;
+            }
+            i++;
+        }
+        return state;
+    }
+    
+    protected boolean isHex(char c) {
+        return (c >= '0' && c <= '9') || (c >= 'a' && c <= 'f') || (c >= 'A' && c <= 'F');
+    }
+
+    protected boolean isKeyword(String w) {
+        switch (w) {
+            case "var": case "let": case "const": case "function": case "return":
+            case "if": case "else": case "for": case "while": case "do":
+            case "switch": case "case": case "break": case "continue": case "new":
+            case "delete": case "typeof": case "instanceof": case "in": case "of":
+            case "class": case "extends": case "import": case "export": case "default":
+            case "async": case "await": case "try": case "catch": case "finally":
+            case "throw": case "void": case "yield": case "this": case "super":
+            case "true": case "false": case "null": case "undefined":
+                return true;
+        }
+        return false;
+    }
+
     protected int getColor(int resId) {
         return ContextCompat.getColor(context, resId);
     }

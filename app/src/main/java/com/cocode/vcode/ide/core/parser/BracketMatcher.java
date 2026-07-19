@@ -1,5 +1,9 @@
 package com.cocode.vcode.ide.core.parser;
 
+import com.cocode.vcode.ide.core.editor.highlight.HighlightToken;
+
+import java.util.List;
+
 /**
  * Utility class responsible for pair-matching bracket tokens under the cursor.
  * Supports structural highlighting and scope navigation for parentheses (), brackets [], and braces {}.
@@ -9,12 +13,15 @@ public class BracketMatcher {
     private static final String OPEN_BRACKETS = "({[";
     private static final String CLOSE_BRACKETS = ")}]";
 
-    public static void applyRainbowBrackets(android.text.SpannableStringBuilder ssb, String text, int[] colors) {
-        if (text == null || colors == null || colors.length == 0) return;
+    public static void applyRainbowBrackets(List<HighlightToken> tokens, String text, int[] colors, int initialDepth) {
+        if (text == null || colors == null || colors.length == 0 || tokens == null) return;
 
-        // One shared depth counter so nested (){}[] all get consistent colors
-        int depth = 0;
+        boolean[] mask = computeStringCommentMask(text, 0, text.length());
+        int depth = initialDepth;
+
         for (int i = 0; i < text.length(); i++) {
+            if (mask[i]) continue;
+
             char c = text.charAt(i);
             boolean isOpen = c == '(' || c == '{' || c == '[';
             boolean isClose = c == ')' || c == '}' || c == ']';
@@ -22,22 +29,27 @@ public class BracketMatcher {
 
             if (isOpen) {
                 int colorIdx = depth % colors.length;
-                ssb.setSpan(
-                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[colorIdx]),
-                        i, i + 1,
-                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
+                tokens.add(new com.cocode.vcode.ide.core.editor.highlight.HighlightToken(0, i, i + 1, colors[colorIdx], false));
                 depth++;
             } else {
                 depth = Math.max(0, depth - 1);
                 int colorIdx = depth % colors.length;
-                ssb.setSpan(
-                        new com.cocode.vcode.ide.views.SyntaxHighlightSpan(colors[colorIdx]),
-                        i, i + 1,
-                        android.text.Spanned.SPAN_EXCLUSIVE_EXCLUSIVE
-                );
+                tokens.add(new com.cocode.vcode.ide.core.editor.highlight.HighlightToken(0, i, i + 1, colors[colorIdx], false));
             }
         }
+    }
+
+    public static int computeBracketDepth(String text, int initialDepth) {
+        if (text == null) return initialDepth;
+        boolean[] mask = computeStringCommentMask(text, 0, text.length());
+        int depth = initialDepth;
+        for (int i = 0; i < text.length(); i++) {
+            if (mask[i]) continue;
+            char c = text.charAt(i);
+            if (c == '(' || c == '{' || c == '[') depth++;
+            else if (c == ')' || c == '}' || c == ']') depth = Math.max(0, depth - 1);
+        }
+        return depth;
     }
 
     public static java.util.List<com.cocode.vcode.ide.data.model.Problem> findMismatches(java.io.File file, String text) {
@@ -94,7 +106,7 @@ public class BracketMatcher {
         return problems;
     }
 
-    private static boolean isInStringOrComment(String text, int pos) {
+    private static boolean isInStringOrComment(CharSequence text, int pos) {
         boolean inSingle = false, inDouble = false, inTemplate = false;
         boolean inLineComment = false, inBlockComment = false;
 
@@ -136,6 +148,13 @@ public class BracketMatcher {
         return inSingle || inDouble || inTemplate || inLineComment || inBlockComment;
     }
 
+    private static final int MAX_SCAN_DISTANCE = 5000;
+
+    private int cachedCursor = -1;
+    private int cachedLength = -1;
+    private MatchResult cachedMatch = null;
+    private boolean hasCache = false;
+
     /**
      * Inspects the character directly under the cursor and tracks its matching sibling balance
      * by scanning either forward or backward through the document text.
@@ -144,15 +163,32 @@ public class BracketMatcher {
      * @param cursorPos The current 0-based index position of the cursor caret.
      * @return A MatchResult object detailing the pair coordinates and discovery status.
      */
-    public MatchResult findMatch(String text, int cursorPos) {
+    public MatchResult findMatch(CharSequence text, int cursorPos) {
         // Guard check against empty inputs or indices targeting outer space bounds
         if (text == null || cursorPos < 0 || cursorPos >= text.length()) {
-            return new MatchResult(-1, -1, false);
+            return null;
         }
+
+        if (hasCache && cachedCursor == cursorPos && cachedLength == text.length()) {
+            return cachedMatch;
+        }
+
+        MatchResult result = findMatchInternal(text, cursorPos);
+
+        cachedCursor = cursorPos;
+        cachedLength = text.length();
+        cachedMatch = result;
+        hasCache = true;
+
+        return result;
+    }
+
+    private MatchResult findMatchInternal(CharSequence text, int cursorPos) {
+
 
         char c = text.charAt(cursorPos);
         if (isInStringOrComment(text, cursorPos)) {
-            return new MatchResult(-1, -1, false);
+            return null;
         }
 
         int openIdx = OPEN_BRACKETS.indexOf(c);
@@ -163,7 +199,8 @@ public class BracketMatcher {
             char closeChar = CLOSE_BRACKETS.charAt(openIdx);
             int depth = 1; // Track nesting level changes
 
-            for (int i = cursorPos + 1; i < text.length(); i++) {
+            int limit = Math.min(text.length(), cursorPos + MAX_SCAN_DISTANCE);
+            for (int i = cursorPos + 1; i < limit; i++) {
                 char ch = text.charAt(i);
                 if (ch == c)
                     depth++;          // Found another identical open token; increment depth level
@@ -178,7 +215,8 @@ public class BracketMatcher {
             char openChar = OPEN_BRACKETS.charAt(closeIdx);
             int depth = 1; // Track nesting level changes backwards
 
-            for (int i = cursorPos - 1; i >= 0; i--) {
+            int limit = Math.max(0, cursorPos - MAX_SCAN_DISTANCE);
+            for (int i = cursorPos - 1; i >= limit; i--) {
                 char ch = text.charAt(i);
                 if (ch == c)
                     depth++;         // Found another identical close token; increment depth level
@@ -190,7 +228,7 @@ public class BracketMatcher {
         }
 
         // No matching partner token was discovered within document limits
-        return new MatchResult(-1, -1, false);
+        return null;
     }
 
     /**
@@ -201,32 +239,94 @@ public class BracketMatcher {
      * @param cursorPos Current cursor offset (0-based).
      * @return MatchResult with openPos/closePos, or found=false if not inside any bracket.
      */
-    public MatchResult findEnclosing(String text, int cursorPos) {
-        if (text == null || cursorPos <= 0) return new MatchResult(-1, -1, false);
+    public MatchResult findEnclosing(CharSequence text, int cursorPos) {
+        if (text == null || cursorPos <= 0) return null;
 
+        if (hasCache && cachedCursor == cursorPos && cachedLength == text.length()) {
+            return cachedMatch;
+        }
+
+        MatchResult result = findEnclosingInternal(text, cursorPos);
+        cachedCursor = cursorPos;
+        cachedLength = text.length();
+        cachedMatch = result;
+        hasCache = true;
+
+        return result;
+    }
+
+    private MatchResult findEnclosingInternal(CharSequence text, int cursorPos) {
         int depth_paren = 0;
         int depth_square = 0;
         int depth_brace = 0;
 
-        for (int i = cursorPos - 1; i >= 0; i--) {
-            if (isInStringOrComment(text, i)) continue;
+        int scanLimit = Math.max(0, cursorPos - MAX_SCAN_DISTANCE);
+        boolean[] mask = computeStringCommentMask(text, scanLimit, cursorPos);
+
+        for (int i = cursorPos - 1; i >= scanLimit; i--) {
+            if (mask[i - scanLimit]) continue;
 
             char c = text.charAt(i);
             if (c == ')') depth_paren++;
             else if (c == ']') depth_square++;
             else if (c == '}') depth_brace++;
             else if (c == '(') {
-                if (depth_paren == 0) return findMatch(text, i);
+                if (depth_paren == 0) return findMatchInternal(text, i);
                 depth_paren--;
             } else if (c == '[') {
-                if (depth_square == 0) return findMatch(text, i);
+                if (depth_square == 0) return findMatchInternal(text, i);
                 depth_square--;
             } else if (c == '{') {
-                if (depth_brace == 0) return findMatch(text, i);
+                if (depth_brace == 0) return findMatchInternal(text, i);
                 depth_brace--;
             }
         }
-        return new MatchResult(-1, -1, false);
+        return null;
+    }
+
+    private static boolean[] computeStringCommentMask(CharSequence text, int from, int to) {
+        boolean[] mask = new boolean[to - from];
+        boolean inSingle = false, inDouble = false, inTemplate = false;
+        boolean inLineComment = false, inBlockComment = false;
+
+        for (int i = from; i < to; i++) {
+            mask[i - from] = inSingle || inDouble || inTemplate || inLineComment || inBlockComment;
+
+            char c = text.charAt(i);
+            char n = (i + 1 < text.length()) ? text.charAt(i + 1) : '\0';
+
+            if (inLineComment) {
+                if (c == '\n') inLineComment = false;
+                continue;
+            }
+            if (inBlockComment) {
+                if (c == '*' && n == '/') {
+                    inBlockComment = false;
+                    i++;
+                }
+                continue;
+            }
+            if (!inSingle && !inDouble && !inTemplate) {
+                if (c == '/' && n == '/') {
+                    inLineComment = true;
+                    i++;
+                    continue;
+                }
+                if (c == '/' && n == '*') {
+                    inBlockComment = true;
+                    i++;
+                    continue;
+                }
+            }
+            if (c == '\\') {
+                i++;
+                continue;
+            }
+            if (c == '\'' && !inDouble && !inTemplate) inSingle = !inSingle;
+            else if (c == '"' && !inSingle && !inTemplate) inDouble = !inDouble;
+            else if (c == '`' && !inSingle && !inDouble) inTemplate = !inTemplate;
+        }
+        return mask;
     }
 
     /**

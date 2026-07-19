@@ -32,6 +32,7 @@ public class TabBar extends HorizontalScrollView {
     private int activeIndex = -1;
     private OnTabClickListener tabClickListener;
     private OnTabCloseListener tabCloseListener;
+    private boolean isAutoSaveOn = false;
 
     public TabBar(Context context) {
         super(context);
@@ -83,6 +84,13 @@ public class TabBar extends HorizontalScrollView {
         scrollToActiveTab();
     }
 
+    public void setAutoSaveOn(boolean autoSaveOn) {
+        this.isAutoSaveOn = autoSaveOn;
+        for (int i = 0; i < tabs.size(); i++) {
+            updateTabDirtyState(i, tabs.get(i).isDirty());
+        }
+    }
+
     /**
      * Alternates visibility parameters on circular unsaved changes flags labels indicator rings.
      */
@@ -92,7 +100,11 @@ public class TabBar extends HorizontalScrollView {
 
         ItemEditorTabBinding binding = (ItemEditorTabBinding) tabView.getTag();
         if (binding != null) {
-            binding.dotDirty.setVisibility(dirty ? VISIBLE : GONE);
+            boolean showDot = dirty;
+            if (tabs.get(index).getFileType() == FileType.API_TESTER) showDot = false;
+            else if (isAutoSaveOn) showDot = false;
+            
+            binding.dotDirty.setVisibility(showDot ? VISIBLE : GONE);
         }
     }
 
@@ -132,26 +144,24 @@ public class TabBar extends HorizontalScrollView {
         ItemEditorTabBinding binding = ItemEditorTabBinding.inflate(
                 LayoutInflater.from(getContext()), tabContainer, false);
 
-        String rawExt = FileUtils.getExtension(file.getFileName());
-        String ext = rawExt.toUpperCase();
-
         FileType fileType = file.getFileType();
-        if (fileType != null && fileType != FileType.TEXT) {
-            binding.tvLangBadge.setText(fileType.getDisplayName().toUpperCase());
-            binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), fileType.getColorResId()));
-        } else {
-            binding.tvLangBadge.setText(ext.isEmpty() ? "TXT" : ext);
-            binding.tvLangBadge.setTextColor(ContextCompat.getColor(getContext(), R.color.vcode_text_secondary));
-        }
+        if (fileType == null) fileType = FileType.TEXT;
+
+        binding.ivFileIcon.setImageResource(fileType.getIconResId());
+        binding.ivFileIcon.setImageTintList(android.content.res.ColorStateList.valueOf(
+                ContextCompat.getColor(getContext(), fileType.getColorResId())));
 
         // Apply string truncations to protect tab layout row size constraints
         String displayFileName = getFileName(file);
 
         binding.tvFileName.setText(displayFileName);
         binding.tvFileName.setTypeface(FontManager.getInstance().getUiMedium(getContext()));
-        binding.tvLangBadge.setTypeface(FontManager.getInstance().getUiSemiBold(getContext()));
 
-        binding.dotDirty.setVisibility(file.isDirty() ? VISIBLE : GONE);
+        boolean showDot = file.isDirty();
+        if (file.getFileType() == FileType.API_TESTER) showDot = false;
+        else if (isAutoSaveOn) showDot = false;
+        
+        binding.dotDirty.setVisibility(showDot ? VISIBLE : GONE);
 
         updateTabActiveState(binding, index == activeIndex);
 

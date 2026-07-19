@@ -13,17 +13,14 @@
     android:orientation="horizontal"
     android:paddingHorizontal="12dp">
 
-    <TextView
-        android:id="@+id/tv_lang_badge"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
+    <ImageView
+        android:id="@+id/iv_file_icon"
+        android:layout_width="14dp"
+        android:layout_height="14dp"
         android:layout_marginEnd="6dp"
-        android:fontFamily="sans-serif-black"
-        android:includeFontPadding="false"
-        android:textColor="@color/vcode_text_secondary"
-        android:textSize="9sp"
-        tools:ignore="SmallSp"
-        tools:text="HTML" />
+        android:importantForAccessibility="no"
+        tools:ignore="UseAppTint"
+        tools:src="@drawable/ic_html_icon" />
 
     <TextView
         android:id="@+id/tv_file_name"

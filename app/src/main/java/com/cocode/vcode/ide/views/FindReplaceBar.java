@@ -4,6 +4,7 @@ import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.text.Editable;
+import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextWatcher;
 import android.util.AttributeSet;
@@ -135,7 +136,7 @@ public class FindReplaceBar extends LinearLayout {
         SearchResult cur = results.get(currentIndex);
         String replacement = binding.etReplace.getText().toString();
 
-        Objects.requireNonNull(editor.getText()).replace(cur.absoluteStart, cur.absoluteEnd, replacement);
+        editor.replaceRange(cur.absoluteStart, cur.absoluteEnd, replacement);
         scheduleSearch();
     }
 
@@ -150,7 +151,7 @@ public class FindReplaceBar extends LinearLayout {
         // Note: Looping backwards prevents shifting index parameters from invalidating text boundaries downstream
         for (int i = results.size() - 1; i >= 0; i--) {
             SearchResult r = results.get(i);
-            Objects.requireNonNull(editor.getText()).replace(r.absoluteStart, r.absoluteEnd, replacement);
+            editor.replaceRange(r.absoluteStart, r.absoluteEnd, replacement);
         }
         scheduleSearch();
     }
@@ -223,47 +224,15 @@ public class FindReplaceBar extends LinearLayout {
     }
 
     private void applyHighlights() {
-        if (editor == null || editor.getText() == null) return;
-        Editable editable = editor.getText();
-        clearHighlights();
-
-        int textColor = editor.getCurrentTextColor();
-
-        for (int i = 0; i < results.size(); i++) {
-            SearchResult r = results.get(i);
-            if (r.absoluteStart >= 0 && r.absoluteEnd <= editable.length()) {
-                if (i == currentIndex) {
-                    applySpanSafely(editable, r.absoluteStart, r.absoluteEnd, activeHighlightColor, textColor, true);
-                } else {
-                    applySpanSafely(editable, r.absoluteStart, r.absoluteEnd, highlightColor, textColor, false);
-                }
-            }
-        }
-    }
-
-    private void applySpanSafely(Editable editable, int start, int end, int color, int textColor, boolean isActive) {
-        String text = editable.subSequence(start, end).toString();
-        int currentStart = start;
-        for (int i = 0; i < text.length(); i++) {
-            if (text.charAt(i) == '\n') {
-                if (currentStart < start + i) {
-                    editable.setSpan(isActive ? new ActiveHighlightSpan(color) : new SearchHighlightSpan(color), currentStart, start + i, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                }
-                currentStart = start + i + 1;
-            }
-        }
-        if (currentStart < end) {
-            editable.setSpan(isActive ? new ActiveHighlightSpan(color) : new SearchHighlightSpan(color), currentStart, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
+        if (editor == null) return;
+        // Phase 6: delegate to the new setSearchDecorations() API on CodeEditText.
+        // The editor's onDraw() paints search result backgrounds from this list.
+        editor.setSearchDecorations(results, currentIndex);
     }
 
     private void clearHighlights() {
-        if (editor == null || editor.getText() == null) return;
-        Editable editable = editor.getText();
-        SearchHighlightSpan[] spans = editable.getSpans(0, editable.length(), SearchHighlightSpan.class);
-        for (SearchHighlightSpan s : spans) editable.removeSpan(s);
-        ActiveHighlightSpan[] active = editable.getSpans(0, editable.length(), ActiveHighlightSpan.class);
-        for (ActiveHighlightSpan s : active) editable.removeSpan(s);
+        if (editor == null) return;
+        editor.clearSearchDecorations();
     }
 
     /**
@@ -273,12 +242,7 @@ public class FindReplaceBar extends LinearLayout {
         if (editor == null || currentIndex < 0 || currentIndex >= results.size()) return;
         SearchResult r = results.get(currentIndex);
         editor.setSelection(r.absoluteEnd);
-
-        if (editor.getLayout() != null) {
-            int line = editor.getLayout().getLineForOffset(r.absoluteStart);
-            int y = editor.getLayout().getLineTop(line);
-            editor.scrollTo(0, Math.max(0, y - editor.getHeight() / 3));
-        }
+        editor.scrollToOffset(r.absoluteStart);
         applyHighlights();
         updateMatchCountLabel();
     }

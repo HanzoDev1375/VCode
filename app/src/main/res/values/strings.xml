@@ -262,6 +262,12 @@
     <string name="vcode_invalid_json">Invalid JSON</string>
     <string name="vcode_validating_json">Validating…</string>
 
+    <!--    Custom View: Selection Toolbar-->
+    <string name="vcode_action_cut">Cut</string>
+    <string name="vcode_action_copy">Copy</string>
+    <string name="vcode_action_paste">Paste</string>
+    <string name="vcode_action_select_all">Select All</string>
+
 <!--    Custom View: Find and Replace-->
     <string name="vcode_find_hint">Find...</string>
     <string name="vcode_replace_with_hint">Replace with...</string>

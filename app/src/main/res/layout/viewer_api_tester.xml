@@ -163,11 +163,14 @@
                     android:layout_marginTop="8dp"
                     android:background="?attr/selectableItemBackground"
                     android:clickable="true"
+                    android:drawablePadding="8dp"
                     android:focusable="true"
                     android:padding="8dp"
-                    android:text="+ Add Body Param"
+                    android:text="Add Body Param"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                    android:textColor="?attr/colorPrimary" />
+                    android:textColor="?attr/colorPrimary"
+                    app:drawableStartCompat="@drawable/ic_plus"
+                    app:drawableTint="?attr/colorPrimary" />
             </LinearLayout>
 
             <!-- Response Panel -->
@@ -249,13 +252,13 @@
                             android:id="@+id/tv_response"
                             android:layout_width="match_parent"
                             android:layout_height="wrap_content"
+                            android:background="?attr/colorSurfaceContainer"
                             android:gravity="top|start"
                             android:minHeight="256dp"
                             android:padding="12dp"
-                            android:textIsSelectable="true"
-                            android:background="?attr/colorSurfaceContainer"
                             android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
-                            android:textColor="?attr/colorOnSurface" />
+                            android:textColor="?attr/colorOnSurface"
+                            android:textIsSelectable="true" />
 
                         <com.google.android.material.progressindicator.CircularProgressIndicator
                             android:id="@+id/pb_loading"

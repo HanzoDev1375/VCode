@@ -741,35 +741,25 @@ public class EditorViewModel extends ViewModel {
         }
     }
 
-    /**
-     * Updates the content and viewport state of the active file.
-     * Triggers the auto-save mechanism if configured.
-     */
-    public void updateActiveFileContent(String content, int cursor, int scrollY) {
-        int index = getActiveTabIndexValue();
-        if (index < 0) return;
+    public void notifyFileDirtyStatusChanged() {
+        openFilesLiveData.setValue(new ArrayList<>(getOpenFilesList()));
+    }
 
-        List<EditorFile> docs = getOpenFilesList();
-        if (index >= docs.size()) return;
+    public void triggerAutoSave() {
+        AppSettings settings = settingsLiveData.getValue();
 
-        EditorFile file = docs.get(index);
-
-        boolean wasDirty = file.isDirty();
-        file.setContent(content);
-        file.setCursorPosition(cursor);
-        file.setScrollY(scrollY);
-        boolean isNowDirty = file.isDirty();
-
-        // Notify UI only if the 'dirty' status changed to update save indicators
-        if (wasDirty != isNowDirty) {
-            openFilesLiveData.setValue(new ArrayList<>(docs));
+        boolean hasDirtyVirtual = false;
+        for (EditorFile ef : getOpenFilesList()) {
+            if (ef.isDirty() && ef.getFileType() == FileType.API_TESTER) {
+                hasDirtyVirtual = true;
+                break;
+            }
         }
 
-        // Handle debounced auto-save logic
-        AppSettings settings = settingsLiveData.getValue();
-        if (settings != null && settings.autoSave) {
+        if (hasDirtyVirtual || (settings != null && settings.autoSave)) {
             ExecutorProvider.getInstance().getMainHandler().removeCallbacks(autoSaveRunnable);
-            ExecutorProvider.getInstance().getMainHandler().postDelayed(autoSaveRunnable, settings.autoSaveDelay * 20L);
+            long delay = (settings != null) ? settings.autoSaveDelay * 20L : 2000L;
+            ExecutorProvider.getInstance().getMainHandler().postDelayed(autoSaveRunnable, delay);
         }
     }
 
