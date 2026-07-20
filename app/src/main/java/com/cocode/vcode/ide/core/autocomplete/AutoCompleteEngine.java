@@ -120,8 +120,26 @@ public abstract class AutoCompleteEngine {
             }
 
             // Standard Emmet characters
-            if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$'
-                    || c == '#' || c == '.' || c == '*' || c == '>' || c == '+'
+            if (c == '>') {
+                // Distinguish Emmet child operator '>' from HTML tag closing '>'.
+                // An HTML tag closing '>' is preceded by a tag name (letters/digits)
+                // which is itself preceded by '<' or '</'.
+                // Walk back from start-1 to check: if we find a '<' before any
+                // non-tag-name character, this '>' belongs to an HTML tag — stop.
+                int lookahead = start - 1;
+                while (lookahead >= 0 && (Character.isLetterOrDigit(text.charAt(lookahead))
+                        || text.charAt(lookahead) == '-' || text.charAt(lookahead) == '_'
+                        || text.charAt(lookahead) == '/')) {
+                    lookahead--;
+                }
+                if (lookahead >= 0 && text.charAt(lookahead) == '<') {
+                    // This '>' closes an HTML tag like <p>, </p>, <br/> — stop here.
+                    break;
+                }
+                // It's an Emmet child operator — include it.
+                start--;
+            } else if (Character.isLetterOrDigit(c) || c == '_' || c == '-' || c == '$'
+                    || c == '#' || c == '.' || c == '*' || c == '+'
                     || c == '^' || c == '!' || c == ':') {
                 start--;
             } else {
