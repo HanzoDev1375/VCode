@@ -1,94 +1,84 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:id="@+id/selectionToolbarRoot"
-    android:layout_width="match_parent"
+<com.google.android.material.card.MaterialCardView xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="wrap_content"
     android:layout_height="wrap_content"
-    android:background="@drawable/vcode_bg_toolbar"
-    android:elevation="8dp"
-    android:gravity="center_vertical"
-    android:orientation="horizontal"
-    android:paddingBottom="4dp"
-    android:paddingEnd="8dp"
-    android:paddingStart="8dp"
-    android:paddingTop="4dp">
+    android:layout_margin="8dp"
+    app:cardCornerRadius="8dp"
+    app:cardElevation="8dp"
+    app:cardBackgroundColor="@color/vcode_bg_surface"
+    app:strokeColor="@color/vcode_divider"
+    app:strokeWidth="1dp">
 
-    <!-- Cancel on the left -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCancel"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
+    <HorizontalScrollView
         android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:minWidth="0dp"
-        android:paddingEnd="8dp"
-        android:paddingStart="8dp"
-        android:text="@string/vcode_action_cancel"
-        android:textColor="@color/vcode_text_secondary"
-        android:textSize="13sp" />
+        android:layout_height="wrap_content"
+        android:scrollbars="none"
+        android:fillViewport="true">
 
-    <View
-        android:layout_width="0dp"
-        android:layout_height="0dp"
-        android:layout_weight="1" />
+        <LinearLayout
+            android:id="@+id/selectionToolbarRoot"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:orientation="horizontal"
+            android:paddingBottom="4dp"
+            android:paddingEnd="8dp"
+            android:paddingStart="8dp"
+            android:paddingTop="4dp">
 
-    <!-- Cut -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCut"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:drawablePadding="4dp"
-        android:minWidth="0dp"
-        android:paddingEnd="8dp"
-        android:paddingStart="8dp"
-        android:text="@string/vcode_action_cut"
-        android:textColor="@color/vcode_text_primary"
-        android:textSize="13sp"
-        app:icon="@drawable/ic_scissors"
-        app:iconGravity="start"
-        app:iconPadding="4dp"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
+            <!-- Cut -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCut"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingEnd="12dp"
+                android:paddingStart="12dp"
+                android:text="@string/vcode_action_cut"
+                android:textColor="@color/vcode_text_primary"
+                android:textSize="14sp" />
 
-    <!-- Copy -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnCopy"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:minWidth="0dp"
-        android:paddingEnd="8dp"
-        android:paddingStart="8dp"
-        android:text="@string/vcode_action_copy"
-        android:textColor="@color/vcode_text_primary"
-        android:textSize="13sp"
-        app:icon="@drawable/ic_copy"
-        app:iconGravity="start"
-        app:iconPadding="4dp"
-        xmlns:app="http://schemas.android.com/apk/res-auto" />
+            <!-- Copy -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnCopy"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingEnd="12dp"
+                android:paddingStart="12dp"
+                android:text="@string/vcode_action_copy"
+                android:textColor="@color/vcode_text_primary"
+                android:textSize="14sp" />
 
-    <!-- Paste -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnPaste"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:minWidth="0dp"
-        android:paddingEnd="8dp"
-        android:paddingStart="8dp"
-        android:text="@string/vcode_action_paste"
-        android:textColor="@color/vcode_text_primary"
-        android:textSize="13sp" />
+            <!-- Paste -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnPaste"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingEnd="12dp"
+                android:paddingStart="12dp"
+                android:text="@string/vcode_action_paste"
+                android:textColor="@color/vcode_text_primary"
+                android:textSize="14sp" />
 
-    <!-- Select All -->
-    <com.google.android.material.button.MaterialButton
-        android:id="@+id/btnSelectAll"
-        style="@style/Widget.MaterialComponents.Button.TextButton"
-        android:layout_width="wrap_content"
-        android:layout_height="40dp"
-        android:minWidth="0dp"
-        android:paddingEnd="8dp"
-        android:paddingStart="8dp"
-        android:text="@string/vcode_action_select_all"
-        android:textColor="@color/vcode_text_primary"
-        android:textSize="13sp" />
+            <!-- Select All -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnSelectAll"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="40dp"
+                android:minWidth="0dp"
+                android:paddingEnd="12dp"
+                android:paddingStart="12dp"
+                android:text="@string/vcode_action_select_all"
+                android:textColor="@color/vcode_text_primary"
+                android:textSize="14sp" />
 
-</LinearLayout>
+        </LinearLayout>
+    </HorizontalScrollView>
+</com.google.android.material.card.MaterialCardView>

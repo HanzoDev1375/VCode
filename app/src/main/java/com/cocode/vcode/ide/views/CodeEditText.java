@@ -1565,8 +1565,8 @@ public class CodeEditText extends View {
         ContentPosition pos = content.positionAt(flatOffset);
         int[] loc = new int[2];
         getLocationInWindow(loc);
-        int screenX = loc[0] + (int) (getPaddingLeft() + getCursorX(pos.line, pos.column)) - getScrollX();
-        int screenYTop = loc[1] + (int) (getPaddingTop() + pos.line * lineHeightPx) - getScrollY();
+        int screenX = loc[0] + (int) (getPaddingLeft() + getCursorX(pos.line, pos.column)) - (wordWrap ? 0 : getScrollX());
+        int screenYTop = loc[1] + (int) (getPaddingTop() + absoluteVisualRow(pos.line, pos.column) * lineHeightPx) - getScrollY();
         int screenYBottom = screenYTop + lineHeightPx;
         return new int[]{screenX, screenYTop, screenYBottom};
     }

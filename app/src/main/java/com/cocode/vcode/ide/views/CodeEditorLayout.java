@@ -76,8 +76,12 @@ public class CodeEditorLayout extends LinearLayout {
 
         // Synchronize scroll shifts from the editor to the line numbers gutter.
         // Only update scrollY — NOT cursorOffset — during scroll to avoid O(n) scan mid-fling.
-        codeEditText.setOnScrollChangeListener((scrollX, scrollY) ->
-                lineNumberView.setScrollY(scrollY));
+        codeEditText.setOnScrollChangeListener((scrollX, scrollY) -> {
+            lineNumberView.setScrollY(scrollY);
+            if (selectionToolbar.isVisible()) {
+                selectionToolbar.show();
+            }
+        });
 
         codeEditText.addOnLayoutChangeListener((v, l, t, r, b, ol, ot, or, ob) ->
                 syncLineNumberView());

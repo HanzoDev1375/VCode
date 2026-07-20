@@ -49,15 +49,6 @@ public class CodeFileViewer implements IFileViewer {
 
             container.addView(editorLayout);
 
-            // Pin the SelectionToolbar to the bottom of the container (Phase 4)
-            View toolbarView = editorLayout.getSelectionToolbar().getView();
-            FrameLayout.LayoutParams tbParams = new FrameLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    android.view.Gravity.BOTTOM);
-            toolbarView.setLayoutParams(tbParams);
-            container.addView(toolbarView);
-
             this.viewContainer = container;
             codeEditText = editorLayout.getCodeEditText();
             codeEditText.addContentChangeListener(() -> {
