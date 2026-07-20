@@ -39,6 +39,7 @@ import com.cocode.vcode.ide.ui.editor.viewer.ViewerManager;
 import com.cocode.vcode.ide.ui.filetree.FileTreeFragment;
 import com.cocode.vcode.ide.ui.git.GitActivity;
 import com.cocode.vcode.ide.ui.preview.PreviewActivity;
+import com.cocode.vcode.ide.ui.sheets.EditorOptionsBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.GoToLineBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.SnippetsBottomSheet;
 import com.cocode.vcode.ide.utils.CodeFormatter;
@@ -50,6 +51,7 @@ import com.cocode.vcode.ide.utils.UiUtils;
 import com.cocode.vcode.ide.views.CodeEditText;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 public class EditorActivity extends BaseActivity implements FileTreeFragment.FileSelectionListener, IEditorCallback {
@@ -580,13 +582,6 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     }
 
     private void showOverflowMenu(View anchorView) {
-        LayoutCustomPopupBinding popupBinding = LayoutCustomPopupBinding.inflate(getLayoutInflater());
-        int width = UiUtils.dpToPx(this, 220);
-
-        PopupWindow popupWindow = new PopupWindow(popupBinding.getRoot(), width, ViewGroup.LayoutParams.WRAP_CONTENT, true);
-        popupWindow.setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-        popupWindow.setElevation(UiUtils.dpToPx(this, 8));
-
         int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
@@ -606,30 +601,32 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
         }
 
+        List<EditorOptionsBottomSheet.Option> options = new ArrayList<>();
+
         if (showTextEditingOptions) {
             boolean isVirtual = activeFile != null && activeFile.isVirtual();
             if (!isVirtual) {
-                addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar);
-                addPopupToggleItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_lock, "Read-only", isReadOnly, () -> {
+                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar));
+                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_lock, "Read-only", true, isReadOnly, () -> {
                     isReadOnly = !isReadOnly;
                     applyReadOnlyState();
-                });
+                }));
             }
             if (CodeFormatter.isFormatSupported(files.get(activeIndex).getFileType())) {
-                addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile);
+                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile));
             }
             if (!isVirtual) {
-                addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog);
+                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog));
             }
         }
 
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_star, "Snippet Manager", this::showSnippetManager);
+        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_star, "Snippet Manager", this::showSnippetManager));
 
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_globe, "API Tester", () -> {
+        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_globe, "API Tester", () -> {
             viewModel.openApiTester();
-        });
+        }));
 
-        addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
+        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);
             if (viewModel.getProjectRoot() != null) {
                 navToGit.putExtra("project_path", viewModel.getProjectRoot().getAbsolutePath());
@@ -642,50 +639,20 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             } else {
                 Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
             }
-        }));
+        })));
 
         AppSettings settingsForMenu = viewModel.getSettingsLiveData().getValue();
         boolean autoSave = settingsForMenu != null && settingsForMenu.autoSave;
         if (hasOpenFile && !autoSave) {
-            addPopupItem(popupBinding.popupContainer, popupWindow, R.drawable.ic_floppy_disk, "Save All", () -> {
+            options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_floppy_disk, "Save All", () -> {
                 viewModel.saveAll();
                 Toast.makeText(this, "Saving all files...", Toast.LENGTH_SHORT).show();
-            });
+            }));
         }
 
-        popupWindow.showAsDropDown(anchorView, 0, UiUtils.dpToPx(this, 4));
-    }
-
-    private void addPopupItem(LinearLayout container, PopupWindow popup, int iconRes, String title, Runnable action) {
-        ItemCustomPopupBinding itemBinding = ItemCustomPopupBinding.inflate(getLayoutInflater(), container, false);
-        itemBinding.ivIcon.setImageResource(iconRes);
-        itemBinding.tvTitle.setText(title);
-        itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(this));
-        itemBinding.getRoot().setOnClickListener(v -> {
-            popup.dismiss();
-            action.run();
-        });
-        container.addView(itemBinding.getRoot());
-    }
-
-    private void addPopupToggleItem(LinearLayout container, PopupWindow popup, int iconRes, String title, boolean isChecked, Runnable onToggle) {
-        ItemCustomPopupBinding itemBinding = ItemCustomPopupBinding.inflate(getLayoutInflater(), container, false);
-        itemBinding.ivIcon.setImageResource(iconRes);
-        itemBinding.tvTitle.setText(title);
-        itemBinding.tvTitle.setTypeface(FontManager.getInstance().getUiMedium(this));
-        itemBinding.switchToggle.setVisibility(View.VISIBLE);
-        itemBinding.switchToggle.setChecked(isChecked);
-
-        itemBinding.getRoot().setOnClickListener(v -> {
-            itemBinding.switchToggle.setChecked(!itemBinding.switchToggle.isChecked());
-            onToggle.run();
-            popup.dismiss();
-        });
-        itemBinding.switchToggle.setOnClickListener(v -> {
-            onToggle.run();
-            popup.dismiss();
-        });
-        container.addView(itemBinding.getRoot());
+        EditorOptionsBottomSheet bottomSheet = new EditorOptionsBottomSheet();
+        bottomSheet.setOptions(options);
+        bottomSheet.show(getSupportFragmentManager(), "EditorOptions");
     }
 
     private void applyReadOnlyState() {

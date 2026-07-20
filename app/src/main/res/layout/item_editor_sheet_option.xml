@@ -1,0 +1,40 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="wrap_content"
+    android:layout_height="wrap_content"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:gravity="center_horizontal"
+    android:orientation="vertical">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/cv_option_card"
+        android:layout_width="55dp"
+        android:layout_height="55dp"
+        app:cardBackgroundColor="?attr/colorSurfaceContainerLowest"
+        android:elevation="0dp"
+        app:strokeWidth="0dp"
+        app:cardCornerRadius="360dp"
+        android:clickable="true"
+        android:focusable="true"
+        android:background="?attr/selectableItemBackground">
+
+        <ImageView
+            android:id="@+id/iv_option_icon"
+            android:layout_width="22dp"
+            android:layout_height="22dp"
+            android:importantForAccessibility="no"
+            android:src="@drawable/ic_magnifying_glass"
+            android:layout_gravity="center"
+            app:tint="?attr/colorOnSurfaceVariant"/>
+
+    </com.google.android.material.card.MaterialCardView>
+
+    <TextView
+        android:id="@+id/tv_option_name"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+        android:layout_marginTop="8dp"
+        android:textColor="?attr/colorOnSurfaceVariant"/>
+
+</LinearLayout>
