@@ -113,7 +113,8 @@ public class LineNumberView extends View {
             // Mirror the exact baseline Y formula used in CodeEditText.onDraw:
             //   y = paddingTop + (line * lineHeightPx) - ascent - scrollY
             // Include the editor's paddingTop so numbers align with their text lines.
-            float y = editor.getEditorPaddingTop() + (i * lineH) - ascent - scrollY;
+            int visualRow = editor.getVisualRowStart(i);
+            float y = editor.getEditorPaddingTop() + (visualRow * lineH) - ascent - scrollY;
 
             boolean isActive = (i == activeLine);
             numberPaint.setColor(isActive ? _colorPrimary : _colorSecondary);

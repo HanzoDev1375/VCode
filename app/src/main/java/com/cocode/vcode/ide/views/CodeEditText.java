@@ -102,6 +102,8 @@ public class CodeEditText extends View {
     boolean autoCloseHtmlTags = true;
     private boolean autoCloseQuotes = true;
     private boolean wordWrap = false;
+    private int[] visualRowStarts;
+    private int totalVisualRows;
     // ── IME composing region ──────────────────────────────────────────────────
     int composingStart = -1;
     int composingEnd = -1;
@@ -384,6 +386,7 @@ public class CodeEditText extends View {
                 dirtyTracker.addEdit(content.flatOffset(new ContentPosition(line, col)), 0, inserted.length());
                 scheduleHighlight();
                 dispatchContentChanged();
+                rebuildVisualLayout();
             }
 
             @Override
@@ -392,6 +395,7 @@ public class CodeEditText extends View {
                 dirtyTracker.addEdit(content.flatOffset(new ContentPosition(startLine, startCol)), 1, 0);
                 scheduleHighlight();
                 dispatchContentChanged();
+                rebuildVisualLayout();
             }
         });
 
@@ -407,16 +411,19 @@ public class CodeEditText extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        // Fix #3: The View must always fill its container (MATCH_PARENT from CodeEditorLayout).
-        // We report the LARGER of (a) the container's constrained size or (b) the content size,
-        // so the view always occupies the full pane AND still allows internal scroll for long files.
+        if (wordWrap) {
+            int w = MeasureSpec.getSize(widthMeasureSpec);
+            int contentHeight = totalVisualRows * lineHeightPx + getPaddingTop() + getPaddingBottom();
+            int h = Math.max(resolveSize(contentHeight, heightMeasureSpec), MeasureSpec.getSize(heightMeasureSpec));
+            setMeasuredDimension(w, h);
+            return;
+        }
+
         int contentWidth = (int) (getLongestLineLength() * charWidth)
                 + getPaddingLeft() + getPaddingRight() + (int) dpToPx(64, getContext());
         int contentHeight = content.lineCount() * lineHeightPx
                 + getPaddingTop() + getPaddingBottom();
 
-        // resolveSize honours EXACTLY / AT_MOST constraints from the parent while still
-        // returning contentSize when the parent is UNSPECIFIED (e.g. inside a ScrollView).
         int w = Math.max(resolveSize(contentWidth, widthMeasureSpec),
                 MeasureSpec.getSize(widthMeasureSpec));
         int h = Math.max(resolveSize(contentHeight, heightMeasureSpec),
@@ -435,16 +442,21 @@ public class CodeEditText extends View {
         int viewH = getHeight();
         int viewW = getWidth();
 
-        int firstLine = Math.max(0, scrollY / lineHeightPx - 1);
-        int lastLine = Math.min(content.lineCount() - 1, (scrollY + viewH) / lineHeightPx + 1);
+        int firstVisualRow = scrollY / lineHeightPx;
+        int lastVisualRow = (scrollY + viewH) / lineHeightPx + 1;
+        int firstLine = visualRowToLogicalLine(firstVisualRow);
+        int lastLine = visualRowToLogicalLine(lastVisualRow);
+        lastLine = Math.min(content.lineCount() - 1, lastLine);
 
         float paddingLeft = getPaddingLeft();
         float paddingTop = getPaddingTop();
 
         // 1. Line highlight for cursor line
         if (isFocused()) {
-            float lineTop = paddingTop + cursor.line * lineHeightPx;
-            canvas.drawRect(scrollX, lineTop, scrollX + viewW, lineTop + lineHeightPx, lineHighlightPaint);
+            int cursorVisualRow = absoluteVisualRow(cursor.line, cursor.column);
+            float lineTop = paddingTop + cursorVisualRow * lineHeightPx - scrollY + scrollY; // keeping the logic intact but scrollY cancels out in standard view since scrolling is hardware based, wait, actually canvas translates are not used here, the views do translate. Wait, no, scrollY is used directly or view translates? In Android, scrollX and scrollY are handled by canvas translation. So y should be absolute Y.
+            float rectTop = paddingTop + cursorVisualRow * lineHeightPx;
+            canvas.drawRect(scrollX, rectTop, scrollX + viewW, rectTop + lineHeightPx, lineHighlightPaint);
         }
 
         // 2. Selection background
@@ -459,27 +471,13 @@ public class CodeEditText extends View {
         Paint.FontMetricsInt fm = textPaint.getFontMetricsInt();
         int ascent = fm.ascent;
 
+        int charsPerRow = wordWrap ? Math.max(1, (int)((getWidth()-getPaddingLeft()-getPaddingRight())/charWidth)) : Integer.MAX_VALUE;
+
         for (int line = firstLine; line <= lastLine; line++) {
             int lineLen = content.lineLength(line);
             if (lineLen == 0) continue;
 
-            int startVisCol = Math.max(0, (int) (scrollX / charWidth) - 20);
-            int endVisCol = Math.min(lineLen, (int) ((scrollX + viewW) / charWidth) + 20);
-            int renderLen = endVisCol - startVisCol;
-            if (renderLen <= 0) continue;
-
-            if (lineBuffer == null || lineBuffer.length < renderLen) {
-                int newCap = Math.max(1024, renderLen * 2);
-                lineBuffer = new char[newCap];
-                colorBuffer = new int[newCap];
-                underlineBuffer = new boolean[newCap];
-                previewBuffer = new boolean[newCap];
-                previewColorBuffer = new int[newCap];
-            }
-            content.getLineChars(line, startVisCol, endVisCol, lineBuffer);
-
-            float x = paddingLeft + getCursorX(line, startVisCol);
-            float baseY = paddingTop + (line * lineHeightPx) - ascent;
+            int subRows = wordWrap ? Math.max(1, (int)Math.ceil((double)lineLen / charsPerRow)) : 1;
 
             com.cocode.vcode.ide.core.editor.text.ContentLine contentLine = content.getLine(line);
             if (contentLine.tokens == null && syntaxHighlighter != null) {
@@ -490,6 +488,39 @@ public class CodeEditText extends View {
                 com.cocode.vcode.ide.core.parser.BracketMatcher.applyRainbowBrackets(contentLine.tokens, contentLine.toLineString(), rainbowColors, depth);
             }
             List<HighlightToken> lineTokens = contentLine.tokens;
+
+            for (int sr = 0; sr < subRows; sr++) {
+                int srStart = sr * charsPerRow;
+                int srEnd = Math.min(lineLen, srStart + charsPerRow);
+
+                int startVisCol, endVisCol;
+                if (wordWrap) {
+                    startVisCol = srStart;
+                    endVisCol = srEnd;
+                } else {
+                    startVisCol = Math.max(0, (int) (scrollX / charWidth) - 20);
+                    endVisCol = Math.min(lineLen, (int) ((scrollX + viewW) / charWidth) + 20);
+                }
+                startVisCol = Math.max(srStart, startVisCol);
+                endVisCol = Math.min(srEnd, endVisCol);
+
+                int renderLen = endVisCol - startVisCol;
+                if (renderLen <= 0) continue;
+
+                if (lineBuffer == null || lineBuffer.length < renderLen) {
+                    int newCap = Math.max(1024, renderLen * 2);
+                    lineBuffer = new char[newCap];
+                    colorBuffer = new int[newCap];
+                    underlineBuffer = new boolean[newCap];
+                    previewBuffer = new boolean[newCap];
+                    previewColorBuffer = new int[newCap];
+                }
+                content.getLineChars(line, startVisCol, endVisCol, lineBuffer);
+
+                int visualRow = visualRowOf(line) + sr;
+                float x = paddingLeft + (wordWrap ? 0 : getCursorX(line, startVisCol));
+                float baseY = paddingTop + (visualRow * lineHeightPx) - ascent;
+
             if (lineTokens == null || lineTokens.isEmpty()) {
                 textPaint.setColor(defaultTextColor);
                 canvas.drawText(lineBuffer, 0, renderLen, x, baseY, textPaint);
@@ -563,6 +594,7 @@ public class CodeEditText extends View {
                 textPaint.setColor(defaultTextColor);
                 textPaint.setStyle(Paint.Style.FILL);
             }
+            }
         }
 
         // 5. Bracket match highlights
@@ -571,7 +603,8 @@ public class CodeEditText extends View {
         // 6. Cursor
         if (isFocused() && cursorVisible && selectionAnchor == null) {
             float cx = paddingLeft + getCursorX(cursor.line, cursor.column);
-            float cy = paddingTop + cursor.line * lineHeightPx;
+            int cursorVisualRow = absoluteVisualRow(cursor.line, cursor.column);
+            float cy = paddingTop + cursorVisualRow * lineHeightPx;
             canvas.drawLine(cx, cy, cx, cy + lineHeightPx, cursorPaint);
         }
 
@@ -602,10 +635,26 @@ public class CodeEditText extends View {
             int colStart = (line == selStart.line) ? selStart.column : 0;
             int colEnd = (line == selEnd.line) ? selEnd.column : lineLen;
 
-            float x0 = paddingLeft + getCursorX(line, colStart);
-            float x1 = paddingLeft + getCursorX(line, colEnd);
-            float y0 = paddingTop + line * lineHeightPx;
-            canvas.drawRect(x0, y0, x1, y0 + lineHeightPx, selectionPaint);
+            if (!wordWrap) {
+                float x0 = paddingLeft + getCursorX(line, colStart);
+                float x1 = paddingLeft + getCursorX(line, colEnd);
+                float y0 = paddingTop + line * lineHeightPx;
+                canvas.drawRect(x0, y0, x1, y0 + lineHeightPx, selectionPaint);
+            } else {
+                int charsPerRow = Math.max(1, (int)((getWidth()-getPaddingLeft()-getPaddingRight())/charWidth));
+                int subRows = Math.max(1, (int)Math.ceil((double)lineLen / charsPerRow));
+                for (int sr = 0; sr < subRows; sr++) {
+                    int srStart = sr * charsPerRow;
+                    int srEndRow = Math.min(lineLen, srStart + charsPerRow);
+                    if (colEnd <= srStart || colStart >= srEndRow) continue;
+                    int s = Math.max(colStart, srStart);
+                    int e = Math.min(colEnd, srEndRow);
+                    float x0 = paddingLeft + getCursorX(line, s);
+                    float x1 = paddingLeft + getCursorX(line, e);
+                    float y0 = paddingTop + (visualRowOf(line) + sr) * lineHeightPx;
+                    canvas.drawRect(x0, y0, x1, y0 + lineHeightPx, selectionPaint);
+                }
+            }
         }
     }
 
@@ -631,10 +680,26 @@ public class CodeEditText extends View {
                 int colStart = (line == startPos.line) ? startPos.column : 0;
                 int colEnd = (line == endPos.line) ? endPos.column : lineLen;
 
-                float x0 = paddingLeft + getCursorX(line, colStart);
-                float x1 = paddingLeft + getCursorX(line, colEnd);
-                float y0 = paddingTop + line * lineHeightPx;
-                canvas.drawRect(x0, y0, x1, y0 + lineHeightPx, paint);
+                if (!wordWrap) {
+                    float x0 = paddingLeft + getCursorX(line, colStart);
+                    float x1 = paddingLeft + getCursorX(line, colEnd);
+                    float y0 = paddingTop + line * lineHeightPx;
+                    canvas.drawRect(x0, y0, x1, y0 + lineHeightPx, paint);
+                } else {
+                    int charsPerRow = Math.max(1, (int)((getWidth()-getPaddingLeft()-getPaddingRight())/charWidth));
+                    int subRows = Math.max(1, (int)Math.ceil((double)lineLen / charsPerRow));
+                    for (int sr = 0; sr < subRows; sr++) {
+                        int srStart = sr * charsPerRow;
+                        int srEndRow = Math.min(lineLen, srStart + charsPerRow);
+                        if (colEnd <= srStart || colStart >= srEndRow) continue;
+                        int s = Math.max(colStart, srStart);
+                        int e = Math.min(colEnd, srEndRow);
+                        float x0 = paddingLeft + getCursorX(line, s);
+                        float x1 = paddingLeft + getCursorX(line, e);
+                        float y0 = paddingTop + (visualRowOf(line) + sr) * lineHeightPx;
+                        canvas.drawRect(x0, y0, x1, y0 + lineHeightPx, paint);
+                    }
+                }
             }
         }
     }
@@ -646,12 +711,12 @@ public class CodeEditText extends View {
 
         if (bracketMatchOpen != null) {
             float x = paddingLeft + getCursorX(bracketMatchOpen.line, bracketMatchOpen.column);
-            float y = paddingTop + bracketMatchOpen.line * lineHeightPx;
+            float y = paddingTop + absoluteVisualRow(bracketMatchOpen.line, bracketMatchOpen.column) * lineHeightPx;
             canvas.drawRect(x, y, x + charWidth, y + lineHeightPx, bracketHighlightPaint);
         }
         if (bracketMatchClose != null) {
             float x = paddingLeft + getCursorX(bracketMatchClose.line, bracketMatchClose.column);
-            float y = paddingTop + bracketMatchClose.line * lineHeightPx;
+            float y = paddingTop + absoluteVisualRow(bracketMatchClose.line, bracketMatchClose.column) * lineHeightPx;
             canvas.drawRect(x, y, x + charWidth, y + lineHeightPx, bracketHighlightPaint);
         }
     }
@@ -696,10 +761,14 @@ public class CodeEditText extends View {
                 color = cachedInfoColor;
             diagnosticPaint.setColor(color);
 
-            if (problem.getCachedPath() == null) {
+            if (problem.getCachedPath() == null || wordWrap) {
                 float x0 = paddingLeft + getCursorX(lineIdx, colStart);
                 float x1 = paddingLeft + getCursorX(lineIdx, colEnd);
-                float waveY = paddingTop + lineIdx * lineHeightPx + lineHeightPx + 2;
+                if (wordWrap && colEnd > colStart && colInSubRow(lineIdx, colEnd) < colInSubRow(lineIdx, colStart)) {
+                    // problem spans multiple subrows, just draw for the first subrow
+                    x1 = paddingLeft + getWidth() - getPaddingRight();
+                }
+                float waveY = paddingTop + absoluteVisualRow(lineIdx, colStart) * lineHeightPx + lineHeightPx + 2;
                 float amp = 2.5f;
                 float period = 8f;
                 float half = period / 2f;
@@ -724,7 +793,8 @@ public class CodeEditText extends View {
                                      float paddingLeft, float paddingTop,
                                      int scrollY, int scrollX, boolean isStart) {
         float cx = paddingLeft + getCursorX(pos.line, pos.column);
-        float cy = paddingTop + pos.line * lineHeightPx;
+        int vRow = absoluteVisualRow(pos.line, pos.column);
+        float cy = paddingTop + vRow * lineHeightPx;
         float handleY = isStart ? cy : cy + lineHeightPx;
 
         // Draw the cursor line at this position
@@ -741,12 +811,12 @@ public class CodeEditText extends View {
         ContentPosition endPos = ContentPosition.max(cursor, selectionAnchor);
 
         float startX = getPaddingLeft() + getCursorX(startPos.line, startPos.column);
-        float startY = getPaddingTop() + startPos.line * lineHeightPx;
+        float startY = getPaddingTop() + absoluteVisualRow(startPos.line, startPos.column) * lineHeightPx;
 
         float endX = getPaddingLeft() + getCursorX(endPos.line, endPos.column);
-        float endY = getPaddingTop() + (endPos.line + 1) * lineHeightPx;
+        float endY = getPaddingTop() + (absoluteVisualRow(endPos.line, endPos.column) + 1) * lineHeightPx;
 
-        float testX = touchX + getScrollX();
+        float testX = touchX + (wordWrap ? 0 : getScrollX());
         float testY = touchY + getScrollY();
 
         if (Math.abs(testX - startX) < threshold && Math.abs(testY - startY) < threshold) {
@@ -816,6 +886,14 @@ public class CodeEditText extends View {
 
     @Override
     public void scrollTo(int x, int y) {
+        if (wordWrap) {
+            int totalContentH = totalVisualRows * lineHeightPx + getPaddingTop() + getPaddingBottom();
+            int maxScrollY = Math.max(0, totalContentH - getHeight());
+            x = 0;
+            y = Math.max(0, Math.min(y, maxScrollY));
+            super.scrollTo(x, y);
+            return;
+        }
         // Full content dimensions (same formula as onMeasure)
         int totalContentH = content.lineCount() * lineHeightPx + getPaddingTop() + getPaddingBottom();
         int totalContentW = (int) (getLongestLineLength() * charWidth) + getPaddingLeft() + getPaddingRight();
@@ -867,6 +945,7 @@ public class CodeEditText extends View {
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
+        rebuildVisualLayout();
         if (h != oldh && oldh > 0) {
             post(this::ensureCursorVisible);
         }
@@ -876,7 +955,8 @@ public class CodeEditText extends View {
         if (cursor == null || getHeight() <= 0 || getWidth() <= 0) return;
 
         // Vertical
-        int cursorYTop = getPaddingTop() + cursor.line * lineHeightPx;
+        int cursorVisualRow = absoluteVisualRow(cursor.line, cursor.column);
+        int cursorYTop = getPaddingTop() + cursorVisualRow * lineHeightPx;
         int cursorYBottom = cursorYTop + lineHeightPx;
         int currentScrollY = getScrollY();
         int viewHeight = getHeight() - getPaddingTop() - getPaddingBottom();
@@ -890,20 +970,22 @@ public class CodeEditText extends View {
         }
 
         // Horizontal
-        int cursorXLeft = getPaddingLeft() + (int) (getCursorX(cursor.line, cursor.column));
-        int cursorXRight = cursorXLeft + (int) charWidth;
-        int currentScrollX = getScrollX();
-        int viewWidth = getWidth() - getPaddingLeft() - getPaddingRight();
-        int bufferX = (int) (charWidth * 4);
+        int newScrollX = getScrollX();
+        if (!wordWrap) {
+            int cursorXLeft = getPaddingLeft() + (int) (getCursorX(cursor.line, cursor.column));
+            int cursorXRight = cursorXLeft + (int) charWidth;
+            int currentScrollX = getScrollX();
+            int viewWidth = getWidth() - getPaddingLeft() - getPaddingRight();
+            int bufferX = (int) (charWidth * 4);
 
-        int newScrollX = currentScrollX;
-        if (cursorXLeft - bufferX < currentScrollX) {
-            newScrollX = Math.max(0, cursorXLeft - bufferX);
-        } else if (cursorXRight + bufferX > currentScrollX + viewWidth) {
-            newScrollX = cursorXRight + bufferX - viewWidth;
+            if (cursorXLeft - bufferX < currentScrollX) {
+                newScrollX = Math.max(0, cursorXLeft - bufferX);
+            } else if (cursorXRight + bufferX > currentScrollX + viewWidth) {
+                newScrollX = cursorXRight + bufferX - viewWidth;
+            }
         }
 
-        if (newScrollX != currentScrollX || newScrollY != currentScrollY) {
+        if (newScrollX != getScrollX() || newScrollY != currentScrollY) {
             scrollTo(newScrollX, newScrollY);
         }
     }
@@ -1410,6 +1492,7 @@ public class CodeEditText extends View {
                 isSettingText = false;
                 dirtyTracker.reset();
                 dirtyTracker.addEdit(0, 0, content.totalLength());
+                rebuildVisualLayout();
                 requestLayout();
                 invalidate();
                 scheduleHighlight();
@@ -1460,7 +1543,7 @@ public class CodeEditText extends View {
     }
 
     public int getFirstVisibleLine() {
-        return Math.max(0, getScrollY() / lineHeightPx);
+        return visualRowToLogicalLine(getScrollY() / lineHeightPx);
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -1653,8 +1736,68 @@ public class CodeEditText extends View {
 
     public void setWordWrap(boolean wordWrap) {
         this.wordWrap = wordWrap;
+        rebuildVisualLayout();
         invalidate();
         requestLayout();
+    }
+
+    private void rebuildVisualLayout() {
+        if (!wordWrap || getWidth() <= 0) {
+            int n = content.lineCount();
+            if (visualRowStarts == null || visualRowStarts.length < n + 1)
+                visualRowStarts = new int[n + 1];
+            for (int i = 0; i <= n; i++) visualRowStarts[i] = i;
+            totalVisualRows = n;
+            return;
+        }
+        int n = content.lineCount();
+        if (visualRowStarts == null || visualRowStarts.length < n + 1)
+            visualRowStarts = new int[n + 1];
+        int charsPerRow = Math.max(1, (int) ((getWidth() - getPaddingLeft() - getPaddingRight()) / charWidth));
+        int row = 0;
+        for (int i = 0; i < n; i++) {
+            visualRowStarts[i] = row;
+            int lineLen = content.lineLength(i);
+            int rows = Math.max(1, (int) Math.ceil((double) lineLen / charsPerRow));
+            row += rows;
+        }
+        visualRowStarts[n] = row;
+        totalVisualRows = row;
+    }
+
+    private int visualRowOf(int logicalLine) {
+        if (visualRowStarts == null || logicalLine >= visualRowStarts.length) return logicalLine;
+        return visualRowStarts[logicalLine];
+    }
+
+    private int visualSubRow(int logicalLine, int col) {
+        if (!wordWrap || getWidth() <= 0) return 0;
+        int charsPerRow = Math.max(1, (int) ((getWidth() - getPaddingLeft() - getPaddingRight()) / charWidth));
+        return col / charsPerRow;
+    }
+
+    private int colInSubRow(int logicalLine, int col) {
+        if (!wordWrap || getWidth() <= 0) return col;
+        int charsPerRow = Math.max(1, (int) ((getWidth() - getPaddingLeft() - getPaddingRight()) / charWidth));
+        return col % charsPerRow;
+    }
+
+    private int absoluteVisualRow(int logicalLine, int col) {
+        return visualRowOf(logicalLine) + visualSubRow(logicalLine, col);
+    }
+
+    private int visualRowToLogicalLine(int visualRow) {
+        if (!wordWrap || visualRowStarts == null) return Math.max(0, visualRow);
+        int lo = 0, hi = content.lineCount() - 1;
+        while (lo < hi) {
+            int mid = (lo + hi + 1) / 2;
+            if (visualRowStarts[mid] <= visualRow) lo = mid; else hi = mid - 1;
+        }
+        return lo;
+    }
+
+    public int getVisualRowStart(int logicalLine) {
+        return visualRowOf(logicalLine);
     }
 
     public void setAutoIndent(boolean autoIndent) {
@@ -2237,6 +2380,7 @@ public class CodeEditText extends View {
     }
 
     private float getCursorX(int line, int col) {
+        if (wordWrap) col = colInSubRow(line, col);
         float cx = col * charWidth;
         java.util.List<com.cocode.vcode.ide.core.editor.highlight.HighlightToken> tokens = content.getLine(line).tokens;
         if (tokens != null) {
@@ -2250,13 +2394,18 @@ public class CodeEditText extends View {
     }
 
     private ContentPosition touchToPosition(float touchX, float touchY) {
-        int line = (int) ((touchY + getScrollY() - getPaddingTop()) / lineHeightPx);
-        line = Math.max(0, Math.min(line, content.lineCount() - 1));
+        int visualRow = (int) ((touchY + getScrollY() - getPaddingTop()) / lineHeightPx);
+        int logicalLine = visualRowToLogicalLine(visualRow);
+        logicalLine = Math.max(0, Math.min(logicalLine, content.lineCount() - 1));
 
-        float relativeX = touchX + getScrollX() - getPaddingLeft();
-        int lineLen = content.lineLength(line);
+        int subRow = wordWrap ? (visualRow - visualRowOf(logicalLine)) : 0;
+        int charsPerRow = wordWrap ? Math.max(1, (int) ((getWidth() - getPaddingLeft() - getPaddingRight()) / charWidth)) : Integer.MAX_VALUE;
+        int colOffset = subRow * charsPerRow;
 
-        java.util.List<com.cocode.vcode.ide.core.editor.highlight.HighlightToken> tokens = content.getLine(line).tokens;
+        float relativeX = touchX + (wordWrap ? 0 : getScrollX()) - getPaddingLeft();
+        int lineLen = content.lineLength(logicalLine);
+
+        java.util.List<com.cocode.vcode.ide.core.editor.highlight.HighlightToken> tokens = content.getLine(logicalLine).tokens;
 
         boolean hasCircles = false;
         if (tokens != null) {
@@ -2268,29 +2417,27 @@ public class CodeEditText extends View {
             }
         }
 
+        int colInSub = 0;
         if (!hasCircles) {
-            int col = (int) (relativeX / charWidth);
-            if (relativeX - col * charWidth > charWidth / 2f) col++;
-            return new ContentPosition(line, Math.max(0, Math.min(col, lineLen)));
-        }
-
-        int col = 0;
-        float currentX = 0;
-
-        while (col < lineLen) {
-            float widthAtCol = charWidth;
-            for (com.cocode.vcode.ide.core.editor.highlight.HighlightToken t : tokens) {
-                if (t.hasPreviewColor && t.startCol == col) {
-                    widthAtCol += charWidth * 1.2f;
-                    break;
+            colInSub = (int) (relativeX / charWidth);
+            if (relativeX - colInSub * charWidth > charWidth / 2f) colInSub++;
+        } else {
+            float currentX = 0;
+            while (colInSub < lineLen - colOffset) {
+                float widthAtCol = charWidth;
+                for (com.cocode.vcode.ide.core.editor.highlight.HighlightToken t : tokens) {
+                    if (t.hasPreviewColor && t.startCol == colOffset + colInSub) {
+                        widthAtCol += charWidth * 1.2f;
+                        break;
+                    }
                 }
+                if (relativeX < currentX + widthAtCol / 2f) break;
+                currentX += widthAtCol;
+                colInSub++;
             }
-            if (relativeX < currentX + widthAtCol / 2f) break;
-            currentX += widthAtCol;
-            col++;
         }
-
-        return new ContentPosition(line, col);
+        int col = colOffset + colInSub;
+        return new ContentPosition(logicalLine, Math.max(0, Math.min(col, lineLen)));
     }
 
     /**

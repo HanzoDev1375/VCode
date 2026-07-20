@@ -1,18 +1,13 @@
 package com.cocode.vcode.ide.ui.editor;
 
 import android.content.Intent;
-import android.graphics.Color;
-import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.os.Bundle;
 
 import android.util.TypedValue;
 import android.view.View;
-import android.view.ViewGroup;
 import android.view.inputmethod.InputMethodManager;
-import android.widget.LinearLayout;
-import android.widget.PopupWindow;
 import android.widget.Toast;
 
 import androidx.activity.EdgeToEdge;
@@ -30,8 +25,6 @@ import com.cocode.vcode.ide.data.model.AppSettings;
 import com.cocode.vcode.ide.data.model.EditorFile;
 import com.cocode.vcode.ide.data.model.FileNode;
 import com.cocode.vcode.ide.databinding.ActivityEditorBinding;
-import com.cocode.vcode.ide.databinding.ItemCustomPopupBinding;
-import com.cocode.vcode.ide.databinding.LayoutCustomPopupBinding;
 import com.cocode.vcode.ide.ui.base.BaseActivity;
 import com.cocode.vcode.ide.ui.editor.viewer.IEditorCallback;
 import com.cocode.vcode.ide.ui.editor.viewer.IFileViewer;
@@ -203,23 +196,21 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         });
 
 
-        if (binding.diagnosticBar != null) {
-            binding.diagnosticBar.setOnClickListener(v -> {
-                com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet sheet = new com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet();
-                sheet.setListener(this::jumpToLine);
-                Integer activeIndex = viewModel.getActiveTabIndex().getValue();
-                if (activeIndex != null && activeIndex >= 0) {
-                    java.util.List<com.cocode.vcode.ide.data.model.EditorFile> openFiles = viewModel.getOpenFiles().getValue();
-                    if (openFiles != null && activeIndex < openFiles.size()) {
-                        sheet.setFilterFile(openFiles.get(activeIndex).getFile());
-                    }
+        binding.diagnosticBar.setOnClickListener(v -> {
+            com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet sheet = new com.cocode.vcode.ide.ui.sheets.ProblemsBottomSheet();
+            sheet.setListener(this::jumpToLine);
+            Integer activeIndex = viewModel.getActiveTabIndex().getValue();
+            if (activeIndex != null && activeIndex >= 0) {
+                List<EditorFile> openFiles = viewModel.getOpenFiles().getValue();
+                if (openFiles != null && activeIndex < openFiles.size()) {
+                    sheet.setFilterFile(openFiles.get(activeIndex).getFile());
                 }
-                sheet.show(getSupportFragmentManager(), "ProblemsSheet");
-            });
-        }
+            }
+            sheet.show(getSupportFragmentManager(), "ProblemsSheet");
+        });
 
 
-        binding.btnOverflow.setOnClickListener(this::showOverflowMenu);
+        binding.btnOverflow.setOnClickListener(v -> showOverflowMenu());
 
         binding.tabBar.setOnTabClickListener(index -> {
             saveCurrentEditorState();
@@ -434,7 +425,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     }
                 }
                 updateActiveViewer(activeFile, isPreview);
-                boolean isEmpty = false;
+                boolean isEmpty;
                 if (activeViewer != null && activeViewer.getCodeEditor() != null) {
                     isEmpty = activeViewer.getCodeEditor().length() == 0;
                 } else {
@@ -455,7 +446,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 return;
             }
             
-            boolean isEmpty = false;
+            boolean isEmpty;
             if (activeViewer != null && activeViewer.getCodeEditor() != null) {
                 isEmpty = activeViewer.getCodeEditor().length() == 0;
             } else {
@@ -581,7 +572,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         }
     }
 
-    private void showOverflowMenu(View anchorView) {
+    private void showOverflowMenu() {
         int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
         boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
@@ -604,7 +595,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         List<EditorOptionsBottomSheet.Option> options = new ArrayList<>();
 
         if (showTextEditingOptions) {
-            boolean isVirtual = activeFile != null && activeFile.isVirtual();
+            boolean isVirtual = activeFile.isVirtual();
             if (!isVirtual) {
                 options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar));
                 options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_lock, "Read-only", true, isReadOnly, () -> {
@@ -622,9 +613,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_star, "Snippet Manager", this::showSnippetManager));
 
-        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_globe, "API Tester", () -> {
-            viewModel.openApiTester();
-        }));
+        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_globe, "API Tester", () -> viewModel.openApiTester()));
 
         options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
             Intent navToGit = new Intent(this, GitActivity.class);
@@ -770,9 +759,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             new AlertDialog.Builder(this)
                     .setTitle("Unsaved Changes")
                     .setMessage("You have unsaved files. Save them before leaving?")
-                    .setPositiveButton("Save All", (d, w) -> {
-                        viewModel.saveAll(() -> navigateAction.run());
-                    })
+                    .setPositiveButton("Save All", (d, w) -> viewModel.saveAll(navigateAction))
                     .setNegativeButton("Discard", (d, w) -> navigateAction.run())
                     .setNeutralButton("Cancel", null)
                     .show();
