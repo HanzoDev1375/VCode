@@ -1661,12 +1661,16 @@ public class CodeEditText extends View {
         }
 
         isApplyingHighlight = true;
+        ContentPosition insertStart = cursor;
+        UndoStack.EditorSnapshot before = snapshotAt(insertStart, selectionAnchor);
         content.insert(cursor.line, cursor.column, formattedSnippet);
         if (pipeIndex != -1) {
             cursor = content.positionAt(flatCursor + pipeIndex);
         } else {
             cursor = content.positionAt(flatCursor + formattedSnippet.length());
         }
+        UndoStack.EditorSnapshot after = snapshotAt(cursor, null);
+        undoStack.recordInsert(insertStart.line, insertStart.column, formattedSnippet, before, after);
         selectionAnchor = null;
         isApplyingHighlight = false;
         scheduleHighlight();
@@ -1977,10 +1981,26 @@ public class CodeEditText extends View {
             }
         }
         ContentPosition wordStartPos = content.positionAt(wordStart);
+        ContentPosition beforeCursor = cursor;
+        UndoStack.EditorSnapshot before = snapshotAt(beforeCursor, selectionAnchor);
+        String deletedText = "";
+        try {
+            int deleteEnd = content.flatOffset(cursor);
+            if (deleteEnd > wordStart) {
+                deletedText = content.getSubstring(wordStart, deleteEnd);
+            }
+        } catch (Exception ignored) {}
         content.replace(wordStartPos.line, wordStartPos.column,
                 cursor.line, cursor.column, cleanInsert);
         int safeFinal = Math.min(finalCursorFlat, content.totalLength());
         cursor = content.positionAt(safeFinal);
+        UndoStack.EditorSnapshot after = snapshotAt(cursor, null);
+        if (!deletedText.isEmpty()) {
+            undoStack.recordReplace(wordStartPos.line, wordStartPos.column,
+                    beforeCursor.line, beforeCursor.column, deletedText, cleanInsert, before, after);
+        } else {
+            undoStack.recordInsert(wordStartPos.line, wordStartPos.column, cleanInsert, before, after);
+        }
         selectionAnchor = null;
 
         autoCompletePopup.dismiss();
