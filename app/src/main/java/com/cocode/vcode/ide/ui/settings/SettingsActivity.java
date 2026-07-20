@@ -58,6 +58,9 @@ public class SettingsActivity extends BaseActivity {
         // Handle row clicks by toggling their associated switches
         binding.opShowLineNumbers.setOnClickListener(_view -> binding.switchLineNumbers.setChecked(!binding.switchLineNumbers.isChecked()));
         binding.opAutoCloseBrackets.setOnClickListener(_view -> binding.switchAutoClose.setChecked(!binding.switchAutoClose.isChecked()));
+        binding.opAutoCloseQuotes.setOnClickListener(_view -> binding.switchAutoCloseQuotes.setChecked(!binding.switchAutoCloseQuotes.isChecked()));
+        binding.opAutoCloseTags.setOnClickListener(_view -> binding.switchAutoCloseTags.setChecked(!binding.switchAutoCloseTags.isChecked()));
+        binding.opWordWrap.setOnClickListener(_view -> binding.switchWordWrap.setChecked(!binding.switchWordWrap.isChecked()));
         binding.opAutoIndent.setOnClickListener(_view -> binding.switchAutoIndent.setChecked(!binding.switchAutoIndent.isChecked()));
         binding.opConfirmHardReset.setOnClickListener(_view -> binding.switchConfirmReset.setChecked(!binding.switchConfirmReset.isChecked()));
         binding.opShowInAppPreview.setOnClickListener(_view -> binding.switchInAppPreview.setChecked(!binding.switchInAppPreview.isChecked()));
@@ -108,6 +111,18 @@ public class SettingsActivity extends BaseActivity {
 
         binding.switchAutoClose.setOnCheckedChangeListener((btn, isChecked) -> {
             if (!isUpdatingUi) viewModel.updateAutoCloseBrackets(isChecked);
+        });
+
+        binding.switchAutoCloseQuotes.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (!isUpdatingUi) viewModel.updateAutoCloseQuotes(isChecked);
+        });
+
+        binding.switchAutoCloseTags.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (!isUpdatingUi) viewModel.updateAutoCloseHtmlTags(isChecked);
+        });
+
+        binding.switchWordWrap.setOnCheckedChangeListener((btn, isChecked) -> {
+            if (!isUpdatingUi) viewModel.updateWordWrap(isChecked);
         });
 
         binding.switchAutoIndent.setOnCheckedChangeListener((btn, isChecked) -> {
@@ -174,6 +189,9 @@ public class SettingsActivity extends BaseActivity {
 
                 binding.switchLineNumbers.setChecked(settings.isShowLineNumbers());
                 binding.switchAutoClose.setChecked(settings.isAutoCloseBrackets());
+                binding.switchAutoCloseQuotes.setChecked(settings.autoCloseQuotes);
+                binding.switchAutoCloseTags.setChecked(settings.autoCloseHtmlTags);
+                binding.switchWordWrap.setChecked(settings.wordWrap);
                 binding.switchAutoIndent.setChecked(settings.autoIndent);
                 binding.switchInAppPreview.setChecked(settings.openPreviewInApp);
                 binding.switchAutoSave.setChecked(settings.autoSave);
@@ -235,6 +253,12 @@ public class SettingsActivity extends BaseActivity {
         binding.tvFontSizeValue.setTypeface(fm.getUiFont(this));
         binding.tvAutoCloseBrackets.setTypeface(fm.getUiMedium(this));
         binding.tvAutoCloseBracketsDesc.setTypeface(fm.getUiFont(this));
+        binding.tvAutoCloseQuotes.setTypeface(fm.getUiMedium(this));
+        binding.tvAutoCloseQuotesDesc.setTypeface(fm.getUiFont(this));
+        binding.tvAutoCloseTags.setTypeface(fm.getUiMedium(this));
+        binding.tvAutoCloseTagsDesc.setTypeface(fm.getUiFont(this));
+        binding.tvWordWrap.setTypeface(fm.getUiMedium(this));
+        binding.tvWordWrapDesc.setTypeface(fm.getUiFont(this));
         binding.tvAutoIndent.setTypeface(fm.getUiMedium(this));
         binding.tvAutoIndentDesc.setTypeface(fm.getUiFont(this));
 

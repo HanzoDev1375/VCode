@@ -18,7 +18,13 @@
     <string name="font_size">FONT SIZE</string>
     <string name="_14px">14px</string>
     <string name="auto_close_brackets">Auto-close Brackets</string>
-    <string name="automatically_insert_matching_closing_symbols">Automatically insert matching closing symbols</string>
+    <string name="auto_close_quotes">Auto-close Quotes</string>
+    <string name="auto_close_quotes_desc">Automatically insert matching closing quotes</string>
+    <string name="auto_close_tags">Auto-close HTML Tags</string>
+    <string name="auto_close_tags_desc">Automatically insert matching closing HTML tags</string>
+    <string name="word_wrap">Word Wrap</string>
+    <string name="word_wrap_desc">Wrap lines that exceed the screen width</string>
+    <string name="automatically_insert_matching_closing_symbols">Automatically insert matching closing brackets</string>
     <string name="auto_indent">Auto-indent</string>
     <string name="automatically_handle_indentation">Automatically handle indentation for respective files</string>
     <string name="auto_save">Auto save</string>

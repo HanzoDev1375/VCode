@@ -95,6 +95,9 @@ public class CodeFileViewer implements IFileViewer {
         if (settings != null) {
             codeEditText.setTextSize(settings.getFontSize());
             codeEditText.setAutoCloseBrackets(settings.isAutoCloseBrackets());
+            codeEditText.setAutoCloseQuotes(settings.autoCloseQuotes);
+            codeEditText.setAutoCloseHtmlTags(settings.autoCloseHtmlTags);
+            codeEditText.setWordWrap(settings.wordWrap);
             codeEditText.setAutoIndent(settings.autoIndent);
             editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
         }

@@ -39,6 +39,8 @@ public class SettingsRepository {
         s.showLineNumbers = prefs.getBoolean(PreferenceKeys.SHOW_LINE_NUMBERS, s.showLineNumbers);
         s.autoCloseBrackets = prefs.getBoolean(PreferenceKeys.AUTO_CLOSE_BRACKETS, s.autoCloseBrackets);
         s.autoCloseHtmlTags = prefs.getBoolean(PreferenceKeys.AUTO_CLOSE_HTML_TAGS, s.autoCloseHtmlTags);
+        s.autoCloseQuotes = prefs.getBoolean(PreferenceKeys.AUTO_CLOSE_QUOTES, s.autoCloseQuotes);
+        s.wordWrap = prefs.getBoolean(PreferenceKeys.WORD_WRAP, s.wordWrap);
         s.highlightCurrentLine = prefs.getBoolean(PreferenceKeys.HIGHLIGHT_CURRENT_LINE, s.highlightCurrentLine);
         s.autoIndent = prefs.getBoolean(PreferenceKeys.AUTO_INDENT, s.autoIndent);
         s.matchBrackets = prefs.getBoolean(PreferenceKeys.MATCH_BRACKETS, s.matchBrackets);
@@ -149,6 +151,8 @@ public class SettingsRepository {
         ed.putBoolean(PreferenceKeys.SHOW_LINE_NUMBERS, s.showLineNumbers);
         ed.putBoolean(PreferenceKeys.AUTO_CLOSE_BRACKETS, s.autoCloseBrackets);
         ed.putBoolean(PreferenceKeys.AUTO_CLOSE_HTML_TAGS, s.autoCloseHtmlTags);
+        ed.putBoolean(PreferenceKeys.AUTO_CLOSE_QUOTES, s.autoCloseQuotes);
+        ed.putBoolean(PreferenceKeys.WORD_WRAP, s.wordWrap);
         ed.putBoolean(PreferenceKeys.HIGHLIGHT_CURRENT_LINE, s.highlightCurrentLine);
         ed.putBoolean(PreferenceKeys.AUTO_INDENT, s.autoIndent);
         ed.putBoolean(PreferenceKeys.MATCH_BRACKETS, s.matchBrackets);

@@ -13,6 +13,8 @@ public class AppSettings {
     public boolean showLineNumbers = true;
     public boolean autoCloseBrackets = true;
     public boolean autoCloseHtmlTags = true;
+    public boolean autoCloseQuotes = true;
+    public boolean wordWrap = false;
     public boolean highlightCurrentLine = true;
     public boolean autoIndent = true;
     public boolean matchBrackets = true;

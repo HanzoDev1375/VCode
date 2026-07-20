@@ -100,6 +100,8 @@ public class CodeEditText extends View {
     private final BracketMatcher bracketMatcher = new BracketMatcher();
     private final DirtyRangeTracker dirtyTracker = new DirtyRangeTracker();
     boolean autoCloseHtmlTags = true;
+    private boolean autoCloseQuotes = true;
+    private boolean wordWrap = false;
     // ── IME composing region ──────────────────────────────────────────────────
     int composingStart = -1;
     int composingEnd = -1;
@@ -1641,6 +1643,20 @@ public class CodeEditText extends View {
         this.autoCloseBrackets = autoClose;
     }
 
+    public void setAutoCloseHtmlTags(boolean autoClose) {
+        this.autoCloseHtmlTags = autoClose;
+    }
+
+    public void setAutoCloseQuotes(boolean autoClose) {
+        this.autoCloseQuotes = autoClose;
+    }
+
+    public void setWordWrap(boolean wordWrap) {
+        this.wordWrap = wordWrap;
+        invalidate();
+        requestLayout();
+    }
+
     public void setAutoIndent(boolean autoIndent) {
         this.autoIndent = autoIndent;
     }
@@ -2009,9 +2025,12 @@ public class CodeEditText extends View {
     }
 
     private void handleAutoClose(CharSequence text, int insertFlatPos, char typed) {
-        if (!autoCloseBrackets) return;
         String closing = getClosingPair(typed);
         if (closing == null) return;
+
+        boolean isQuote = typed == '"' || typed == '\'' || typed == '`';
+        if (isQuote && !autoCloseQuotes) return;
+        if (!isQuote && !autoCloseBrackets) return;
 
         // Don't auto-close if the next char is already the closing char
         if (insertFlatPos < text.length() && text.charAt(insertFlatPos) == closing.charAt(0))

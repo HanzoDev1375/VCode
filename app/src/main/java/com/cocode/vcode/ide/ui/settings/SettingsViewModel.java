@@ -96,6 +96,39 @@ public class SettingsViewModel extends ViewModel {
         }
     }
 
+    /**
+     * Toggles word wrap in the editor.
+     */
+    public void updateWordWrap(boolean value) {
+        AppSettings current = settingsLiveData.getValue();
+        if (current != null) {
+            current.wordWrap = value;
+            saveSettings(current);
+        }
+    }
+
+    /**
+     * Toggles auto-closing of HTML tags.
+     */
+    public void updateAutoCloseHtmlTags(boolean value) {
+        AppSettings current = settingsLiveData.getValue();
+        if (current != null) {
+            current.autoCloseHtmlTags = value;
+            saveSettings(current);
+        }
+    }
+
+    /**
+     * Toggles auto-closing of quote characters.
+     */
+    public void updateAutoCloseQuotes(boolean value) {
+        AppSettings current = settingsLiveData.getValue();
+        if (current != null) {
+            current.autoCloseQuotes = value;
+            saveSettings(current);
+        }
+    }
+
 
     /**
      * Updates the global application theme (Light, Dark, or System).

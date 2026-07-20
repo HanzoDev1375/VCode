@@ -8,6 +8,8 @@ public final class PreferenceKeys {
     public static final String SHOW_LINE_NUMBERS = "vcode_pref_show_line_numbers";
     public static final String AUTO_CLOSE_BRACKETS = "vcode_pref_auto_close_brackets";
     public static final String AUTO_CLOSE_HTML_TAGS = "vcode_pref_auto_close_html_tags";
+    public static final String AUTO_CLOSE_QUOTES = "vcode_pref_auto_close_quotes";
+    public static final String WORD_WRAP = "vcode_pref_word_wrap";
     public static final String HIGHLIGHT_CURRENT_LINE = "vcode_pref_highlight_current_line";
     public static final String AUTO_INDENT = "vcode_pref_auto_indent";
     public static final String MATCH_BRACKETS = "vcode_pref_match_brackets";
