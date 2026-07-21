@@ -322,8 +322,20 @@ public class CodeEditText extends View {
             @Override
             public boolean onFling(MotionEvent e1, @NonNull MotionEvent e2,
                                    float velocityX, float velocityY) {
-                int maxScrollX = Math.max(0, (int) (getLongestLineLength() * charWidth) - getWidth() + getPaddingRight());
-                int maxScrollY = Math.max(0, content.lineCount() * lineHeightPx - getHeight() + getPaddingBottom());
+                int maxScrollX;
+                int maxScrollY;
+                if (wordWrap) {
+                    // In word-wrap mode there is no horizontal scrolling and the vertical
+                    // content height is based on visual rows, NOT logical line count.
+                    // Using lineCount() here would massively underestimate the content
+                    // height, causing the fling to snap back early (the scroll jump bug).
+                    maxScrollX = 0;
+                    int totalContentH = totalVisualRows * lineHeightPx + getPaddingTop() + getPaddingBottom();
+                    maxScrollY = Math.max(0, totalContentH - getHeight());
+                } else {
+                    maxScrollX = Math.max(0, (int) (getLongestLineLength() * charWidth) - getWidth() + getPaddingRight());
+                    maxScrollY = Math.max(0, content.lineCount() * lineHeightPx - getHeight() + getPaddingBottom());
+                }
                 overScroller.fling(getScrollX(), getScrollY(),
                         (int) -velocityX, (int) -velocityY,
                         0, maxScrollX, 0, maxScrollY,
