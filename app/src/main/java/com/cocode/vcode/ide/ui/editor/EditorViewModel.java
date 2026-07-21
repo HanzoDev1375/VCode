@@ -291,7 +291,13 @@ public class EditorViewModel extends ViewModel {
     private void loadRemainingTabsAsync(List<EditorFile> files) {
         ExecutorProvider.getInstance().runOnIo(() -> {
             boolean updated = false;
-            for (EditorFile ef : files) {
+            Integer activeIdx = activeTabIndexLiveData.getValue();
+            for (int i = 0; i < files.size(); i++) {
+                EditorFile ef = files.get(i);
+                // Skip the active tab — it was already loaded synchronously in restoreTabsFromState.
+                // Re-loading it here would cause the UI to call bindFile again, which could flush
+                // empty editor content back into the EditorFile (the empty-file-on-open bug).
+                if (activeIdx != null && i == activeIdx) continue;
                 if (!ef.isContentLoaded()) {
                     if (ef.isVirtual()) {
                         String relativePath = ef.getRelativePath(projectRoot);
@@ -311,12 +317,9 @@ public class EditorViewModel extends ViewModel {
                 }
             }
             if (updated) {
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    List<EditorFile> currentDocs = getOpenFilesList();
-                    if (!currentDocs.isEmpty()) {
-                        openFilesLiveData.setValue(new ArrayList<>(currentDocs));
-                    }
-                });
+                // Notify tab bar of changes (e.g. dirty indicators) without triggering
+                // a full re-bind of the active viewer via openFilesLiveData.
+                ExecutorProvider.getInstance().runOnMain(this::notifyFileDirtyStatusChanged);
             }
         });
     }

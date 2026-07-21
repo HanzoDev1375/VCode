@@ -71,9 +71,9 @@ public class CodeFileViewer implements IFileViewer {
 
     @Override
     public void bindFile(EditorFile file, EditorViewModel viewModel) {
-        if (codeEditText != null) {
-            // We must flush the PREVIOUS file's state to the model before switching!
-            // Do this BEFORE updating this.currentFile, otherwise we overwrite the NEW file with the old (or empty) editor content!
+        if (codeEditText != null && currentFile != null && currentFile.isContentLoaded()) {
+            // Flush the PREVIOUS file's state only if it was fully loaded.
+            // If it wasn't loaded yet, flushing would overwrite the model with empty string.
             flushContentToViewModel();
         }
 

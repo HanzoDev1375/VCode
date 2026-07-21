@@ -1765,11 +1765,16 @@ public class CodeEditText extends View {
 
     private void scheduleVisualLayoutRebuild() {
         if (!wordWrap) {
-            // Without word wrap, the visual layout is trivial (1:1 lines) —
-            // just update in place without touching scroll or triggering layout.
+            // Without word wrap the layout is trivial (1:1 lines) — update in place.
             rebuildVisualLayout();
             return;
         }
+        // ALWAYS rebuild synchronously so totalVisualRows is immediately correct.
+        // This prevents onMeasure() from returning a stale height that causes the
+        // scroll parent to clamp scrollY to the wrong position (the "scroll jump" bug).
+        rebuildVisualLayout();
+        // Debounce the expensive requestLayout + invalidate to avoid doing them
+        // on every single keystroke during rapid typing.
         if (!visualLayoutPending) {
             visualLayoutPending = true;
             mainHandler.postDelayed(visualLayoutRunnable, VISUAL_LAYOUT_DEBOUNCE_MS);
