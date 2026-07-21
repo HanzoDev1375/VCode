@@ -28,17 +28,11 @@ public class SelectionToolbar {
     private final PopupWindow popupWindow;
     private final ClipboardManager clipboardManager;
 
-    // Shadow padding in px — must match what the CardView elevation renders into.
-    // We pad the PopupWindow contents so the drop-shadow is not clipped.
-    private final int shadowPadding;
-
     public SelectionToolbar(Context context) {
         this.context = context;
         binding = ViewSelectionToolbarBinding.inflate(LayoutInflater.from(context));
 
         float density = context.getResources().getDisplayMetrics().density;
-        // cardElevation = 8dp → shadow can bleed ~12dp; give 14dp safety margin
-        shadowPadding = (int) (14 * density);
 
         setupTypefaces();
         setupListeners();
@@ -56,11 +50,13 @@ public class SelectionToolbar {
         // want the toolbar to follow the scroll, not disappear.
         popupWindow.setOutsideTouchable(false);
 
-        // Do not clip to screen bounds — the shadow bleed needs room at the edges.
+        // Allow the popup to extend past screen bounds (needed for edge-clamping logic).
         popupWindow.setClippingEnabled(false);
 
-        // No extra system elevation — the MaterialCardView handles it.
-        popupWindow.setElevation(0f);
+        // Let the PopupWindow itself render the elevation/shadow. This is the only
+        // reliable way to avoid shadow clipping inside the window surface.
+        // The CardView elevation in the layout must be 0dp to avoid double-shadow.
+        popupWindow.setElevation(12 * density);
         popupWindow.setAnimationStyle(R.style.VCodePopupMenuAnimation);
 
         clipboardManager = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
@@ -119,7 +115,8 @@ public class SelectionToolbar {
         float density   = context.getResources().getDisplayMetrics().density;
         int   screenW   = context.getResources().getDisplayMetrics().widthPixels;
         int   screenH   = context.getResources().getDisplayMetrics().heightPixels;
-        int   margin    = (int) (8 * density); // visual gap between toolbar and selection
+        int   margin    = (int) (8 * density);  // gap between toolbar and selection anchor
+        int   grace     = (int) (16 * density); // minimum distance from screen edge
 
         int firstOffset = Math.min(selStart, selEnd);
         int[] coords    = editor.getCursorScreenCoords(firstOffset);
@@ -127,25 +124,31 @@ public class SelectionToolbar {
         int anchorYTop  = coords[1];
         int anchorYBot  = coords[2];
 
-        // ── Horizontal ────────────────────────────────────────────────────────
-        // Center over the selection start; account for shadow padding on the left.
-        int x = anchorX - (popupWidth / 2) + shadowPadding;
-        // Clamp so the visible card never leaves the screen (shadow can overflow).
-        int minX = -shadowPadding;
-        int maxX = screenW - popupWidth + shadowPadding;
-        if (x < minX) x = minX;
-        if (x > maxX) x = maxX;
+        // ── Horizontal: center over anchor, clamp to screen ───────────────────
+        int x = anchorX - (popupWidth / 2);
+        if (x < grace) x = grace;
+        if (x + popupWidth > screenW - grace) x = screenW - popupWidth - grace;
 
-        // ── Vertical ──────────────────────────────────────────────────────────
-        // Prefer above the selection; fall back to below if not enough room.
-        int y = anchorYTop - popupHeight - margin + shadowPadding;
-        if (y < 0) {
+        // ── Vertical: prefer above anchor; fall back to below ─────────────────
+        int yAbove = anchorYTop - popupHeight - margin;
+        int yBelow = anchorYBot + margin;
+
+        int y;
+        if (yAbove >= grace) {
+            // Enough room above — show there.
+            y = yAbove;
+        } else if (yBelow + popupHeight <= screenH - grace) {
             // Not enough room above — show below.
-            y = anchorYBot + margin - shadowPadding;
+            y = yBelow;
+        } else {
+            // Neither fits perfectly — prefer above but clamp to grace margin.
+            y = yAbove;
         }
-        // Clamp to screen bottom.
-        int maxY = screenH - popupHeight + shadowPadding;
-        if (y > maxY) y = maxY;
+
+        // Hard-clamp: toolbar must ALWAYS stay within screen bounds + grace margin.
+        // This ensures it never scrolls off-screen when the user scrolls the editor.
+        if (y < grace) y = grace;
+        if (y + popupHeight > screenH - grace) y = screenH - popupHeight - grace;
 
         popupWindow.update(x, y, popupWidth, popupHeight);
     }
