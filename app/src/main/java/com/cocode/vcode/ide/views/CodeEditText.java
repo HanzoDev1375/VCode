@@ -104,6 +104,15 @@ public class CodeEditText extends View {
     private boolean wordWrap = false;
     private int[] visualRowStarts;
     private int totalVisualRows;
+    // Debounced visual layout rebuild (avoids scroll jumps during flings)
+    private static final long VISUAL_LAYOUT_DEBOUNCE_MS = 32; // ~2 frames
+    private boolean visualLayoutPending = false;
+    private final Runnable visualLayoutRunnable = () -> {
+        visualLayoutPending = false;
+        rebuildVisualLayout();
+        requestLayout();
+        invalidate();
+    };
     // ── IME composing region ──────────────────────────────────────────────────
     int composingStart = -1;
     int composingEnd = -1;
@@ -386,7 +395,7 @@ public class CodeEditText extends View {
                 dirtyTracker.addEdit(content.flatOffset(new ContentPosition(line, col)), 0, inserted.length());
                 scheduleHighlight();
                 dispatchContentChanged();
-                rebuildVisualLayout();
+                scheduleVisualLayoutRebuild();
             }
 
             @Override
@@ -395,7 +404,7 @@ public class CodeEditText extends View {
                 dirtyTracker.addEdit(content.flatOffset(new ContentPosition(startLine, startCol)), 1, 0);
                 scheduleHighlight();
                 dispatchContentChanged();
-                rebuildVisualLayout();
+                scheduleVisualLayoutRebuild();
             }
         });
 
@@ -1735,10 +1744,36 @@ public class CodeEditText extends View {
     }
 
     public void setWordWrap(boolean wordWrap) {
+        if (this.wordWrap == wordWrap) return;
+        // Preserve scroll position in terms of logical line so toggling wrap
+        // doesn't jump the viewport.
+        int scrollY = getScrollY();
+        int topVisualRow = lineHeightPx > 0 ? scrollY / lineHeightPx : 0;
+        int topLogicalLine = visualRowToLogicalLine(topVisualRow);
+        int subRowOffset = lineHeightPx > 0 ? scrollY % lineHeightPx : 0;
+
         this.wordWrap = wordWrap;
         rebuildVisualLayout();
-        invalidate();
         requestLayout();
+        invalidate();
+
+        // Restore scroll to same logical line in the new coordinate system
+        int newTopVisualRow = visualRowOf(topLogicalLine);
+        int newScrollY = getPaddingTop() + newTopVisualRow * lineHeightPx + subRowOffset;
+        post(() -> scrollTo(wordWrap ? 0 : getScrollX(), Math.max(0, newScrollY - getPaddingTop())));
+    }
+
+    private void scheduleVisualLayoutRebuild() {
+        if (!wordWrap) {
+            // Without word wrap, the visual layout is trivial (1:1 lines) —
+            // just update in place without touching scroll or triggering layout.
+            rebuildVisualLayout();
+            return;
+        }
+        if (!visualLayoutPending) {
+            visualLayoutPending = true;
+            mainHandler.postDelayed(visualLayoutRunnable, VISUAL_LAYOUT_DEBOUNCE_MS);
+        }
     }
 
     private void rebuildVisualLayout() {
