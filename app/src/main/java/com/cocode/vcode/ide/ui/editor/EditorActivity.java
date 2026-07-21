@@ -111,6 +111,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     binding.findReplaceBar.slideUp();
                     return;
                 }
+                
+                CodeEditText codeEditText = getActiveCodeEditor();
+                if (codeEditText != null && codeEditText.getSelectionStart() != codeEditText.getSelectionEnd()) {
+                    codeEditText.collapseSelection();
+                    return;
+                }
+                
                 navigateWithUnsavedCheck(EditorActivity.this::finish);
             }
         });
