@@ -160,23 +160,22 @@ public class CodeFileViewer implements IFileViewer {
             final int scrollY = codeEditText.getScrollY();
 
             Runnable validationRunnable = () -> {
+                if (capturedFile == null || capturedFile.getFile() == null) {
+                    if (codeEditText != null)
+                        codeEditText.applyDiagnostics(new java.util.ArrayList<>());
+                    return;
+                }
+
+                // CRITICAL: Capture the text on the MAIN THREAD before dispatching to IO.
+                // Reading codeEditText from a background thread while the main thread may be
+                // calling setText() causes a race condition where the Content object is in a
+                // partially-modified state, producing an empty string that overwrites the file
+                // model (the "sometimes empty file" bug). Per AGENTS.md: always snapshot here.
+                final String textSnapshot = codeEditText != null ? codeEditText.getTextAsString() : "";
+
                 ExecutorProvider.getInstance().runOnIo(() -> {
-                    if (capturedFile == null || capturedFile.getFile() == null) {
-                        ExecutorProvider.getInstance().runOnMain(() -> {
-                            if (codeEditText != null)
-                                codeEditText.applyDiagnostics(new java.util.ArrayList<>());
-                        });
-                        return;
-                    }
-
-                    // 1. Safely allocate the large document string on the background thread!
-                    String text = "";
-                    if (codeEditText != null) {
-                        text = codeEditText.getTextAsString();
-                    }
-
                     // 2. Update EditorFile with latest state so AutoSave will pick it up
-                    capturedFile.setContent(text);
+                    capturedFile.setContent(textSnapshot);
                     capturedFile.setCursorPosition(cursor);
                     capturedFile.setScrollY(scrollY);
 
@@ -187,7 +186,7 @@ public class CodeFileViewer implements IFileViewer {
 
                     // 4. Run language diagnostics
                     java.util.List<com.cocode.vcode.ide.data.model.Problem> problems =
-                            com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(capturedFile.getFile(), text, capturedFile.getFileType());
+                            com.cocode.vcode.ide.core.diagnostic.DiagnosticEngine.analyze(capturedFile.getFile(), textSnapshot, capturedFile.getFileType());
 
                     ExecutorProvider.getInstance().runOnMain(() -> {
                         if (editorLayout == null || editorLayout.getParent() == null || ((View) editorLayout.getParent()).getVisibility() != View.VISIBLE) {
