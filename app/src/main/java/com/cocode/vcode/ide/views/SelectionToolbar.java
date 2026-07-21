@@ -116,7 +116,8 @@ public class SelectionToolbar {
         int   screenW   = context.getResources().getDisplayMetrics().widthPixels;
         int   screenH   = context.getResources().getDisplayMetrics().heightPixels;
         int   margin    = (int) (8 * density);  // gap between toolbar and selection anchor
-        int   grace     = (int) (16 * density); // minimum distance from screen edge
+        int   graceH    = (int) (24 * density); // minimum distance from left/right screen edge
+        int   graceV    = (int) (16 * density); // minimum distance from top/bottom screen edge
 
         int firstOffset = Math.min(selStart, selEnd);
         int[] coords    = editor.getCursorScreenCoords(firstOffset);
@@ -126,18 +127,18 @@ public class SelectionToolbar {
 
         // ── Horizontal: center over anchor, clamp to screen ───────────────────
         int x = anchorX - (popupWidth / 2);
-        if (x < grace) x = grace;
-        if (x + popupWidth > screenW - grace) x = screenW - popupWidth - grace;
+        if (x < graceH) x = graceH;
+        if (x + popupWidth > screenW - graceH) x = screenW - popupWidth - graceH;
 
         // ── Vertical: prefer above anchor; fall back to below ─────────────────
         int yAbove = anchorYTop - popupHeight - margin;
         int yBelow = anchorYBot + margin;
 
         int y;
-        if (yAbove >= grace) {
+        if (yAbove >= graceV) {
             // Enough room above — show there.
             y = yAbove;
-        } else if (yBelow + popupHeight <= screenH - grace) {
+        } else if (yBelow + popupHeight <= screenH - graceV) {
             // Not enough room above — show below.
             y = yBelow;
         } else {
@@ -147,8 +148,8 @@ public class SelectionToolbar {
 
         // Hard-clamp: toolbar must ALWAYS stay within screen bounds + grace margin.
         // This ensures it never scrolls off-screen when the user scrolls the editor.
-        if (y < grace) y = grace;
-        if (y + popupHeight > screenH - grace) y = screenH - popupHeight - grace;
+        if (y < graceV) y = graceV;
+        if (y + popupHeight > screenH - graceV) y = screenH - popupHeight - graceV;
 
         popupWindow.update(x, y, popupWidth, popupHeight);
     }
