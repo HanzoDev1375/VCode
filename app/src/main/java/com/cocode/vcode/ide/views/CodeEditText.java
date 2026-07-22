@@ -1475,7 +1475,11 @@ public class CodeEditText extends View {
      * Called whenever the selection state changes.
      */
     private void notifySelectionChanged() {
-        if (selectionChangeListener != null) {
+        // Only show/hide the selection toolbar for genuine user-initiated selections
+        // (long-press, double-tap, drag handles, selectAll).
+        // IME-driven selections (backspace-slide, spacebar-slide) set
+        // isSettingSelectionFromIme = true — skip the toolbar in that case.
+        if (selectionChangeListener != null && !isSettingSelectionFromIme) {
             selectionChangeListener.onSelectionChanged(selectionAnchor != null);
         }
         mainHandler.removeCallbacks(bracketMatchRunnable);
