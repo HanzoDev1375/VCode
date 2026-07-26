@@ -24,6 +24,13 @@ public class EditorFile {
     private boolean isVirtual = false;
     private boolean manuallyDirty = false;
 
+    /**
+     * For files opened via a content:// URI: the original source URI string.
+     * When set, saves are written back to this URI in addition to the local cache file.
+     * Stored as a String (not Uri) to avoid Android-specific types in the data model.
+     */
+    private String sourceUriString;
+
     public EditorFile() {
     }
 
@@ -180,5 +187,13 @@ public class EditorFile {
 
     public void setVirtual(boolean virtual) {
         isVirtual = virtual;
+    }
+
+    public String getSourceUriString() {
+        return sourceUriString;
+    }
+
+    public void setSourceUriString(String sourceUriString) {
+        this.sourceUriString = sourceUriString;
     }
 }

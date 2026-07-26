@@ -98,4 +98,14 @@
         <item name="android:windowExitAnimation">@anim/vcode_popup_exit</item>
     </style>
 
+    <!-- Transparent theme used by FileOpenActivity so no UI flash appears
+         when VCode is invoked as a file handler from external apps. -->
+    <style name="Theme.VCode.Transparent" parent="Theme.VCode">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowAnimationStyle">@null</item>
+    </style>
+
 </resources>

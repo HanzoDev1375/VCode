@@ -37,6 +37,7 @@ public class EditorViewModelFactory implements ViewModelProvider.Factory {
         if (modelClass.isAssignableFrom(EditorViewModel.class)) {
             // Manually inject dependencies into the ViewModel constructor
             return (T) new EditorViewModel(
+                    appContext,
                     new FileRepository(),
                     new ProjectStateRepository(),
                     new SettingsRepository(appContext),

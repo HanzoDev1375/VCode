@@ -1,6 +1,7 @@
 package com.cocode.vcode.ide.utils;
 
 import android.content.Context;
+import android.net.Uri;
 import android.os.Environment;
 
 import com.cocode.vcode.ide.data.model.FileNode;
@@ -10,6 +11,8 @@ import java.io.BufferedWriter;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
@@ -323,5 +326,101 @@ public class FileUtils {
 
     public interface ProgressListener {
         void onProgress(File file, long bytesRead);
+    }
+
+    /**
+     * Returns the root VCodeProjects directory on external storage.
+     */
+    public static File getProjectsDirectory() {
+        return new File(Environment.getExternalStorageDirectory(), PROJECTS_DIR_NAME);
+    }
+
+    /**
+     * Given a file, determines the best project root for the VCode editor.
+     * - If the file lives inside VCodeProjects/, returns the appropriate top-level project folder.
+     * - Otherwise returns the file's parent directory.
+     */
+    public static File resolveProjectRoot(File file) {
+        File projectsDir = getProjectsDirectory();
+        String filePath  = file.getAbsolutePath();
+        String pdPath    = projectsDir.getAbsolutePath();
+
+        if (filePath.startsWith(pdPath + File.separator)) {
+            // Walk up until the immediate child of VCodeProjects is found
+            File candidate = file.getParentFile();
+            while (candidate != null) {
+                File parent = candidate.getParentFile();
+                if (parent != null && parent.getAbsolutePath().equals(pdPath)) {
+                    return candidate;
+                }
+                candidate = parent;
+            }
+        }
+
+        // Fallback: use the file's parent directory as a standalone project root
+        File parent = file.getParentFile();
+        return (parent != null && parent.exists()) ? parent : file;
+    }
+
+    /**
+     * Resolves an Android URI (file:// or content://) to a java.io.File.
+     * For content:// URIs the content is copied to the app's cache directory.
+     * Returns null if the URI cannot be resolved.
+     */
+    public static File resolveUri(Context context, Uri uri) {
+        if (uri == null) return null;
+        String scheme = uri.getScheme();
+
+        if ("file".equalsIgnoreCase(scheme)) {
+            String path = uri.getPath();
+            return path != null ? new File(path) : null;
+        }
+
+        if ("content".equalsIgnoreCase(scheme)) {
+            // Attempt to retrieve the display name from the content provider
+            String fileName = null;
+            try (android.database.Cursor cursor = context.getContentResolver().query(
+                    uri,
+                    new String[]{android.provider.OpenableColumns.DISPLAY_NAME},
+                    null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    fileName = cursor.getString(0);
+                }
+            } catch (Exception ignored) {}
+
+            if (fileName == null || fileName.isEmpty()) {
+                fileName = "vcode_tmp_" + System.currentTimeMillis();
+            }
+            // Strip characters that are unsafe in file names
+            fileName = fileName.replaceAll("[^a-zA-Z0-9._\\-]", "_");
+
+            File cacheDir = new File(context.getCacheDir(), "vcode_open");
+            if (!cacheDir.exists()) cacheDir.mkdirs();
+            File dest = new File(cacheDir, fileName);
+
+            try (InputStream in = context.getContentResolver().openInputStream(uri);
+                 FileOutputStream out = new FileOutputStream(dest)) {
+                if (in == null) return null;
+                byte[] buf = new byte[8192];
+                int n;
+                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+                return dest;
+            } catch (Exception e) {
+                return null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Writes UTF-8 content back to a content:// URI via ContentResolver.
+     * Used to save edits back to files opened from external providers (e.g. Google Drive).
+     */
+    public static void writeToUri(Context context, Uri uri, String content) throws IOException {
+        try (OutputStream out = context.getContentResolver().openOutputStream(uri, "wt")) {
+            if (out == null) throw new IOException("Cannot open output stream for URI: " + uri);
+            out.write(content != null ? content.getBytes(StandardCharsets.UTF_8) : new byte[0]);
+        }
     }
 }

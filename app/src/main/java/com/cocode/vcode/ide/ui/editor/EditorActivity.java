@@ -53,6 +53,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     public static final String EXTRA_PROJECT_ID = "extra_project_id";
     public static final String EXTRA_PROJECT_NAME = "extra_project_name";
     public static final String EXTRA_OPEN_FILE_PATH = "extra_open_file_path";
+    public static final String EXTRA_SOURCE_URI = "extra_source_uri";
 
     private ActivityEditorBinding binding;
     private LocalWebServer localWebServer;
@@ -133,12 +134,19 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     }
 
     private void handleOpenFileIntent(Intent intent) {
-        if (intent != null && intent.hasExtra(EXTRA_OPEN_FILE_PATH)) {
+        if (intent == null) return;
+
+        if (intent.hasExtra(EXTRA_OPEN_FILE_PATH)) {
             String path = intent.getStringExtra(EXTRA_OPEN_FILE_PATH);
+            String sourceUri = intent.getStringExtra(EXTRA_SOURCE_URI);
             if (path != null) {
                 File file = new File(path);
                 if (file.exists() && file.isFile()) {
-                    onFileSelected(new FileNode(file, 0));
+                    if (sourceUri != null) {
+                        viewModel.openFile(file, sourceUri);
+                    } else {
+                        viewModel.openFile(file);
+                    }
                 }
             }
         }

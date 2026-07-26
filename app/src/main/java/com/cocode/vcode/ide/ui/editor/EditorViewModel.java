@@ -25,6 +25,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
+import android.content.Context;
+import android.net.Uri;
+
 /**
  * EditorViewModel serves as the centralized state manager for the EditorActivity.
  * it orchestrates file system operations, project state persistence, settings management,
@@ -32,6 +35,7 @@ import java.util.UUID;
  */
 public class EditorViewModel extends ViewModel {
 
+    private final Context appContext;
     private final FileRepository fileRepo;
     private final ProjectStateRepository stateRepo;
     private final SettingsRepository settingsRepo;
@@ -64,7 +68,8 @@ public class EditorViewModel extends ViewModel {
     private String projectName;
     private ProjectState currentState;
 
-    public EditorViewModel(FileRepository fileRepo, ProjectStateRepository stateRepo, SettingsRepository settingsRepo, ProjectRepository projectRepo) {
+    public EditorViewModel(Context appContext, FileRepository fileRepo, ProjectStateRepository stateRepo, SettingsRepository settingsRepo, ProjectRepository projectRepo) {
+        this.appContext = appContext;
         this.fileRepo = fileRepo;
         this.stateRepo = stateRepo;
         this.settingsRepo = settingsRepo;
@@ -583,6 +588,55 @@ public class EditorViewModel extends ViewModel {
     }
 
     /**
+     * Opens an externally-sourced file. The sourceUriString (content:// URI as a string)
+     * is attached to the EditorFile so saves are written back to the original source.
+     */
+    public void openFile(File file, String sourceUriString) {
+        List<EditorFile> currentDocs = getOpenFilesList();
+        for (int i = 0; i < currentDocs.size(); i++) {
+            if (currentDocs.get(i).getFile().getAbsolutePath().equals(file.getAbsolutePath())) {
+                activeTabIndexLiveData.setValue(i);
+                return;
+            }
+        }
+
+        ExecutorProvider.getInstance().runOnIo(() -> {
+            try {
+                FileType fileType = FileType.fromExtension(FileUtils.getExtension(file.getName()));
+                String content = "";
+
+                if (fileType == null || fileType.isTextBased()) {
+                    if (file.exists()) {
+                        content = FileUtils.readFile(file);
+                    }
+                }
+
+                EditorFile newFile = new EditorFile(UUID.randomUUID().toString(), file, content, fileType);
+                newFile.markSaved();
+                newFile.setContentLoaded(true);
+                if (sourceUriString != null) {
+                    newFile.setSourceUriString(sourceUriString);
+                }
+
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    List<EditorFile> latestDocs = getOpenFilesList();
+                    for (int i = 0; i < latestDocs.size(); i++) {
+                        if (latestDocs.get(i).getFile().getAbsolutePath().equals(file.getAbsolutePath())) {
+                            activeTabIndexLiveData.setValue(i);
+                            return;
+                        }
+                    }
+                    List<EditorFile> updated = new ArrayList<>(latestDocs);
+                    updated.add(newFile);
+                    openFilesLiveData.setValue(updated);
+                    activeTabIndexLiveData.setValue(updated.size() - 1);
+                    persistStateAsync();
+                });
+            } catch (Exception ignored) {}
+        });
+    }
+
+    /**
      * Opens a file in the editor, or switches to its tab if it is already open.
      *
      * @param file The file to open.
@@ -809,6 +863,15 @@ public class EditorViewModel extends ViewModel {
                     openFilesLiveData.setValue(new ArrayList<>(docs));
                     projectRepo.touchProjectById(projectId);
 
+                    // Write back to the original content:// source if applicable
+                    if (ef.getSourceUriString() != null) {
+                        ExecutorProvider.getInstance().runOnIo(() -> {
+                            try {
+                                FileUtils.writeToUri(appContext, Uri.parse(ef.getSourceUriString()), ef.getContent());
+                            } catch (Exception ignored) {}
+                        });
+                    }
+
                     // Update Git status as the file change is now committed to the filesystem
                     refreshGitStatuses();
 
@@ -862,6 +925,12 @@ public class EditorViewModel extends ViewModel {
                             fileRepo.writeFileSync(ef.getFile(), ef.getContent());
                             ef.markSaved();
                             anySaved = true;
+                            // Write back to the original content:// source if applicable
+                            if (ef.getSourceUriString() != null) {
+                                try {
+                                    FileUtils.writeToUri(appContext, Uri.parse(ef.getSourceUriString()), ef.getContent());
+                                } catch (Exception ignored) {}
+                            }
                         } catch (Exception e) {
                             allSuccess = false;
                         }
@@ -949,6 +1018,12 @@ public class EditorViewModel extends ViewModel {
                         fileRepo.writeFileSync(ef.getFile(), ef.getContent());
                         ef.markSaved();
                         anySaved = true;
+                        // Write back to the original content:// source if applicable
+                        if (ef.getSourceUriString() != null) {
+                            try {
+                                FileUtils.writeToUri(appContext, Uri.parse(ef.getSourceUriString()), ef.getContent());
+                            } catch (Exception ignored2) {}
+                        }
                     } catch (Exception ignored) {
                     }
                 }
