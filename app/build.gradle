@@ -10,8 +10,8 @@ android {
         applicationId "com.cocode.vcode.ide"
         minSdk 23
         targetSdk 36
-        versionCode 4
-        versionName "1.2.0"
+        versionCode 5
+        versionName "1.2.1"
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
     }
@@ -69,6 +69,6 @@ dependencies {
     androidTestImplementation libs.ext.junit
     androidTestImplementation libs.espresso.core
 
-    implementation 'com.jcraft:jsch:0.1.55'
-    implementation 'org.eclipse.jgit:org.eclipse.jgit.ssh.jsch:6.7.0.202309050840-r'
+    implementation libs.jsch
+    implementation libs.org.eclipse.jgit.ssh.jsch
 }
