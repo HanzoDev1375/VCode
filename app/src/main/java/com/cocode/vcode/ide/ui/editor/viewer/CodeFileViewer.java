@@ -159,7 +159,10 @@ public class CodeFileViewer implements IFileViewer {
             final int cursor = codeEditText.getSelectionStart();
             final int scrollY = codeEditText.getScrollY();
 
-            Runnable validationRunnable = () -> {
+            // Use a self-referencing Runnable array so it can re-post itself when the
+            // async setText() hasn't finished applying content yet.
+            final Runnable[] runnableHolder = new Runnable[1];
+            runnableHolder[0] = () -> {
                 if (capturedFile == null || capturedFile.getFile() == null) {
                     if (codeEditText != null)
                         codeEditText.applyDiagnostics(new java.util.ArrayList<>());
@@ -169,18 +172,27 @@ public class CodeFileViewer implements IFileViewer {
                 // CRITICAL: Capture the text on the MAIN THREAD before dispatching to IO.
                 // Reading codeEditText from a background thread while the main thread may be
                 // calling setText() causes a race condition where the Content object is in a
-                // partially-modified state, producing an empty string that overwrites the file
-                // model (the "sometimes empty file" bug). Per AGENTS.md: always snapshot here.
+                // partially-modified state. Per AGENTS.md: always snapshot on main thread.
                 final String textSnapshot = codeEditText != null ? codeEditText.getTextAsString() : "";
 
+                // If the snapshot is empty but the model has content, the async setText()
+                // CPU task hasn't finished yet (Content.prepareLoad is still running).
+                // Retry in 300ms instead of overwriting the model with an empty string.
+                final String modelContent = capturedFile.getContent();
+                final boolean modelIsEmpty = modelContent == null || modelContent.isEmpty();
+                if (textSnapshot.isEmpty() && !modelIsEmpty) {
+                    jsonValidationHandler.postDelayed(runnableHolder[0], 300L);
+                    return;
+                }
+
                 ExecutorProvider.getInstance().runOnIo(() -> {
-                    // 2. Update EditorFile with latest state so AutoSave will pick it up
+                    // 2. Update EditorFile with latest state so AutoSave will pick it up.
                     capturedFile.setContent(textSnapshot);
                     capturedFile.setCursorPosition(cursor);
                     capturedFile.setScrollY(scrollY);
 
                     // 3. Trigger AutoSave on Main Thread
-                    if (settings.autoSave) {
+                    if (settings.autoSave && !textSnapshot.isEmpty()) {
                         ExecutorProvider.getInstance().runOnMain(() -> viewModel.triggerAutoSave());
                     }
 
@@ -208,7 +220,7 @@ public class CodeFileViewer implements IFileViewer {
             // Perf: adaptive delay — large files get more debounce time so diagnostics don't compete with typing
             int contentLen = codeEditText != null ? codeEditText.length() : 0;
             long diagDelay = contentLen > 20000 ? 1500L : 800L;
-            jsonValidationHandler.postDelayed(validationRunnable, diagDelay);
+            jsonValidationHandler.postDelayed(runnableHolder[0], diagDelay);
         }
     }
 }
