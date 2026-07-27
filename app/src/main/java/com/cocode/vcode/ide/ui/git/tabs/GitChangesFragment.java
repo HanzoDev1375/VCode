@@ -128,6 +128,18 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
 
         binding.btnStageAll.setOnClickListener(v -> viewModel.stageAll());
         binding.btnUnstageAll.setOnClickListener(v -> viewModel.unstageAll());
+
+        if (binding.btnDiscardAll != null) {
+            binding.btnDiscardAll.setOnClickListener(v -> {
+                com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet.show(
+                        getChildFragmentManager(),
+                        com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet.DeleteType.DISCARD,
+                        "",
+                        null,
+                        () -> viewModel.discardAll()
+                );
+            });
+        }
     }
 
     /**
@@ -205,6 +217,17 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
         // Toggle staging status for an individual file
         if (item.isStaged()) viewModel.unstageFile(item.getPath());
         else viewModel.stageFile(item.getPath());
+    }
+
+    @Override
+    public void onDiscardClick(GitFileItem item) {
+        com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet.show(
+                getChildFragmentManager(),
+                com.cocode.vcode.ide.ui.sheets.DeleteBottomSheet.DeleteType.DISCARD,
+                item.getFileName(),
+                null,
+                () -> viewModel.discardFile(item.getPath())
+        );
     }
 
     @Override

@@ -7,12 +7,12 @@ import org.json.JSONObject;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.InputStreamReader;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
 
 public class GitHubApiClient {
-
     public static final String BASE_URL = "https://api.github.com";
     private static final int CONNECT_TIMEOUT = 15000;
     private static final int READ_TIMEOUT = 15000;
@@ -22,57 +22,62 @@ public class GitHubApiClient {
         this.token = token;
     }
 
-    // --- Core HTTP Engine ---
-
-    private String request() throws IOException {
-        HttpURLConnection conn = null;
-        try {
-            URL url = new URL(BASE_URL + "/user");
-            conn = (HttpURLConnection) url.openConnection();
-            conn.setRequestMethod("GET");
-            conn.setRequestProperty("Authorization", "token " + token);
-            conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
-            conn.setRequestProperty("Content-Type", "application/json");
-            conn.setRequestProperty("User-Agent", "VCode-IDE");
-            conn.setConnectTimeout(CONNECT_TIMEOUT);
-            conn.setReadTimeout(READ_TIMEOUT);
-
-            StringBuilder sb = getStringBuilder(conn);
-
-            return sb.toString();
-        } finally {
-            if (conn != null) {
-                conn.disconnect();
-            }
-        }
+    private HttpURLConnection openConnection(String path, String method) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) new URL(BASE_URL + path).openConnection();
+        conn.setRequestMethod(method);
+        conn.setRequestProperty("Authorization", "token " + token);
+        conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setRequestProperty("User-Agent", "VCode-IDE");
+        conn.setConnectTimeout(CONNECT_TIMEOUT);
+        conn.setReadTimeout(READ_TIMEOUT);
+        return conn;
     }
 
-    @NonNull
-    private StringBuilder getStringBuilder(HttpURLConnection conn) throws IOException {
+    private String readResponse(HttpURLConnection conn) throws IOException {
         int code = conn.getResponseCode();
-        InputStream is = (code >= 200 && code < 300)
-                ? conn.getInputStream() : conn.getErrorStream();
-
+        InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
         StringBuilder sb = new StringBuilder();
         if (is != null) {
-            try (BufferedReader reader = new BufferedReader(
-                    new java.io.InputStreamReader(is, StandardCharsets.UTF_8))) {
+            try (BufferedReader r = new BufferedReader(new InputStreamReader(is, StandardCharsets.UTF_8))) {
                 String line;
-                while ((line = reader.readLine()) != null) sb.append(line);
+                while ((line = r.readLine()) != null) sb.append(line);
             }
         }
-
         if (code == 401) throw new IOException("Authentication failed. Check your token.");
         if (code == 403) throw new IOException("Access forbidden. Token may lack required scopes.");
-        if (code == 404) throw new IOException("User profile destination endpoint not found.");
+        if (code == 404) throw new IOException("Not found.");
+        if (code == 422) throw new IOException("Repository name already exists or is invalid.");
         if (code >= 400) throw new IOException("GitHub API error " + code + ": " + sb);
-        return sb;
+        return sb.toString();
     }
 
-    // --- Public API ---
+    private String get(String path) throws IOException {
+        HttpURLConnection conn = openConnection(path, "GET");
+        try {
+            return readResponse(conn);
+        } finally {
+            conn.disconnect();
+        }
+    }
+
+    private String post(String path, JSONObject body) throws IOException {
+        HttpURLConnection conn = openConnection(path, "POST");
+        conn.setDoOutput(true);
+        byte[] bytes = body.toString().getBytes(StandardCharsets.UTF_8);
+        conn.setFixedLengthStreamingMode(bytes.length);
+        try (java.io.OutputStream os = conn.getOutputStream()) {
+            os.write(bytes);
+        }
+        try {
+            return readResponse(conn);
+        } finally {
+            conn.disconnect();
+        }
+    }
 
     public GitHubUser validateToken() throws IOException {
-        String json = request();
+        String json = get("/user");
         try {
             JSONObject obj = new JSONObject(json);
             return new GitHubUser(
@@ -88,8 +93,30 @@ public class GitHubApiClient {
         }
     }
 
-    // --- Unified Data Model ---
+    public CreateRepoResult createRepository(String name, String description, boolean isPrivate) throws IOException {
+        JSONObject body = new JSONObject();
+        try {
+            body.put("name", name);
+            body.put("description", description != null ? description : "");
+            body.put("private", isPrivate);
+            body.put("auto_init", false);
+        } catch (Exception e) {
+            throw new IOException("Failed to build request: " + e.getMessage());
+        }
+        String response = post("/user/repos", body);
+        try {
+            JSONObject obj = new JSONObject(response);
+            return new CreateRepoResult(
+                    obj.optString("full_name", ""),
+                    obj.optString("clone_url", ""),
+                    obj.optString("html_url", "")
+            );
+        } catch (Exception e) {
+            throw new IOException("Failed to parse create-repo response: " + e.getMessage());
+        }
+    }
 
+    // --- Data Models ---
     public static class GitHubUser {
         private final String login;
         private final String name;
@@ -129,6 +156,24 @@ public class GitHubApiClient {
 
         public int getTotalPrivateRepos() {
             return totalPrivateRepos;
+        }
+    }
+
+    public static class CreateRepoResult {
+        private final String fullName, cloneUrl, htmlUrl;
+        public CreateRepoResult(String fullName, String cloneUrl, String htmlUrl) {
+            this.fullName = fullName;
+            this.cloneUrl = cloneUrl;
+            this.htmlUrl = htmlUrl;
+        }
+        public String getFullName() {
+            return fullName;
+        }
+        public String getCloneUrl() {
+            return cloneUrl;
+        }
+        public String getHtmlUrl() {
+            return htmlUrl;
         }
     }
 }

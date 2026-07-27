@@ -33,6 +33,8 @@ public class GitBranchFragment extends Fragment implements BranchAdapter.BranchL
     private FragmentGitBranchBinding binding;
     private GitViewModel viewModel;
     private BranchAdapter adapter;
+    private BranchAdapter remoteAdapter;
+    private boolean isRemoteExpanded = false;
 
     @Nullable
     @Override
@@ -51,6 +53,10 @@ public class GitBranchFragment extends Fragment implements BranchAdapter.BranchL
         binding.rvBranches.setLayoutManager(new LinearLayoutManager(getContext()));
         binding.rvBranches.setAdapter(adapter);
 
+        remoteAdapter = new BranchAdapter(this);
+        binding.rvRemoteBranches.setLayoutManager(new LinearLayoutManager(getContext()));
+        binding.rvRemoteBranches.setAdapter(remoteAdapter);
+
         setupTypefaces();
         setupListeners();
         observeData();
@@ -65,6 +71,8 @@ public class GitBranchFragment extends Fragment implements BranchAdapter.BranchL
         binding.tvActiveBranchPill.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.tvBranchesListLabel.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.fabNewBranch.setTypeface(FontManager.getInstance().getUiSemiBold(context));
+        binding.tvRemoteBranchesLabel.setTypeface(FontManager.getInstance().getUiSemiBold(context));
+        binding.tvRemoteBranchCount.setTypeface(FontManager.getInstance().getUiMedium(context));
     }
 
     /**
@@ -73,6 +81,21 @@ public class GitBranchFragment extends Fragment implements BranchAdapter.BranchL
     private void setupListeners() {
         binding.fabNewBranch.setOnClickListener(v ->
                 new NewBranchBottomSheet().show(getChildFragmentManager(), "new_branch"));
+
+        binding.layoutRemoteHeader.setOnClickListener(v -> {
+            isRemoteExpanded = !isRemoteExpanded;
+            if (isRemoteExpanded && remoteAdapter.getItemCount() > 0) {
+                binding.rvRemoteBranches.setVisibility(View.VISIBLE);
+                binding.tvNoRemoteBranches.setVisibility(View.GONE);
+            } else if (isRemoteExpanded && remoteAdapter.getItemCount() == 0) {
+                binding.rvRemoteBranches.setVisibility(View.GONE);
+                binding.tvNoRemoteBranches.setVisibility(View.VISIBLE);
+            } else {
+                binding.rvRemoteBranches.setVisibility(View.GONE);
+                binding.tvNoRemoteBranches.setVisibility(View.GONE);
+            }
+            binding.ivRemoteChevron.animate().rotation(isRemoteExpanded ? 0f : -90f).setDuration(200).start();
+        });
     }
 
     /**
@@ -92,6 +115,25 @@ public class GitBranchFragment extends Fragment implements BranchAdapter.BranchL
                 adapter.submitList(branches);
             }
         });
+
+        viewModel.getRemoteBranches().observe(getViewLifecycleOwner(), branches -> {
+            if (branches != null) {
+                remoteAdapter.submitList(branches);
+                binding.tvRemoteBranchCount.setText("(" + branches.size() + ")");
+                if (isRemoteExpanded) {
+                    if (branches.isEmpty()) {
+                        binding.rvRemoteBranches.setVisibility(View.GONE);
+                        binding.tvNoRemoteBranches.setVisibility(View.VISIBLE);
+                    } else {
+                        binding.rvRemoteBranches.setVisibility(View.VISIBLE);
+                        binding.tvNoRemoteBranches.setVisibility(View.GONE);
+                    }
+                } else {
+                    binding.rvRemoteBranches.setVisibility(View.GONE);
+                    binding.tvNoRemoteBranches.setVisibility(View.GONE);
+                }
+            }
+        });
     }
 
     @Override
@@ -104,6 +146,12 @@ public class GitBranchFragment extends Fragment implements BranchAdapter.BranchL
     public void onOverflowClick(BranchItem item, View anchor) {
         // Build and display a context menu for branch-specific actions
         GitOptionsBottomSheet optionsSheet = GitOptionsBottomSheet.newInstance("Branch " + item.getName());
+
+        if (item.isRemote()) {
+            optionsSheet.addOption("Checkout as local", R.drawable.ic_code_branch, () -> viewModel.checkoutRemoteAsBranch(item.getName()));
+            optionsSheet.show(getChildFragmentManager(), "BranchOptionsSheet");
+            return;
+        }
 
         if (!item.isActive()) {
             optionsSheet.addOption("Checkout Branch", R.drawable.ic_right_from_bracket, () -> viewModel.checkoutBranch(item.getName()));

@@ -118,6 +118,20 @@ public class GitRemoteFragment extends Fragment {
 
             binding.tvAccountUsername.setText("Not Logged In");
         }
+        
+        if (binding.etRemoteUrl != null && binding.etRemoteUrl.getText() != null) {
+            updateCreateButtonVisibility(binding.etRemoteUrl.getText().toString());
+        }
+    }
+
+    private void updateCreateButtonVisibility(String url) {
+        if (binding.btnCreateOnGithub == null) return;
+        boolean hasAuth = credentialStore.hasCredentials(requireContext());
+        if (hasAuth && (url == null || url.trim().isEmpty())) {
+            binding.btnCreateOnGithub.setVisibility(View.VISIBLE);
+        } else {
+            binding.btnCreateOnGithub.setVisibility(View.GONE);
+        }
     }
 
     /**
@@ -158,6 +172,7 @@ public class GitRemoteFragment extends Fragment {
                     String url = s.toString().trim();
                     prefs.edit().putString(projectPath + "_url", url).apply();
                     viewModel.updateRemoteUrl(url); // Sync with the Git repository instance
+                    updateCreateButtonVisibility(url);
                 }
             }
         });
@@ -226,6 +241,80 @@ public class GitRemoteFragment extends Fragment {
         binding.btnPush.setOnClickListener(v -> executeRemoteOperation("push"));
         binding.btnPull.setOnClickListener(v -> executeRemoteOperation("pull"));
         binding.btnFetch.setOnClickListener(v -> executeRemoteOperation("fetch"));
+
+        if (binding.btnOpenOnGithub != null) {
+            binding.btnOpenOnGithub.setOnClickListener(v -> {
+                String url = binding.etRemoteUrl.getText() != null 
+                    ? binding.etRemoteUrl.getText().toString().trim() : "";
+                if (url.isEmpty()) {
+                    Toast.makeText(requireContext(), "No remote URL configured.", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                String browserUrl = url.replace(".git", "");
+                if (browserUrl.startsWith("git@github.com:")) {
+                    browserUrl = "https://github.com/" + browserUrl.substring("git@github.com:".length());
+                }
+                try {
+                    startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(browserUrl)));
+                } catch (Exception e) {
+                    Toast.makeText(requireContext(), "Could not open URL.", Toast.LENGTH_SHORT).show();
+                }
+            });
+        }
+
+        if (binding.btnCreateOnGithub != null) {
+            binding.btnCreateOnGithub.setOnClickListener(v -> {
+                String name = projectPath != null && !projectPath.isEmpty() 
+                    ? new java.io.File(projectPath).getName() : "new-repo";
+                com.cocode.vcode.ide.ui.sheets.CreateGitHubRepoBottomSheet.show(getChildFragmentManager(), name, (repoName, desc, isPrivate) -> {
+                    createGitHubRepo(repoName, desc, isPrivate);
+                });
+            });
+        }
+    }
+
+    private void createGitHubRepo(String name, String desc, boolean isPrivate) {
+        String token = null;
+        try {
+            token = credentialStore.getToken(requireContext());
+        } catch (Exception e) {
+            Toast.makeText(requireContext(), "Failed to get token: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+            return;
+        }
+        if (token == null || token.isEmpty()) return;
+
+        final String finalToken = token;
+
+        binding.layoutStatusArea.setVisibility(View.VISIBLE);
+        binding.progressIndicator.setVisibility(View.VISIBLE);
+        setHUDStatus("Creating GitHub repository...", R.color.vcode_accent_primary);
+        toggleFormInputState(false);
+
+        ExecutorProvider.getInstance().runOnIo(() -> {
+            try {
+                GitHubApiClient client = new GitHubApiClient(finalToken);
+                GitHubApiClient.CreateRepoResult result = client.createRepository(name, desc, isPrivate);
+                
+                String cloneUrl = result.getCloneUrl();
+                
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (binding != null) {
+                        binding.etRemoteUrl.setText(cloneUrl);
+                        viewModel.updateRemoteUrl(cloneUrl);
+                        updateCreateButtonVisibility(cloneUrl);
+                        executeRemoteOperation("push");
+                    }
+                });
+            } catch (Exception e) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (binding != null) {
+                        binding.progressIndicator.setVisibility(View.GONE);
+                        setHUDStatus("Failed to create repository: " + e.getMessage(), R.color.vcode_accent_error);
+                        toggleFormInputState(true);
+                    }
+                });
+            }
+        });
     }
 
     /**

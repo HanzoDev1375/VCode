@@ -87,6 +87,15 @@ public class GitHistoryFragment extends Fragment implements CommitHistoryAdapter
         });
 
         // Observe the commit history stream and update the list or empty state UI
+        viewModel.getConflictEvent().observe(getViewLifecycleOwner(), conflict -> {
+            if (conflict != null) {
+                com.cocode.vcode.ide.ui.sheets.GitConflictBottomSheet.show(getChildFragmentManager(), 
+                        viewModel.getRepository(), 
+                        conflict.getConflictingFiles(), 
+                        () -> viewModel.refreshAll());
+            }
+        });
+
         viewModel.getCommitHistory().observe(getViewLifecycleOwner(), commits -> {
             fullHistory = commits;
             adapter.submitList(commits);

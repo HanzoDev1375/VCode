@@ -67,6 +67,8 @@ public class GitFilesAdapter extends ListAdapter<GitFileItem, GitFilesAdapter.Vi
         void onFileClick(GitFileItem item);
 
         void onActionClick(GitFileItem item);
+
+        void onDiscardClick(GitFileItem item);
     }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
@@ -128,6 +130,15 @@ public class GitFilesAdapter extends ListAdapter<GitFileItem, GitFilesAdapter.Vi
 
             binding.getRoot().setOnClickListener(v -> listener.onFileClick(item));
             binding.btnAction.setOnClickListener(v -> listener.onActionClick(item));
+
+            if (binding.btnDiscard != null) {
+                if (!item.isStaged()) {
+                    binding.btnDiscard.setVisibility(android.view.View.VISIBLE);
+                    binding.btnDiscard.setOnClickListener(v -> listener.onDiscardClick(item));
+                } else {
+                    binding.btnDiscard.setVisibility(android.view.View.GONE);
+                }
+            }
         }
     }
 }

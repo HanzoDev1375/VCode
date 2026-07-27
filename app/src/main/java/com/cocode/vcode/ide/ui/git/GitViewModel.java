@@ -40,6 +40,8 @@ public class GitViewModel extends AndroidViewModel {
     private final MutableLiveData<List<com.cocode.vcode.ide.git.model.StashItem>> stashes = new MutableLiveData<>();
 
     // UI state indicators
+    private final MutableLiveData<String> logOutput = new MutableLiveData<>("");
+    private final MutableLiveData<GitRepository.GitConflictException> conflictEvent = new MutableLiveData<>();
     private final MutableLiveData<String> errorMessage = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isLoading = new MutableLiveData<>();
     private final MutableLiveData<Boolean> isNotRepository = new MutableLiveData<>(false);
@@ -255,6 +257,10 @@ public class GitViewModel extends AndroidViewModel {
         runAction(() -> repository.stashCreate());
     }
 
+    public void stashCreate(String message) {
+        runAction(() -> repository.stashCreate(message));
+    }
+
     public void stashApply(int id) {
         runAction(() -> repository.stashApply(id));
     }
@@ -272,7 +278,13 @@ public class GitViewModel extends AndroidViewModel {
     }
 
     public void cherryPick(String commitSha) {
-        runAction(() -> repository.cherryPick(commitSha));
+        runAction(() -> {
+            try {
+                repository.cherryPick(commitSha);
+            } catch (GitRepository.GitConflictException e) {
+                conflictEvent.postValue(e);
+            }
+        });
     }
 
     public void revertCommit(String commitSha) {
@@ -292,7 +304,21 @@ public class GitViewModel extends AndroidViewModel {
                 resolvedEmail = credentialStore.getLocalAuthorEmail(ctx);
             }
 
-            repository.revertCommit(commitSha, resolvedName, resolvedEmail);
+            try {
+                repository.revertCommit(commitSha, resolvedName, resolvedEmail);
+            } catch (GitRepository.GitConflictException e) {
+                conflictEvent.postValue(e);
+            }
+        });
+    }
+
+    public void revertCommit(String commitSha, String authorName, String authorEmail) {
+        runAction(() -> {
+            try {
+                repository.revertCommit(commitSha, authorName, authorEmail);
+            } catch (GitRepository.GitConflictException e) {
+                conflictEvent.postValue(e);
+            }
         });
     }
 
@@ -302,6 +328,10 @@ public class GitViewModel extends AndroidViewModel {
 
     public void checkoutBranch(String name) {
         runAction(() -> repository.checkoutBranch(name));
+    }
+
+    public void checkoutRemoteAsBranch(String remoteName) {
+        runAction(() -> repository.checkoutRemoteBranchAsLocal(remoteName));
     }
 
     public void mergeBranch(String branchName) {
@@ -330,6 +360,14 @@ public class GitViewModel extends AndroidViewModel {
 
     public void stageFile(String path) {
         runAction(() -> repository.stageFile(path));
+    }
+
+    public void discardFile(String path) {
+        runAction(() -> repository.discardFile(path));
+    }
+
+    public void discardAll() {
+        runAction(() -> repository.discardAll());
     }
 
     /**
@@ -387,8 +425,20 @@ public class GitViewModel extends AndroidViewModel {
         return localBranches;
     }
 
+    public LiveData<List<BranchItem>> getRemoteBranches() {
+        return remoteBranches;
+    }
+
     public LiveData<String> getCurrentBranch() {
         return currentBranch;
+    }
+
+    public LiveData<String> getLogOutput() {
+        return logOutput;
+    }
+
+    public LiveData<GitRepository.GitConflictException> getConflictEvent() {
+        return conflictEvent;
     }
 
     public LiveData<String> getErrorMessage() {

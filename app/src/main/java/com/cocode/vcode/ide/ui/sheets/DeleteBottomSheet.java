@@ -95,6 +95,14 @@ public class DeleteBottomSheet extends BottomSheetDialogFragment {
         } else if (deleteType == DeleteType.BRANCH) {
             binding.tvDelete.setText(getString(R.string.vcode_delete_branch, itemName));
             binding.tvDesc.setText(getString(R.string.vcode_action_cannot_be_undone, "branch"));
+        } else if (deleteType == DeleteType.DISCARD) {
+            binding.tvDelete.setText(itemName != null && !itemName.isEmpty() ? "Discard " + itemName + "?" : "Discard all unstaged changes?");
+            binding.tvDesc.setText("This action cannot be undone.");
+            binding.btnDelete.setText("Discard");
+        } else if (deleteType == DeleteType.STASH) {
+            binding.tvDelete.setText("Drop Stash " + itemName + "?");
+            binding.tvDesc.setText("This action cannot be undone.");
+            binding.btnDelete.setText("Drop");
         }
 
         // Apply custom message override if provided
@@ -137,7 +145,7 @@ public class DeleteBottomSheet extends BottomSheetDialogFragment {
      * Enumeration of supported deletion targets.
      */
     public enum DeleteType {
-        PROJECT, FILE, FOLDER, SNIPPET, BRANCH
+        PROJECT, FILE, FOLDER, SNIPPET, BRANCH, DISCARD, STASH
     }
 
     /**

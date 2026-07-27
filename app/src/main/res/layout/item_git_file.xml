@@ -59,6 +59,18 @@
         tools:text="M" />
 
     <ImageView
+        android:id="@+id/btn_discard"
+        android:layout_width="32dp"
+        android:layout_height="32dp"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:importantForAccessibility="no"
+        android:padding="6dp"
+        app:tint="@color/vcode_accent_error"
+        android:visibility="gone"
+        tools:visibility="visible"
+        tools:src="@drawable/ic_trash" />
+
+    <ImageView
         android:id="@+id/btn_action"
         android:layout_width="32dp"
         android:layout_height="32dp"

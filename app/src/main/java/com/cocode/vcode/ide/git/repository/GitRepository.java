@@ -430,6 +430,22 @@ public class GitRepository {
     }
 
     /**
+     * Creates a local tracking branch from a remote tracking ref.
+     * e.g. remoteName = "origin/feature-x" creates local "feature-x" tracking origin/feature-x
+     */
+    public void checkoutRemoteBranchAsLocal(String remoteName) throws Exception {
+        String localName = remoteName.contains("/") 
+            ? remoteName.substring(remoteName.indexOf('/') + 1) 
+            : remoteName;
+        git.checkout()
+            .setCreateBranch(true)
+            .setName(localName)
+            .setStartPoint(remoteName)
+            .setUpstreamMode(org.eclipse.jgit.api.CreateBranchCommand.SetupUpstreamMode.TRACK)
+            .call();
+    }
+
+    /**
      * Forks a brand new branch pointer pointing from an explicit historical start reference location.
      */
     public void createBranch(String name, String from) throws Exception {
@@ -449,7 +465,14 @@ public class GitRepository {
     public void cherryPick(String commitSha) throws Exception {
         ObjectId commitId = git.getRepository().resolve(commitSha);
         if (commitId == null) throw new IllegalArgumentException("Commit SHA not found");
-        git.cherryPick().include(commitId).call();
+        org.eclipse.jgit.api.CherryPickResult result = git.cherryPick().include(commitId).call();
+        if (result.getStatus() == org.eclipse.jgit.api.CherryPickResult.CherryPickStatus.CONFLICTING) {
+            java.util.List<String> conflicts = new java.util.ArrayList<>(git.status().call().getConflicting());
+            throw new GitConflictException("Cherry-pick conflicts detected", conflicts);
+        }
+        if (result.getStatus() == org.eclipse.jgit.api.CherryPickResult.CherryPickStatus.FAILED) {
+            throw new Exception("Cherry-pick failed: " + result.getFailingPaths());
+        }
     }
 
     /**
@@ -464,9 +487,15 @@ public class GitRepository {
         config.setString("user", null, "email", authorEmail);
         config.save();
 
-        git.revert()
-                .include(commitId)
-                .call();
+        org.eclipse.jgit.api.RevertCommand revert = git.revert().include(commitId);
+        RevCommit result = revert.call();
+        if (result == null) {
+            java.util.List<String> conflicts = new java.util.ArrayList<>(git.status().call().getConflicting());
+            if (!conflicts.isEmpty()) {
+                throw new GitConflictException("Revert conflicts detected", conflicts);
+            }
+            throw new Exception("Revert failed. The commit may already have been reverted.");
+        }
     }
 
     /**
@@ -529,6 +558,18 @@ public class GitRepository {
                 }
             }
         }
+
+        // Set upstream tracking config if not already set
+        try {
+            StoredConfig config = git.getRepository().getConfig();
+            String trackingRemote = config.getString("branch", branch, "remote");
+            if (trackingRemote == null || trackingRemote.isEmpty()) {
+                config.setString("branch", branch, "remote", "origin");
+                config.setString("branch", branch, "merge", "refs/heads/" + branch);
+                config.save();
+            }
+        } catch (Exception ignored) {}
+
         return "Push completed successfully.";
     }
 
@@ -651,6 +692,14 @@ public class GitRepository {
         return git.stashCreate().call();
     }
 
+    public org.eclipse.jgit.revwalk.RevCommit stashCreate(String message) throws Exception {
+        org.eclipse.jgit.api.StashCreateCommand cmd = git.stashCreate();
+        if (message != null && !message.trim().isEmpty()) {
+            cmd.setWorkingDirectoryMessage(message.trim());
+        }
+        return cmd.call();
+    }
+
     public void stashApply(int stashId) throws Exception {
         git.stashApply().setStashRef("stash@{" + stashId + "}").call();
     }
@@ -695,6 +744,20 @@ public class GitRepository {
             treeParser.reset(reader, head);
         }
         return treeParser;
+    }
+
+    /**
+     * Restores a single working-tree file to its index/HEAD state, discarding local edits.
+     */
+    public void discardFile(String path) throws Exception {
+        git.checkout().addPath(path).call();
+    }
+
+    /**
+     * Discards ALL unstaged changes in the working tree, restoring all files to index state.
+     */
+    public void discardAll() throws Exception {
+        git.checkout().setAllPaths(true).call();
     }
 
     /**
