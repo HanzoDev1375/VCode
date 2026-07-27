@@ -2,6 +2,7 @@ package com.cocode.vcode.ide.data.repository;
 
 import androidx.lifecycle.MutableLiveData;
 
+import com.cocode.vcode.ide.VCodeApplication;
 import com.cocode.vcode.ide.data.model.ProjectState;
 import com.cocode.vcode.ide.data.model.Result;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
@@ -90,7 +91,36 @@ public class ProjectStateRepository {
     // --- Section: Disk I/O ---
 
     private File getSessionFile(File projectDir) {
-        return new File(projectDir, SESSION_FILE);
+        return new File(getSessionStorageDir(projectDir), SESSION_FILE);
+    }
+
+    /**
+     * Determines where session data should be persisted.
+     *
+     * For VCode-owned projects (inside the VCodeProjects/ directory) the session file is stored
+     * alongside the project files — same behaviour as before.
+     *
+     * For ANY external directory (Downloads, Documents, WhatsApp, etc.) the session is stored
+     * entirely inside the app's private internal storage so VCode never creates stray files in
+     * folders it doesn't own.  The sub-folder name is a stable hex hash of the absolute path,
+     * guaranteeing the same project always maps to the same session bucket.
+     */
+    private static File getSessionStorageDir(File projectDir) {
+        android.content.Context ctx = VCodeApplication.getInstance();
+        String absPath = projectDir.getAbsolutePath();
+
+        // Check if this directory is inside VCodeProjects (the only directories VCode owns)
+        if (absPath.contains("/VCodeProjects/") || absPath.contains("/VCodeProjects")) {
+            return projectDir;
+        }
+
+        // External directory — redirect to app-private internal storage
+        String safeKey = Integer.toHexString(absPath.hashCode());
+        File bucket = new File(ctx.getFilesDir(), "external_sessions/" + safeKey);
+        if (!bucket.exists()) {
+            bucket.mkdirs();
+        }
+        return bucket;
     }
 
     /**

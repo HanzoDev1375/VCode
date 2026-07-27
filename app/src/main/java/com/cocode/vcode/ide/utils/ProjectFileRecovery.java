@@ -17,9 +17,18 @@ public class ProjectFileRecovery {
 
     /**
      * Reviews state settings layout integrity, re-instantiating metadata sheets if they have been dropped.
+     * Only runs for directories that VCode actually owns (inside VCodeProjects/).
+     * External directories (Downloads, Documents, etc.) are skipped intentionally to avoid
+     * creating stray metadata files in folders VCode doesn't own.
      */
     public static void ensureProjectFilesExist(File projectRoot) {
         if (projectRoot == null || !projectRoot.exists() || !projectRoot.isDirectory()) {
+            return;
+        }
+
+        // Only create metadata files inside VCode-owned project directories
+        String absPath = projectRoot.getAbsolutePath();
+        if (!absPath.contains("/VCodeProjects/") && !absPath.endsWith("/VCodeProjects")) {
             return;
         }
 
