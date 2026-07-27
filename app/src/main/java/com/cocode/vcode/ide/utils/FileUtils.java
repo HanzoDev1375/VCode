@@ -364,7 +364,14 @@ public class FileUtils {
 
     /**
      * Resolves an Android URI (file:// or content://) to a java.io.File.
-     * For content:// URIs the content is copied to the app's cache directory.
+     *
+     * Strategy for content:// URIs:
+     *  1. Try to resolve the real on-disk path (via _data column or DocumentsContract).
+     *     This handles local file managers (Files by Google, Solid Explorer, etc.) which
+     *     always send content:// URIs even for plain local files.
+     *  2. Only if no real path exists (true cloud providers: Drive, WhatsApp, Gmail, etc.)
+     *     copy the stream into the app's cache directory.
+     *
      * Returns null if the URI cannot be resolved.
      */
     public static File resolveUri(Context context, Uri uri) {
@@ -377,40 +384,169 @@ public class FileUtils {
         }
 
         if ("content".equalsIgnoreCase(scheme)) {
-            // Attempt to retrieve the display name from the content provider
-            String fileName = null;
-            try (android.database.Cursor cursor = context.getContentResolver().query(
-                    uri,
-                    new String[]{android.provider.OpenableColumns.DISPLAY_NAME},
-                    null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    fileName = cursor.getString(0);
-                }
-            } catch (Exception ignored) {}
-
-            if (fileName == null || fileName.isEmpty()) {
-                fileName = "vcode_tmp_" + System.currentTimeMillis();
+            // Step 1: Try to resolve to a real file path (local files from file managers)
+            File realFile = resolveContentUriToRealFile(context, uri);
+            if (realFile != null && realFile.exists()) {
+                return realFile;
             }
-            // Strip characters that are unsafe in file names
-            fileName = fileName.replaceAll("[^a-zA-Z0-9._\\-]", "_");
 
-            File cacheDir = new File(context.getCacheDir(), "vcode_open");
-            if (!cacheDir.exists()) cacheDir.mkdirs();
-            File dest = new File(cacheDir, fileName);
-
-            try (InputStream in = context.getContentResolver().openInputStream(uri);
-                 FileOutputStream out = new FileOutputStream(dest)) {
-                if (in == null) return null;
-                byte[] buf = new byte[8192];
-                int n;
-                while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
-                return dest;
-            } catch (Exception e) {
-                return null;
-            }
+            // Step 2: Cloud / sandboxed providers — copy stream to the app cache
+            return copyUriToCache(context, uri);
         }
 
         return null;
+    }
+
+    /**
+     * Attempts to resolve a content:// URI to a real file-system path without copying.
+     * Returns null when the URI belongs to a cloud or sandboxed provider.
+     */
+    private static File resolveContentUriToRealFile(Context context, Uri uri) {
+        // Method A: _data column (works for many MediaStore and legacy content providers)
+        try (android.database.Cursor cursor = context.getContentResolver().query(
+                uri, new String[]{"_data"}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idx = cursor.getColumnIndex("_data");
+                if (idx >= 0) {
+                    String path = cursor.getString(idx);
+                    if (path != null && !path.isEmpty()) {
+                        File f = new File(path);
+                        if (f.exists()) return f;
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        // Method B: DocumentsContract — handles Storage Access Framework URIs
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.KITKAT) {
+            try {
+                if (android.provider.DocumentsContract.isDocumentUri(context, uri)) {
+                    String authority = uri.getAuthority();
+
+                    // Primary external storage (e.g. /sdcard/...)
+                    if ("com.android.externalstorage.documents".equals(authority)) {
+                        String docId = android.provider.DocumentsContract.getDocumentId(uri);
+                        String[] parts = docId.split(":", 2);
+                        if (parts.length == 2 && "primary".equalsIgnoreCase(parts[0])) {
+                            File f = new File(Environment.getExternalStorageDirectory(), parts[1]);
+                            if (f.exists()) return f;
+                        }
+                    }
+
+                    // Downloads provider
+                    if ("com.android.providers.downloads.documents".equals(authority)) {
+                        String id = android.provider.DocumentsContract.getDocumentId(uri);
+                        if (id != null && id.startsWith("raw:")) {
+                            File f = new File(id.substring(4));
+                            if (f.exists()) return f;
+                        }
+                        if (id != null) {
+                            try {
+                                Uri dlUri = android.content.ContentUris.withAppendedId(
+                                        Uri.parse("content://downloads/public_downloads"),
+                                        Long.parseLong(id));
+                                try (android.database.Cursor c = context.getContentResolver().query(
+                                        dlUri, new String[]{"_data"}, null, null, null)) {
+                                    if (c != null && c.moveToFirst()) {
+                                        int idx = c.getColumnIndex("_data");
+                                        if (idx >= 0) {
+                                            String path = c.getString(idx);
+                                            if (path != null && !path.isEmpty()) {
+                                                File f = new File(path);
+                                                if (f.exists()) return f;
+                                            }
+                                        }
+                                    }
+                                }
+                            } catch (NumberFormatException ignored) {}
+                        }
+                    }
+
+                    // Media (image/video/audio) provider
+                    if ("com.android.providers.media.documents".equals(authority)) {
+                        String docId = android.provider.DocumentsContract.getDocumentId(uri);
+                        String[] parts = docId.split(":", 2);
+                        if (parts.length == 2) {
+                            Uri mediaUri;
+                            switch (parts[0]) {
+                                case "image": mediaUri = android.provider.MediaStore.Images.Media.EXTERNAL_CONTENT_URI; break;
+                                case "video": mediaUri = android.provider.MediaStore.Video.Media.EXTERNAL_CONTENT_URI;  break;
+                                case "audio": mediaUri = android.provider.MediaStore.Audio.Media.EXTERNAL_CONTENT_URI;  break;
+                                default: mediaUri = null;
+                            }
+                            if (mediaUri != null) {
+                                try (android.database.Cursor c = context.getContentResolver().query(
+                                        mediaUri, new String[]{"_data"}, "_id=?", new String[]{parts[1]}, null)) {
+                                    if (c != null && c.moveToFirst()) {
+                                        int idx = c.getColumnIndex("_data");
+                                        if (idx >= 0) {
+                                            String path = c.getString(idx);
+                                            if (path != null && !path.isEmpty()) {
+                                                File f = new File(path);
+                                                if (f.exists()) return f;
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            } catch (Exception ignored) {}
+        }
+
+        return null; // Could not resolve — caller will copy to cache
+    }
+
+    /**
+     * Copies a content:// stream into the app's cache directory.
+     * Used only for true cloud / sandboxed providers where a real path cannot be obtained.
+     * Infers the file extension from the MIME type when the display name has none
+     * (common for WhatsApp, Gmail attachments, etc.).
+     */
+    private static File copyUriToCache(Context context, Uri uri) {
+        // Get the display name from the provider
+        String fileName = null;
+        try (android.database.Cursor cursor = context.getContentResolver().query(
+                uri, new String[]{android.provider.OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                fileName = cursor.getString(0);
+            }
+        } catch (Exception ignored) {}
+
+        if (fileName == null || fileName.isEmpty()) {
+            fileName = "vcode_tmp_" + System.currentTimeMillis();
+        }
+
+        // If the display name has no extension, infer it from the MIME type.
+        // WhatsApp, Gmail, and many other apps omit extensions from display names.
+        if (!fileName.contains(".")) {
+            String mimeType = context.getContentResolver().getType(uri);
+            if (mimeType != null) {
+                String ext = android.webkit.MimeTypeMap.getSingleton().getExtensionFromMimeType(mimeType);
+                if (ext != null && !ext.isEmpty()) {
+                    fileName = fileName + "." + ext;
+                }
+            }
+        }
+
+        // Sanitize: keep letters, digits, dots, hyphens, and underscores
+        fileName = fileName.replaceAll("[^a-zA-Z0-9._\\-]", "_");
+
+        File cacheDir = new File(context.getCacheDir(), "vcode_open");
+        if (!cacheDir.exists()) cacheDir.mkdirs();
+        File dest = new File(cacheDir, fileName);
+
+        try (InputStream in = context.getContentResolver().openInputStream(uri);
+             FileOutputStream out = new FileOutputStream(dest)) {
+            if (in == null) return null;
+            byte[] buf = new byte[8192];
+            int n;
+            while ((n = in.read(buf)) != -1) out.write(buf, 0, n);
+            return dest;
+        } catch (Exception e) {
+            return null;
+        }
     }
 
     /**

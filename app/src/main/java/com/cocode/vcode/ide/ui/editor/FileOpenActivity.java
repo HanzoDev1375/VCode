@@ -40,7 +40,6 @@ public class FileOpenActivity extends Activity {
         }
 
         final boolean isContentUri = "content".equalsIgnoreCase(uri.getScheme());
-        final String sourceUriString = isContentUri ? uri.toString() : null;
 
         // URI resolution may involve IO (content:// copy) — dispatch to background thread
         ExecutorProvider.getInstance().runOnIo(() -> {
@@ -53,6 +52,13 @@ public class FileOpenActivity extends Activity {
                 });
                 return;
             }
+
+            // Only attach the source URI for write-back if the file was actually copied into the
+            // app's cache (true cloud/sandboxed providers: Drive, WhatsApp, Gmail...).
+            // For local files that were resolved to their real path, no write-back is needed.
+            boolean isInCache = file.getAbsolutePath().startsWith(
+                    getCacheDir().getAbsolutePath());
+            final String sourceUriString = (isContentUri && isInCache) ? uri.toString() : null;
 
             // Check that the file extension is supported — reject gracefully if not
             String ext = FileUtils.getExtension(file.getName());
