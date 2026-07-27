@@ -59,6 +59,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     private LocalWebServer localWebServer;
     private EditorViewModel viewModel;
     private ViewerManager viewerManager;
+
+    /**
+     * Extras for the external file that should be opened once session restore completes.
+     * Stored here to avoid a race where openFile() fires before restoreTabsFromState() runs.
+     */
+    private String pendingOpenFilePath = null;
+    private String pendingOpenSourceUri = null;
     private IFileViewer activeViewer;
     private boolean isReadOnly = false;
 
@@ -123,14 +130,29 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             }
         });
 
-        handleOpenFileIntent(getIntent());
+        // If launched with an external file, store it as pending.
+        // The actual openFile() call is deferred to the isEditorLoading observer (false branch)
+        // so it runs AFTER restoreTabsFromState() has fully replaced openFilesLiveData.
+        extractPendingOpenIntent(getIntent());
+        if (pendingOpenFilePath != null) {
+            viewModel.setSkipDefaultFileOpen(true);
+        }
     }
 
     @Override
     protected void onNewIntent(@NonNull Intent intent) {
         super.onNewIntent(intent);
         setIntent(intent);
+        // onNewIntent fires on an already-running Activity; session is already loaded,
+        // so it is safe to open the file immediately.
         handleOpenFileIntent(intent);
+    }
+
+    private void extractPendingOpenIntent(Intent intent) {
+        if (intent != null && intent.hasExtra(EXTRA_OPEN_FILE_PATH)) {
+            pendingOpenFilePath  = intent.getStringExtra(EXTRA_OPEN_FILE_PATH);
+            pendingOpenSourceUri = intent.getStringExtra(EXTRA_SOURCE_URI);
+        }
     }
 
     private void handleOpenFileIntent(Intent intent) {
@@ -386,6 +408,24 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 } else {
                     binding.viewerContainer.setVisibility(View.GONE);
                     binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
+                }
+
+                // Session restore is complete — now it is safe to open the externally-requested
+                // file. Doing this here avoids the race where restoreTabsFromState() would wipe
+                // the file from openFilesLiveData if we opened it earlier in onCreate().
+                if (pendingOpenFilePath != null) {
+                    String path      = pendingOpenFilePath;
+                    String sourceUri = pendingOpenSourceUri;
+                    pendingOpenFilePath  = null;
+                    pendingOpenSourceUri = null;
+                    File file = new File(path);
+                    if (file.exists() && file.isFile()) {
+                        if (sourceUri != null) {
+                            viewModel.openFile(file, sourceUri);
+                        } else {
+                            viewModel.openFile(file);
+                        }
+                    }
                 }
             }
         });

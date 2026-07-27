@@ -67,6 +67,16 @@ public class EditorViewModel extends ViewModel {
     private final Runnable autoSaveRunnable = this::saveAll;
     private String projectName;
     private ProjectState currentState;
+    /**
+     * When true, the default "open project mainFile" step inside restoreTabsFromState is skipped.
+     * Set by EditorActivity when the editor is launched from an external file intent so that the
+     * externally-requested file (opened after session restore) stays as the active tab.
+     */
+    private boolean skipDefaultFileOpen = false;
+
+    public void setSkipDefaultFileOpen(boolean skip) {
+        this.skipDefaultFileOpen = skip;
+    }
 
     public EditorViewModel(Context appContext, FileRepository fileRepo, ProjectStateRepository stateRepo, SettingsRepository settingsRepo, ProjectRepository projectRepo) {
         this.appContext = appContext;
@@ -222,21 +232,23 @@ public class EditorViewModel extends ViewModel {
         List<String> paths = state.getOpenFilePaths();
         if (paths == null || paths.isEmpty()) {
             isEditorLoadingLiveData.setValue(false);
-            ExecutorProvider.getInstance().runOnIo(() -> {
-                try {
-                    File metaFile = new File(projectRoot, "project_meta.json");
-                    if (metaFile.exists()) {
-                        String metaContent = FileUtils.readFile(metaFile);
-                        org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
-                        String mainFileName = metaJson.optString("mainFile", "index.html");
-                        File mainFile = new File(projectRoot, mainFileName);
-                        if (mainFile.exists()) {
-                            ExecutorProvider.getInstance().runOnMain(() -> openFile(mainFile));
+            if (!skipDefaultFileOpen) {
+                ExecutorProvider.getInstance().runOnIo(() -> {
+                    try {
+                        File metaFile = new File(projectRoot, "project_meta.json");
+                        if (metaFile.exists()) {
+                            String metaContent = FileUtils.readFile(metaFile);
+                            org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
+                            String mainFileName = metaJson.optString("mainFile", "index.html");
+                            File mainFile = new File(projectRoot, mainFileName);
+                            if (mainFile.exists()) {
+                                ExecutorProvider.getInstance().runOnMain(() -> openFile(mainFile));
+                            }
                         }
+                    } catch (Exception ignored) {
                     }
-                } catch (Exception ignored) {
-                }
-            });
+                });
+            }
             return;
         }
 
