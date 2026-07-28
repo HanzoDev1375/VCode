@@ -87,12 +87,11 @@
                             android:id="@+id/btn_discard_all"
                             android:layout_width="32dp"
                             android:layout_height="32dp"
-                            android:layout_marginEnd="8dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
+                            android:importantForAccessibility="no"
                             android:padding="6dp"
                             android:src="@drawable/ic_trash"
-                            app:tint="@color/vcode_accent_error"
-                            android:importantForAccessibility="no" />
+                            app:tint="@color/vcode_accent_error" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btn_stage_all"

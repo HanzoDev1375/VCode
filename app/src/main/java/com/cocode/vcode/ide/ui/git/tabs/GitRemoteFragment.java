@@ -93,6 +93,7 @@ public class GitRemoteFragment extends Fragment {
         binding.tvEmptyRemoteTitle.setTypeface(FontManager.getInstance().getUiSemiBold(context));
         binding.tvEmptyRemoteDesc.setTypeface(FontManager.getInstance().getUiMedium(context));
         binding.btnLinkAccount.setTypeface(FontManager.getInstance().getUiSemiBold(context));
+        binding.btnCreateOnGithub.setTypeface(FontManager.getInstance().getUiSemiBold(context));
 
         com.cocode.vcode.ide.utils.UiUtils.setViewRounded(binding.etRemoteUrl, com.cocode.vcode.ide.utils.UiUtils.dpToPx(context, 10), ContextCompat.getColor(context, R.color.vcode_bg_elevated));
         com.cocode.vcode.ide.utils.UiUtils.setViewRounded(binding.tvTargetBranchSelector, com.cocode.vcode.ide.utils.UiUtils.dpToPx(context, 10), ContextCompat.getColor(context, R.color.vcode_bg_elevated));

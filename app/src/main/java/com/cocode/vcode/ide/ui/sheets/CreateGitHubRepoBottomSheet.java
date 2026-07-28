@@ -8,13 +8,14 @@ import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.fragment.app.FragmentManager;
 
+import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.databinding.BottomSheetCreateGithubRepoBinding;
 import com.cocode.vcode.ide.utils.FontManager;
+import com.cocode.vcode.ide.utils.UiUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
-
-import java.util.Objects;
 
 public class CreateGitHubRepoBottomSheet extends BottomSheetDialogFragment {
     private BottomSheetCreateGithubRepoBinding binding;
@@ -48,32 +49,37 @@ public class CreateGitHubRepoBottomSheet extends BottomSheetDialogFragment {
         super.onViewCreated(view, savedInstanceState);
 
         Context context = requireContext();
+        int bgColor = ContextCompat.getColor(context, R.color.vcode_bg_elevated);
+
+        UiUtils.setViewRounded(binding.etRepoName, UiUtils.dpToPx(context, 10), bgColor);
+        UiUtils.setViewRounded(binding.etRepoDescription, UiUtils.dpToPx(context, 10), bgColor);
+
         FontManager fm = FontManager.getInstance();
         binding.tvTitle.setTypeface(fm.getUiSemiBold(context));
-        binding.tvPrivateLabel.setTypeface(fm.getUiMedium(context));
+        binding.tvSubtitle.setTypeface(fm.getUiMedium(context));
+        binding.tvRepoNameLabel.setTypeface(fm.getUiSemiBold(context));
+        binding.tvDescLabel.setTypeface(fm.getUiSemiBold(context));
+        binding.tvPrivateRepoLabel.setTypeface(fm.getUiMedium(context));
+        binding.tvPrivateRepoDesc.setTypeface(fm.getUiFont(context));
         binding.btnPublish.setTypeface(fm.getUiSemiBold(context));
-        
-        if (binding.etRepoName != null) {
-            binding.etRepoName.setTypeface(fm.getUiMedium(context));
-        }
-        if (binding.etRepoDescription != null) {
-            binding.etRepoDescription.setTypeface(fm.getUiMedium(context));
-        }
 
-        if (projectName != null && !projectName.isEmpty() && binding.etRepoName != null) {
+        binding.etRepoName.setTypeface(fm.getUiMedium(context));
+        binding.etRepoDescription.setTypeface(fm.getUiMedium(context));
+
+        if (projectName != null && !projectName.isEmpty()) {
             binding.etRepoName.setText(projectName);
         }
 
+        binding.privateRepoBtn.setOnClickListener(v -> binding.switchPrivate.setChecked(!binding.switchPrivate.isChecked()));
+
         binding.btnPublish.setOnClickListener(v -> {
-            String name = binding.etRepoName != null && binding.etRepoName.getText() != null ? binding.etRepoName.getText().toString().trim() : "";
-            String desc = binding.etRepoDescription != null && binding.etRepoDescription.getText() != null ? binding.etRepoDescription.getText().toString().trim() : "";
+            String name = binding.etRepoName.getText() != null ? binding.etRepoName.getText().toString().trim() : "";
+            String desc = binding.etRepoDescription.getText() != null ? binding.etRepoDescription.getText().toString().trim() : "";
             boolean isPrivate = binding.switchPrivate.isChecked();
 
             if (name.isEmpty()) {
-                if (binding.etRepoName != null) {
-                    binding.etRepoName.setError("Repository name is required");
-                    binding.etRepoName.requestFocus();
-                }
+                binding.etRepoName.setError("Repository name is required");
+                binding.etRepoName.requestFocus();
                 return;
             }
 

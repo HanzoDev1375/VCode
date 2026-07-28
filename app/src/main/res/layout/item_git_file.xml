@@ -68,7 +68,7 @@
         app:tint="@color/vcode_accent_error"
         android:visibility="gone"
         tools:visibility="visible"
-        tools:src="@drawable/ic_trash" />
+        android:src="@drawable/ic_trash" />
 
     <ImageView
         android:id="@+id/btn_action"
@@ -77,6 +77,6 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:importantForAccessibility="no"
         android:padding="6dp"
-        tools:src="@drawable/ic_plus" />
+        android:src="@drawable/ic_plus" />
 
 </LinearLayout>
