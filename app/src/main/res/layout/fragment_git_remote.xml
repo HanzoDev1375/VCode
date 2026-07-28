@@ -172,7 +172,7 @@
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:importantForAccessibility="no"
                             android:padding="12dp"
-                            android:src="@drawable/ic_link"
+                            android:src="@drawable/ic_globe"
                             app:tint="@color/vcode_accent_primary" />
                     </LinearLayout>
 
@@ -181,8 +181,9 @@
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginBottom="16dp"
-                        android:text="Publish to GitHub"
+                        android:text="@string/vcode_publish_to_github"
                         android:visibility="gone"
+                        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                         app:backgroundTint="?attr/colorPrimary"
                         android:textColor="?attr/colorOnPrimary" />
 
@@ -226,7 +227,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginEnd="4dp"
                     android:layout_weight="1"
-                    android:text="Fetch"
+                    android:text="@string/vcode_action_fetch"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -237,7 +238,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="4dp"
                     android:layout_weight="1"
-                    android:text="Pull"
+                    android:text="@string/vcode_action_pull"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorOnSurface" />
 

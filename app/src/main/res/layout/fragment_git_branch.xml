@@ -119,7 +119,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginStart="8dp"
-                        android:text="Remote Branches"
+                        android:text="@string/vcode_remote_branches"
                         android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -146,7 +146,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginHorizontal="16dp"
                     android:layout_marginTop="8dp"
-                    android:text="Fetch to see remote branches"
+                    android:text="@string/vcode_fetch_to_see_remote_branches"
                     android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                     android:textColor="?attr/colorOnSurfaceVariant"
                     android:visibility="visible" />

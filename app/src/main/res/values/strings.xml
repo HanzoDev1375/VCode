@@ -224,11 +224,36 @@
     <string name="vcode_target_branch_label">TARGET BRANCH</string>
     <string name="vcode_select_target_branch_hint">Select tracking target branch</string>
     <string name="vcode_action_push">Push</string>
+    <string name="vcode_action_fetch">Fetch</string>
+    <string name="vcode_action_pull">Pull</string>
 
     <!--    Fragment: Git Branch-->
     <string name="vcode_current_branch_label">CURRENT BRANCH</string>
     <string name="vcode_available_branches_label">AVAILABLE BRANCHES</string>
     <string name="vcode_action_new_branch">New Branch</string>
+    <string name="vcode_remote_branches">Remote Branches</string>
+    <string name="vcode_fetch_to_see_remote_branches">Fetch to see remote branches</string>
+
+    <!--    Bottom Sheet: Git Stash Message-->
+    <string name="vcode_stash_changes">Stash Changes</string>
+    <string name="vcode_stash_subtitle">Save uncommitted work without committing</string>
+    <string name="vcode_save_changes_revisit_later">Save your changes to revisit later</string>
+    <string name="vcode_stash_description_hint">Description (optional)</string>
+    <string name="vcode_action_stash">Stash</string>
+    
+    <!--    Fragment: Git Stash-->
+    <string name="vcode_no_stashes_yet">No Stashes Yet</string>
+    <string name="vcode_stash_saves_changes_desc">Stash saves your uncommitted changes so you can switch context without losing work.</string>
+
+    <!--    Bottom Sheet: Create GitHub Repo-->
+    <string name="vcode_publish_to_github">Publish to GitHub</string>
+    <string name="vcode_create_a_repository_desc">Create a repository on GitHub and push your project in one click.</string>
+    <string name="vcode_repository_name_label">REPOSITORY NAME</string>
+    <string name="vcode_description_label">DESCRIPTION</string>
+    <string name="e_g_this_is_my_awesome_creation">e.g., This is my awesome creation!</string>
+    <string name="vcode_private_repository">Private Repository</string>
+    <string name="vcode_creates_private_repo_desc">Creates a private repository which only you can access</string>
+    <string name="vcode_publish_btn">Publish</string>
 
 
     <string name="vcode_git_changes_count">• %d changes</string>

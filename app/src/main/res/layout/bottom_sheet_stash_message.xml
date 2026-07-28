@@ -16,7 +16,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
         android:layout_marginEnd="0dp"
-        android:text="Stash Changes"
+        android:text="@string/vcode_stash_changes"
         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
         android:textColor="?attr/colorOnSurface" />
 
@@ -26,7 +26,7 @@
         android:layout_height="wrap_content"
         android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
         android:layout_marginEnd="0dp"
-        android:text="Save your changes to revisit later"
+        android:text="@string/vcode_save_changes_revisit_later"
         android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -48,7 +48,7 @@
                 android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
                 android:layout_marginTop="24dp"
                 android:background="?attr/colorSurfaceContainerHigh"
-                android:hint="Description (optional)"
+                android:hint="@string/vcode_stash_description_hint"
                 android:imeOptions="actionDone"
                 android:importantForAutofill="no"
                 android:inputType="text"
@@ -68,7 +68,7 @@
                 android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
                 android:layout_marginBottom="24dp"
                 android:paddingHorizontal="24dp"
-                android:text="Stash"
+                android:text="@string/vcode_action_stash"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                 android:textColor="?attr/colorOnPrimary"
                 app:backgroundTint="?attr/colorPrimary" />

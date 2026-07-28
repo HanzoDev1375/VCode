@@ -10,29 +10,35 @@
         android:layout_width="match_parent"
         android:layout_height="wrap_content" />
 
-    <LinearLayout
-        android:layout_width="match_parent"
+    <ImageView
+        android:layout_width="35dp"
+        android:layout_height="35dp"
+        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+        android:importantForAccessibility="no"
+        android:src="@drawable/ic_github"
+        app:tint="?attr/colorOnSurface" />
+
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:gravity="center_vertical"
-        android:orientation="horizontal"
-        android:paddingHorizontal="@dimen/vcode_app_gap_horizontal">
+        android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginTop="6dp"
+        android:text="@string/vcode_publish_to_github"
+        android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
+        android:textColor="?attr/colorOnSurface" />
 
-        <ImageView
-            android:layout_width="32dp"
-            android:layout_height="32dp"
-            android:importantForAccessibility="no"
-            android:src="@drawable/ic_github"
-            app:tint="?attr/colorOnSurface" />
-
-        <TextView
-            android:id="@+id/tv_title"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:text="Publish to GitHub"
-            android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
-            android:textColor="?attr/colorOnSurface" />
-    </LinearLayout>
+    <TextView
+        android:id="@+id/tv_subtitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+        android:layout_marginEnd="0dp"
+        android:paddingStart="0dp"
+        android:paddingEnd="35dp"
+        android:text="@string/vcode_create_a_repository_desc"
+        android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+        android:textColor="?attr/colorOnSurfaceVariant" />
 
     <androidx.core.widget.NestedScrollView
         android:layout_width="match_parent"
@@ -45,75 +51,115 @@
             android:layout_height="wrap_content"
             android:orientation="vertical">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_repo_name"
+            <TextView
+                android:id="@+id/tv_repo_name_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="24dp"
+                android:layout_marginEnd="0dp"
+                android:text="@string/vcode_repository_name_label"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <EditText
+                android:id="@+id/et_repo_name"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-                android:layout_marginTop="24dp"
-                app:boxBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:boxCornerRadiusBottomEnd="10dp"
-                app:boxCornerRadiusBottomStart="10dp"
-                app:boxCornerRadiusTopEnd="10dp"
-                app:boxCornerRadiusTopStart="10dp"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp">
+                android:layout_marginTop="6dp"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:hint="@string/e_g_my_awesome_project"
+                android:imeOptions="actionNext"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:padding="14dp"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant" />
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etRepoName"
+            <TextView
+                android:id="@+id/tv_desc_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="20dp"
+                android:layout_marginEnd="0dp"
+                android:text="@string/vcode_description_label"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <EditText
+                android:id="@+id/et_repo_description"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="6dp"
+                android:background="?attr/colorSurfaceContainerHigh"
+                android:hint="@string/e_g_this_is_my_awesome_creation"
+                android:imeOptions="actionDone"
+                android:importantForAutofill="no"
+                android:inputType="text"
+                android:maxLines="1"
+                android:padding="14dp"
+                android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                android:textColor="?attr/colorOnSurface"
+                android:textColorHint="?attr/colorOnSurfaceVariant" />
+
+            <com.google.android.material.card.MaterialCardView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+                android:layout_marginTop="@dimen/vcode_app_gap_horizontal"
+                app:cardBackgroundColor="?attr/colorSurfaceContainer"
+                app:cardCornerRadius="12dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <LinearLayout
+                    android:id="@+id/private_repo_btn"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:hint="Repository Name"
-                    android:inputType="text"
-                    android:maxLines="1" />
-            </com.google.android.material.textfield.TextInputLayout>
+                    android:background="?attr/selectableItemBackground"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:padding="16dp">
 
-            <com.google.android.material.textfield.TextInputLayout
-                android:id="@+id/til_repo_desc"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-                android:layout_marginTop="16dp"
-                app:boxBackgroundColor="?attr/colorSurfaceContainerHigh"
-                app:boxCornerRadiusBottomEnd="10dp"
-                app:boxCornerRadiusBottomStart="10dp"
-                app:boxCornerRadiusTopEnd="10dp"
-                app:boxCornerRadiusTopStart="10dp"
-                app:boxStrokeWidth="0dp"
-                app:boxStrokeWidthFocused="0dp">
+                    <LinearLayout
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_weight="1"
+                        android:orientation="vertical">
 
-                <com.google.android.material.textfield.TextInputEditText
-                    android:id="@+id/etRepoDescription"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:hint="Description (optional)"
-                    android:inputType="text"
-                    android:maxLines="1" />
-            </com.google.android.material.textfield.TextInputLayout>
+                        <TextView
+                            android:id="@+id/tv_private_repo_label"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text="@string/vcode_private_repository"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelLarge" />
 
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-                android:layout_marginTop="24dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
+                        <TextView
+                            android:id="@+id/tv_private_repo_desc"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="2dp"
+                            android:text="@string/vcode_creates_private_repo_desc"
+                            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                            android:textColor="?attr/colorOnSurfaceVariant" />
+                    </LinearLayout>
 
-                <TextView
-                    android:id="@+id/tv_private_label"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:text="Private repository"
-                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-                    android:textColor="?attr/colorOnSurface" />
-
-                <com.google.android.material.materialswitch.MaterialSwitch
-                    android:id="@+id/switchPrivate"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:checked="true" />
-            </LinearLayout>
+                    <com.google.android.material.materialswitch.MaterialSwitch
+                        android:id="@+id/switchPrivate"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:checked="true"
+                        android:scaleX="0.8"
+                        android:scaleY="0.8" />
+                </LinearLayout>
+            </com.google.android.material.card.MaterialCardView>
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnPublish"
@@ -125,7 +171,7 @@
                 android:layout_marginEnd="@dimen/vcode_app_gap_horizontal"
                 android:layout_marginBottom="24dp"
                 android:paddingHorizontal="24dp"
-                android:text="Publish"
+                android:text="@string/vcode_publish_btn"
                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                 android:textColor="?attr/colorOnPrimary"
                 app:backgroundTint="?attr/colorPrimary" />
