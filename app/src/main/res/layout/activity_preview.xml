@@ -278,7 +278,7 @@
                     android:background="@drawable/vcode_bg_console_badge"
                     android:paddingHorizontal="8dp"
                     android:paddingVertical="2dp"
-                    android:text="0"
+                    tools:text="0"
                     android:textColor="@color/vcode_accent_primary"
                     android:textSize="10sp"
                     android:visibility="gone"

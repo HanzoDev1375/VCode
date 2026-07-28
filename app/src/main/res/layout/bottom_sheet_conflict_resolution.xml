@@ -33,7 +33,7 @@
             android:layout_height="wrap_content"
             android:layout_marginStart="10dp"
             android:layout_weight="1"
-            android:text="Merge Conflicts"
+            android:text="@string/vcode_merge_conflicts"
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
             android:textColor="?attr/colorOnSurface" />
 
@@ -47,7 +47,7 @@
         android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:layout_marginTop="4dp"
         android:lineSpacingMultiplier="1.3"
-        android:text="The pull could not complete automatically. Resolve the conflicts below before committing."
+        android:text="@string/vcode_merge_conflict_desc"
         android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
         android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -58,7 +58,7 @@
         android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:layout_marginTop="20dp"
         android:layout_marginBottom="6dp"
-        android:text="CONFLICTING FILES"
+        android:text="@string/vcode_conflicting_files"
         android:textAllCaps="true"
         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
@@ -79,7 +79,7 @@
         android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:layout_marginTop="20dp"
         android:layout_marginBottom="6dp"
-        android:text="RESOLUTION OPTIONS"
+        android:text="@string/vcode_resolution_options"
         android:textAllCaps="true"
         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
         android:textColor="?attr/colorOnSurfaceVariant" />
@@ -131,7 +131,7 @@
                         android:id="@+id/tv_ours_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Accept Ours (Keep Local)"
+                        android:text="@string/vcode_accept_ours"
                         android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -140,7 +140,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Discard incoming changes, keep your local version"
+                        android:text="@string/vcode_accept_ours_desc"
                         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                         android:textColor="@color/vcode_text_secondary" />
 
@@ -193,7 +193,7 @@
                         android:id="@+id/tv_theirs_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Accept Theirs (Use Remote)"
+                        android:text="@string/vcode_accept_theirs"
                         android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                         android:textColor="?attr/colorOnSurface" />
 
@@ -202,7 +202,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Overwrite local changes with the incoming remote version"
+                        android:text="@string/vcode_accept_theirs_desc"
                         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                         android:textColor="@color/vcode_text_secondary" />
 
@@ -255,7 +255,7 @@
                         android:id="@+id/tv_abort_title"
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
-                        android:text="Abort Merge"
+                        android:text="@string/vcode_abort_merge"
                         android:textAppearance="@style/TextAppearance.Material3.TitleSmall"
                         android:textColor="?attr/colorError" />
 
@@ -264,7 +264,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="Reset to the state before the pull was started"
+                        android:text="@string/vcode_abort_merge_desc"
                         android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                         android:textColor="@color/vcode_text_secondary" />
 

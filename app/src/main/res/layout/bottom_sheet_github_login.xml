@@ -29,7 +29,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Login"
+            android:text="@string/vcode_login"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="@color/vcode_toggle_button_text"
             app:backgroundTint="@color/vcode_toggle_button_bg" />
@@ -40,7 +40,7 @@
             android:layout_width="0dp"
             android:layout_height="match_parent"
             android:layout_weight="1"
-            android:text="Clone"
+            android:text="@string/vcode_clone"
             android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
             android:textColor="@color/vcode_toggle_button_text"
             app:backgroundTint="@color/vcode_toggle_button_bg" />
@@ -367,7 +367,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_gravity="center"
-                    android:text="0%"
+                    tools:text="0%"
                     android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                     android:textColor="?attr/colorPrimary"
                     tools:ignore="HardcodedText" />

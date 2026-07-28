@@ -307,4 +307,49 @@
     <string name="vcode_find_case">Aa</string>
     <string name="vcode_find_word">W</string>
     <string name="vcode_find_regex">.*</string>
+    <string name="vcode_ssh_key">SSH Key</string>
+    <string name="vcode_generate_ssh_key_desc">Generate and view public key</string>
+    <string name="vcode_login">Login</string>
+    <string name="vcode_clone">Clone</string>
+    <string name="vcode_problems">Problems</string>
+    <string name="vcode_global_search">Global Search</string>
+    <string name="vcode_search_across_project">Search across this project</string>
+    <string name="vcode_ssh_public_key">SSH Public Key</string>
+    <string name="vcode_ssh_key_desc">Add this key to your Git provider (GitHub, GitLab, etc.) to authenticate via SSH.</string>
+    <string name="vcode_generating">Generating...</string>
+    <string name="vcode_cancel">Cancel</string>
+    <string name="vcode_copy">Copy</string>
+    <string name="vcode_select_option">Select Option</string>
+    <string name="vcode_key">Key</string>
+    <string name="vcode_value">Value</string>
+    <string name="vcode_analyzing">Analyzing...</string>
+    
+    <!-- Merge Conflicts -->
+    <string name="vcode_merge_conflicts">Merge Conflicts</string>
+    <string name="vcode_merge_conflict_desc">The pull could not complete automatically. Resolve the conflicts below before committing.</string>
+    <string name="vcode_conflicting_files">CONFLICTING FILES</string>
+    <string name="vcode_resolution_options">RESOLUTION OPTIONS</string>
+    <string name="vcode_accept_ours">Accept Ours (Keep Local)</string>
+    <string name="vcode_accept_ours_desc">Discard incoming changes, keep your local version</string>
+    <string name="vcode_accept_theirs">Accept Theirs (Use Remote)</string>
+    <string name="vcode_accept_theirs_desc">Overwrite local changes with the incoming remote version</string>
+    <string name="vcode_abort_merge">Abort Merge</string>
+    <string name="vcode_abort_merge_desc">Reset to the state before the pull was started</string>
+    
+    <!-- New Branch -->
+    <string name="vcode_create_new_branch_desc">Create a new branch for your work</string>
+    <string name="vcode_branch_name">Branch Name</string>
+    <string name="vcode_base_branch">Base Branch</string>
+
+    <!-- API Tester -->
+    <string name="vcode_api_url_hint">https://api.example.com/v1</string>
+    <string name="vcode_get">GET</string>
+    <string name="vcode_send_request">Send Request</string>
+    <string name="vcode_headers">HEADERS</string>
+    <string name="vcode_body">BODY</string>
+    <string name="vcode_add_header">Add Header</string>
+    <string name="vcode_add_body_param">Add Body Param</string>
+    <string name="vcode_response">RESPONSE</string>
+    <string name="vcode_none">None</string>
+    <string name="vcode_share">Share</string>
 </resources>

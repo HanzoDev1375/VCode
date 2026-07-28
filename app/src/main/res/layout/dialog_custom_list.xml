@@ -22,7 +22,7 @@
             android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
             android:layout_marginEnd="0dp"
             android:layout_marginBottom="16dp"
-            android:text="Select Option"
+            android:text="@string/vcode_select_option"
             android:textAppearance="@style/TextAppearance.Material3.TitleMedium"
             android:textColor="?attr/colorOnSurface" />
 

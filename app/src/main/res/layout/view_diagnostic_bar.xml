@@ -47,7 +47,7 @@
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                 android:textColor="@color/vcode_text_primary"
                 android:visibility="gone"
-                android:text="Analyzing..." />
+                android:text="@string/vcode_analyzing" />
 
             <LinearLayout
                 android:id="@+id/ll_errors"

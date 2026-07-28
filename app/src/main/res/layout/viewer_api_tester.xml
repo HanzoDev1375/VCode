@@ -1,5 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<LinearLayout xmlns:tools="http://schemas.android.com/tools"
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
@@ -34,7 +35,7 @@
                     android:drawableStart="@drawable/ic_link"
                     android:drawablePadding="8dp"
                     android:drawableTint="?attr/colorPrimary"
-                    android:hint="https://api.example.com/v1"
+                    android:hint="@string/vcode_api_url_hint"
                     android:imeOptions="actionDone"
                     android:importantForAutofill="no"
                     android:inputType="textUri"
@@ -54,7 +55,7 @@
                     android:focusable="true"
                     android:paddingHorizontal="16dp"
                     android:paddingVertical="14dp"
-                    android:text="GET"
+                    android:text="@string/vcode_get"
                     android:textAlignment="center"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorPrimary"
@@ -70,7 +71,7 @@
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="12dp"
-                android:text="Send Request"
+                android:text="@string/vcode_send_request"
                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                 android:textColor="?attr/colorOnPrimary"
                 app:backgroundTint="?attr/colorPrimary"
@@ -90,7 +91,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:paddingBottom="4dp"
-                    android:text="HEADERS"
+                    android:text="@string/vcode_headers"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorPrimary" />
 
@@ -100,7 +101,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="24dp"
                     android:paddingBottom="4dp"
-                    android:text="BODY"
+                    android:text="@string/vcode_body"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>
@@ -134,7 +135,7 @@
                     android:drawablePadding="8dp"
                     android:focusable="true"
                     android:padding="8dp"
-                    android:text="Add Header"
+                    android:text="@string/vcode_add_header"
                     android:textAlignment="center"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorPrimary"
@@ -166,7 +167,7 @@
                     android:drawablePadding="8dp"
                     android:focusable="true"
                     android:padding="8dp"
-                    android:text="Add Body Param"
+                    android:text="@string/vcode_add_body_param"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorPrimary"
                     app:drawableStartCompat="@drawable/ic_plus"
@@ -201,7 +202,7 @@
                             android:id="@+id/tv_response_label"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="RESPONSE"
+                            android:text="@string/vcode_response"
                             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -213,7 +214,7 @@
                             android:background="@drawable/bg_status_pill"
                             android:paddingHorizontal="8dp"
                             android:paddingVertical="4dp"
-                            android:text="None"
+                            android:text="@string/vcode_none"
                             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                             android:textColor="?attr/colorPrimary"
                             android:textSize="9dp"
@@ -228,7 +229,7 @@
                             android:id="@+id/tv_time_badge"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:text="0ms"
+                            tools:text="0ms"
                             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:visibility="gone" />
@@ -238,7 +239,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginStart="12dp"
-                            android:text="0 B"
+                            tools:text="0 B"
                             android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                             android:textColor="?attr/colorOnSurfaceVariant"
                             android:visibility="gone" />

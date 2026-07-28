@@ -573,7 +573,7 @@
                                 android:id="@+id/tv_ssh_key"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="SSH Key"
+                                android:text="@string/vcode_ssh_key"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelLarge"
                                 android:textColor="?attr/colorOnBackground" />
 
@@ -581,7 +581,7 @@
                                 android:id="@+id/tv_ssh_key_desc"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="Generate and view public key"
+                                android:text="@string/vcode_generate_ssh_key_desc"
                                 android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                                 android:textColor="?attr/colorOnSurfaceVariant" />
                         </LinearLayout>
