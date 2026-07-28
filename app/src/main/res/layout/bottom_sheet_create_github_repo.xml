@@ -24,7 +24,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
         android:layout_marginTop="6dp"
-        android:text="@string/vcode_publish_to_github"
+        android:text="@string/vcode_create_github_repo"
         android:textAppearance="@style/TextAppearance.Material3.TitleLarge"
         android:textColor="?attr/colorOnSurface" />
 

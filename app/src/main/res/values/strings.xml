@@ -246,7 +246,7 @@
     <string name="vcode_stash_saves_changes_desc">Stash saves your uncommitted changes so you can switch context without losing work.</string>
 
     <!--    Bottom Sheet: Create GitHub Repo-->
-    <string name="vcode_publish_to_github">Publish to GitHub</string>
+    <string name="vcode_create_github_repo">Create a GitHub Repo</string>
     <string name="vcode_create_a_repository_desc">Create a repository on GitHub and push your project in one click.</string>
     <string name="vcode_repository_name_label">REPOSITORY NAME</string>
     <string name="vcode_description_label">DESCRIPTION</string>
