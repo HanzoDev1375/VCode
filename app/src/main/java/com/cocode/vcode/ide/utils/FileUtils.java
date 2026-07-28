@@ -533,7 +533,12 @@ public class FileUtils {
         // Sanitize: keep letters, digits, dots, hyphens, and underscores
         fileName = fileName.replaceAll("[^a-zA-Z0-9._\\-]", "_");
 
-        File cacheDir = new File(context.getCacheDir(), "vcode_open");
+        File cacheRoot = new File(context.getCacheDir(), "vcode_open");
+
+        // Each external file gets its own subdirectory named after the file itself.
+        // resolveProjectRoot() will return that subdirectory, so its getName() produces
+        // the actual filename (e.g. "index.html") rather than "vcode_open".
+        File cacheDir = new File(cacheRoot, fileName);
         if (!cacheDir.exists()) cacheDir.mkdirs();
         File dest = new File(cacheDir, fileName);
 
