@@ -353,6 +353,11 @@ public class CodeEditText extends View {
                 // backspace-slide start from the exact tapped position.
                 composingStart = -1;
                 composingEnd = -1;
+                // Reset the blink cycle so the cursor is always immediately visible
+                // after a tap. Without this, if the tap lands during the "off" phase
+                // of the blink the cursor stays invisible until the next blink tick.
+                cursorVisible = true;
+                scheduleBlink();
                 invalidate();
                 mainHandler.removeCallbacks(bracketMatchRunnable);
                 mainHandler.postDelayed(bracketMatchRunnable, 80);
