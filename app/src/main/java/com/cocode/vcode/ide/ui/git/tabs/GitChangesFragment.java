@@ -197,6 +197,9 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
         viewModel.getUnstagedFiles().observe(getViewLifecycleOwner(), files -> {
             unstagedAdapter.submitList(files);
             binding.tvUnstagedCount.setText("(".concat(String.valueOf(files.size())).concat(")"));
+            if (binding.btnDiscardAll != null) {
+                binding.btnDiscardAll.setVisibility(files.isEmpty() ? View.GONE : View.VISIBLE);
+            }
         });
 
         viewModel.getStagedFiles().observe(getViewLifecycleOwner(), files -> {
