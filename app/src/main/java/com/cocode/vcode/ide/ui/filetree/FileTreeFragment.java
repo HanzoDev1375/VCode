@@ -152,14 +152,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
             }
         });
 
-        binding.btnSettings.setOnClickListener(v -> {
-            if (viewModel.getProjectRoot() != null) {
-                File metaFile = new File(viewModel.getProjectRoot(), "project_meta.json");
-                if (metaFile.exists() && selectionListener != null) {
-                    selectionListener.onFileSelected(new FileNode(metaFile, 0));
-                }
-            }
-        });
+
     }
 
     /**
