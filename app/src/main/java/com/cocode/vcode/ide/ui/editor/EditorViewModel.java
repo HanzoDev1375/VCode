@@ -284,14 +284,25 @@ public class EditorViewModel extends ViewModel {
                     String content = state.getVirtualFile(relativePath);
                     active.setContent(content != null ? content : "");
                     active.markSaved();
+                    active.setContentLoaded(true);
                 } else if (!active.isBinaryAsset()) {
                     try {
-                        active.setContent(FileUtils.readFile(active.getFile()));
+                        String content = FileUtils.readFile(active.getFile());
+                        active.setContent(content);
                         active.markSaved();
-                    } catch (Exception ignored) {
+                        // Only mark loaded on success — if this throws, contentLoaded stays
+                        // false so CodeFileViewer.bindFile() will retry the read.
+                        active.setContentLoaded(true);
+                    } catch (Exception e) {
+                        // Leave contentLoaded = false intentionally. bindFile will detect
+                        // the unloaded state and load content asynchronously as a fallback.
+                        active.setContentLoaded(false);
                     }
+                } else {
+                    // Binary assets don't have text content — mark loaded so bindFile
+                    // doesn't try to read them as text.
+                    active.setContentLoaded(true);
                 }
-                active.setContentLoaded(true);
             }
 
             final int finalTargetTab = targetTab;

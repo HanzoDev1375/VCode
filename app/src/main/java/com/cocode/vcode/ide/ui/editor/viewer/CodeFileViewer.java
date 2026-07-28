@@ -95,11 +95,42 @@ public class CodeFileViewer implements IFileViewer {
             editorLayout.setShowLineNumbers(settings.isShowLineNumbers());
         }
 
-        // Horizontal scrolling is managed internally by CodeEditText (View-based OverScroller)
-
         codeEditText.setTag(file.getId());
         codeEditText.setCurrentFile(file.getFile());
         codeEditText.setFileType(file.getFileType());
+
+        if (!file.isContentLoaded() && !file.isVirtual() && !file.isBinaryAsset()) {
+            // Content was never successfully read (e.g. read failed during session restore).
+            // Show an empty editor immediately, then load from disk async and push the
+            // content back to the UI once ready. This prevents the editor staying blank.
+            codeEditText.setText("");
+            final EditorFile capturedFile = file;
+            final CodeEditText capturedEditor = codeEditText;
+            ExecutorProvider.getInstance().runOnIo(() -> {
+                try {
+                    String content = com.cocode.vcode.ide.utils.FileUtils.readFile(capturedFile.getFile());
+                    capturedFile.setContent(content);
+                    capturedFile.markSaved();
+                    capturedFile.setContentLoaded(true);
+                    ExecutorProvider.getInstance().runOnMain(() -> {
+                        // Only apply if this viewer is still bound to the same file.
+                        if (currentFile == capturedFile && capturedEditor == codeEditText) {
+                            capturedEditor.setText(content);
+                            int cursor = capturedFile.getCursorPosition();
+                            if (cursor >= 0 && cursor <= capturedEditor.length()) {
+                                capturedEditor.setSelection(cursor);
+                            }
+                            capturedEditor.scrollTo(0, capturedFile.getScrollY());
+                            validateCodeIfRequired();
+                        }
+                    });
+                } catch (Exception ignored) {
+                    // If we still can't read, leave editor empty — user can see the file
+                    // is missing and act accordingly.
+                }
+            });
+            return;
+        }
 
         // Only set text if it's different to prevent resetting cursor
         String currentText = codeEditText.getText() != null ? codeEditText.getText().toString() : "";
