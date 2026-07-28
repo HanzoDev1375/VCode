@@ -405,6 +405,17 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 if (files != null && !files.isEmpty()) {
                     binding.viewerContainer.setVisibility(View.VISIBLE);
                     binding.layoutEmptyEditor.setVisibility(View.GONE);
+
+                    // setText() in CodeEditText dispatches prepareLoad to a CPU background
+                    // thread. The viewerContainer was GONE while that work ran, so when
+                    // applyLoaded() called invalidate(), the view was hidden and didn't draw.
+                    // Now that the container is VISIBLE, post a re-bind on the next frame so
+                    // the active viewer is refreshed with its content correctly rendered.
+                    Integer activeIdx = viewModel.getActiveTabIndex().getValue();
+                    if (activeIdx != null && activeIdx >= 0 && activeIdx < files.size() && activeViewer != null) {
+                        final EditorFile activeFile = files.get(activeIdx);
+                        binding.viewerContainer.post(() -> activeViewer.bindFile(activeFile, viewModel));
+                    }
                 } else {
                     binding.viewerContainer.setVisibility(View.GONE);
                     binding.layoutEmptyEditor.setVisibility(View.VISIBLE);
