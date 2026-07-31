@@ -1,119 +1,156 @@
+<div align="center">
+
+<img src="previews/banner.jpg" alt="VCode Banner" width="100%"/>
+
 # VCode — The IDE That Fits in Your Pocket
 
-[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE) [![Platform](https://img.shields.io/badge/Platform-Android-brightgreen.svg)](https://android.com) [![Min SDK](https://img.shields.io/badge/Min_SDK-23-orange.svg)]()
+**A premium, blazing-fast mobile IDE for web developers — built natively for Android.**
 
-> **Code anywhere. Preview instantly. Ship confidently.** VCode is a premium mobile IDE for web developers — built from the ground up to feel fast, beautiful, and powerful on any Android device.
+[![License](https://img.shields.io/badge/License-Apache_2.0-blue.svg)](LICENSE)
+[![Platform](https://img.shields.io/badge/Platform-Android-brightgreen.svg)](https://android.com)
+[![Min SDK](https://img.shields.io/badge/Min_SDK-23%20(Android%206.0)-orange.svg)]()
+[![Java](https://img.shields.io/badge/Language-Java-red.svg)]()
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
----
+[**▶ Download on Google Play**](https://play.google.com/store/apps/details?id=com.cocode.vcode.ide)
 
-## Why VCode?
-
-Most mobile code editors feel like toys. VCode doesn't.
-
-We've obsessed over every detail — from the smoothness of tab switching to the way autocomplete understands your HTML structure — so you get a **genuine coding experience** wherever you are. Whether you're polishing a personal project on your commute or making a critical hotfix from your phone, VCode has your back.
-
----
-
-## 🌟 Features
-
-### ⚡ Blazing‑Fast Code Editor
-
-Write code at the speed of thought. VCode's editor never stutters, never freezes, and never loses your place.
-
-- **Instant tab switching** — open tabs stay live in memory, so jumping between files is always instant with zero flicker.
-- **Smart syntax highlighting** for HTML, CSS, JavaScript, and JSON — rendered beautifully in JetBrains Mono.
-- **Context‑aware autocomplete** that actually understands what you're writing:
-  - CSS suggestions inside `<style>` tags and `style="..."` attributes.
-  - JavaScript suggestions inside `<script>` blocks.
-  - Project‑wide variable and function discovery.
-  - File and folder name suggestions with icons.
-- **Built‑in Emmet Expansion** — type shorthand abbreviations like `ul>li.item*3` in HTML or `m10`, `df`, `jcc` in CSS and instantly expand them into full code. The `!` abbreviation injects your custom HTML boilerplate with your cursor already inside `<body>`.
-- **One‑tap code formatting** for JS, CSS, HTML, and JSON — your cursor stays exactly where it was.
-- **Smart overflow menu** — text‑editing tools (Find/Replace, Go to Line, Format Code) automatically appear or hide based on the active file type and view mode.
-- Auto‑closing brackets, smart indentation, Find & Replace with regex, and real‑time JSON validation.
-- **Intelligent diagnostics** — real‑time linting for HTML, CSS, JavaScript, and TypeScript with color‑coded squiggly underlines (red errors, yellow warnings, blue hints) drawn directly in the editor at the exact token position.
+</div>
 
 ---
 
-### 👁️ Beautiful File Previews
+## 📖 About
 
-Stop switching apps just to see what something looks like.
+VCode is a **desktop-grade coding environment** built entirely for Android. It is designed for web developers who want a genuine IDE experience — not a text editor with syntax coloring — right from their pocket.
 
-- **Live Web Preview** — run your *currently active* HTML file instantly in a powerful WebView, or pop it open in your browser. The Run button appears automatically only when relevant — animated and context‑aware.
-- **Markdown rendering** — your `.md` files render as rich, formatted documents right inside the editor.
-- **SVG, CSV, and Image previews** — files open directly in their visual representation, no extra steps.
-- **JSON Viewer** — formatted, syntax‑highlighted JSON at a glance.
+Whether you're committing a hotfix on the go, prototyping a new idea during your commute, or managing a full project from your phone, VCode gives you the tools to do it properly.
+
+> **Code anywhere. Preview instantly. Ship confidently.**
 
 ---
+
+## 📸 Screenshots
+
+<div align="center">
+<table>
+  <tr>
+    <td align="center"><img src="previews/projects_screen.jpg" width="180"/><br/><sub>Projects</sub></td>
+    <td align="center"><img src="previews/editor_screen.jpg" width="180"/><br/><sub>Code Editor</sub></td>
+    <td align="center"><img src="previews/settings_screen.jpg" width="180"/><br/><sub>Settings</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="previews/git_changes_screen.jpg" width="180"/><br/><sub>Git Changes</sub></td>
+    <td align="center"><img src="previews/git_history_screen.jpg" width="180"/><br/><sub>Commit History</sub></td>
+    <td align="center"><img src="previews/git_remote_screen.jpg" width="180"/><br/><sub>Remote & GitHub</sub></td>
+  </tr>
+  <tr>
+    <td align="center"><img src="previews/git_branches_screen.jpg" width="180"/><br/><sub>Branch Manager</sub></td>
+    <td align="center"><img src="previews/git_stash_screen.jpg" width="180"/><br/><sub>Stash Manager</sub></td>
+  </tr>
+</table>
+</div>
+
+---
+
+## ✨ Features
+
+### ⚡ Blazing-Fast Code Editor
+- Custom-built, high-performance editor with **viewport culling** and incremental syntax highlighting — no third-party editor library
+- **Smart syntax highlighting** for HTML, CSS, JavaScript, TypeScript, and JSON rendered in JetBrains Mono
+- **Context-aware autocomplete** — CSS inside `<style>` tags, JS inside `<script>` blocks, project-wide symbol discovery, and file path suggestions
+- **Built-in Emmet expansion** — type `ul>li.item*3` or `!` and expand instantly into full code
+- **One-tap code formatting** for HTML, CSS, JS, and JSON — cursor position preserved
+- **Real-time diagnostics** — linting with color-coded squiggly underlines (red errors, yellow warnings, blue hints) at exact token positions
+- **Find & Replace** with regex support and Go to Line
+- Auto-closing brackets, smart auto-indentation, and undo/redo history
+
+### 👁️ Live Previews
+- **Live Web Preview** — render the active HTML file instantly in a built-in WebView or open in browser
+- **Markdown rendering** — `.md` files render as rich, formatted documents
+- **SVG, CSV, and Image previews** — files open in their visual representation
+- **JSON Viewer** — formatted and syntax-highlighted
 
 ### 🌿 Full Git & GitHub Integration
+- **Complete local Git workflow** — initialize, stage, unstage, commit, branch, merge, stash
+- **GitHub connected** — link your account, push/pull/fetch, create repos, and manage remotes
+- **Visual Diff Viewer** — review every change before committing
+- **Commit History** — scrollable timeline with author, date, and message
+- **Branch Manager** — create, switch, rename, and delete branches
+- **Stash Manager** — save and restore work-in-progress with one tap
+- **Conflict Resolution** — accept ours, accept theirs, or abort merge from a dedicated UI
+- **Background cloning** — clone large repos without freezing the UI, with live progress
 
-VCode treats Git as a first‑class citizen, not an afterthought.
+### 📁 Desktop-Grade File Management
+- **Premium file tree** with long-press context menu for instant actions
+- **Full clipboard support** — Copy, Cut, and Paste files and entire folders
+- **Visual cut feedback** — cut items dim to 70% opacity, just like desktop OS
+- **Background file operations** — import and paste large folders silently with progress notifications
+- **Project templates** — Blank, HTML, or HTML+CSS+JS starter layouts
 
-- **Complete Git workflow** — initialize, stage, commit, branch, and push, all without leaving the app.
-- **GitHub connected** — link your account securely and sync your work with a tap.
-- **Visual Diff Viewer** — review every change before you commit.
-- **Commit History** — a clean, scrollable timeline of your project's story.
-- **Background cloning** — clone large repositories without a single UI freeze, with live progress updates.
-
----
-
-### 📁 Desktop‑Grade File Management
-
-Your workspace, your way.
-
-- **Premium file tree** — long‑press any file or folder to reveal a beautiful animated context menu with instant actions.
-- **Full clipboard support** — Copy, Cut, and Paste files and entire folders across your project.
-- **Visual Cut feedback** — cut files dim to 70% opacity, just like macOS and Windows.
-- **Path copying** — grab the Absolute or Relative path of any file in one tap.
-- **Background file operations** — importing or pasting large folders runs silently in the background with a progress notification and a Cancel button.
-- **Project templates** — start new projects instantly with Blank, HTML, or HTML+CSS+JS layouts.
-- **Snippet Manager** — save your most‑used code blocks and insert them anywhere with a single tap.
+### 🎨 Polished UI
+- **Material Design 3** with a fully polished dark theme
+- Smooth micro-animations, transitions, and carefully tuned visual feedback throughout
 
 ---
 
-### 🛡️ Your Work Is Always Safe
+## 🛠️ Building from Source
 
-- **Unsaved‑Changes Guard** — VCode detects unsaved edits and asks before you navigate away. No more accidental losses.
-- **Auto‑sync project list** — newly cloned or created projects appear in your list automatically.
+### Prerequisites
+- Android Studio Hedgehog or later
+- JDK 11+
+- Android SDK with API 36
 
----
+### Clone & Build
 
-### 🎨 A UI You'll Actually Enjoy
+```bash
+git clone https://github.com/cocodestudio/VCode.git
+cd VCode
+./gradlew assembleDebug
+```
 
-- **Material Design 3** with a fully polished dark theme.
-- **Sora typography** for crisp, readable UI text everywhere.
-- **Smooth micro‑animations** and transitions that make the app feel alive.
-- Circular progress indicators, animated menus, and carefully tuned visual feedback throughout.
+The debug APK will be at `app/build/outputs/apk/debug/app-debug.apk`.
 
----
+### Technical Stack
 
-## 🚀 Getting Started
-
-1. Install the latest stable version from the releases section.
-2. Tap **New Project** and choose a template, or clone a repo.
-3. Open files from the file tree, write code, and see your changes live.
-4. Commit and push with Git — right from within the app.
+| Concern | Approach |
+|---|---|
+| Language | Pure Java (Kotlin is not used) |
+| UI | Native Android Views + XML layouts (no Jetpack Compose) |
+| Networking | `HttpURLConnection` (no Retrofit) |
+| JSON | `org.json` (no Gson / Moshi) |
+| Database | File-based storage (no Room) |
+| Concurrency | `ExecutorProvider` + `Handler` (no RxJava) |
+| Git | `org.eclipse.jgit` |
+| Min SDK | 23 (Android 6.0 Marshmallow) |
+| Target SDK | 36 |
 
 ---
 
 ## 🤝 Contributing
 
-VCode is open‑source and we love contributions! Here's how to get involved:
+Contributions are welcome and appreciated! Please read [**CONTRIBUTING.md**](CONTRIBUTING.md) for guidelines on how to get started, the coding standards we follow, and the pull request process.
 
-1. **Fork** the repository.
-2. **Create** a feature branch: `git checkout -b feature/YourFeature`
-3. **Implement** your changes in **Java only** (no Kotlin). All Android resources must use the `vcode_` prefix (e.g. `@color/vcode_accent_primary`). Avoid Retrofit, Room, Hilt, and RxJava — use `HttpURLConnection` and `org.json` instead.
-4. **Context Synchronization**: If you use an AI assistant, ensure they update `VCode_Project_Context.md` whenever adding, deleting, or refactoring files.
-5. **Build** and verify: `./gradlew assembleDebug`
-6. **Open** a Pull Request with a clear description of what you've changed and why.
+---
+
+## 📋 Changelog
+
+See [**Release Notes**](https://github.com/cocodestudio/VCode/releases) for a full list of changes across versions.
 
 ---
 
 ## 📜 License
 
-Distributed under the **Apache License 2.0**. See [`LICENSE`](LICENSE) for more information.
+Distributed under the **Apache License 2.0**.  
+See [`LICENSE`](LICENSE) for more information.
 
 ---
 
-*VCode — Stop settling for less. Code like a pro, from your pocket.*
+## 📬 Contact
+
+- **Issues & Bug Reports**: [GitHub Issues](https://github.com/cocodestudio/VCode/issues)
+- **Google Play**: [VCode on Play Store](https://play.google.com/store/apps/details?id=com.cocode.vcode.ide)
+
+---
+
+<div align="center">
+<i>VCode — Stop settling for less. Code like a pro, from your pocket.</i>
+</div>
