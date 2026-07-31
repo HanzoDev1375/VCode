@@ -58,7 +58,7 @@ public class GitManager {
             if (url.startsWith("http")) {
                 clone.setCredentialsProvider(
                         new UsernamePasswordCredentialsProvider(
-                                username != null ? username : "token",
+                                token != null ? "x-access-token" : "token",
                                 token != null ? token : ""));
             } else {
                 clone.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(context));

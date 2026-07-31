@@ -142,46 +142,68 @@
             android:textAppearance="@style/TextAppearance.Material3.TitleLarge" />
 
         <TextView
-            android:id="@+id/tv_how_to_get_github_token"
+            android:id="@+id/tv_device_flow_instructions"
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
-            android:layout_marginEnd="0dp"
-            android:paddingStart="0dp"
-            android:paddingEnd="35dp"
-            android:text="@string/vcode_how_to_get_github_token"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+            android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
+            android:layout_marginTop="8dp"
+            android:text="Click below to open GitHub in your browser and authorize this device."
+            android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
-        <TextView
-            android:id="@+id/tv_pat"
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginStart="@dimen/vcode_app_gap_horizontal"
-            android:layout_marginTop="24dp"
-            android:layout_marginEnd="0dp"
-            android:text="@string/vcode_pat"
-            android:textAllCaps="true"
-            android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-            android:textColor="?attr/colorOnSurfaceVariant" />
-
-        <EditText
-            android:id="@+id/et_pat"
+        <LinearLayout
+            android:id="@+id/layout_device_code"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
-            android:layout_marginTop="6dp"
+            android:layout_marginTop="16dp"
             android:background="?attr/colorSurfaceContainerHigh"
-            android:hint="@string/vcode_pat_hint"
-            android:imeOptions="actionDone"
-            android:importantForAutofill="no"
-            android:inputType="textPassword"
-            android:maxLines="1"
-            android:padding="14dp"
-            android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
-            android:textColor="?attr/colorOnSurface"
-            android:textColorHint="?attr/colorOnSurfaceVariant" />
+            android:padding="16dp"
+            android:gravity="center"
+            android:orientation="vertical"
+            android:visibility="gone">
 
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="Your Device Code"
+                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
+                android:textAllCaps="true"
+                android:textColor="?attr/colorOnSurfaceVariant" />
+
+            <TextView
+                android:id="@+id/tv_user_code"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="4dp"
+                tools:text="ABCD-EFGH"
+                android:textAppearance="@style/TextAppearance.Material3.HeadlineMedium"
+                android:textColor="?attr/colorOnSurface"
+                android:textIsSelectable="true" />
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="12dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal">
+
+                <ProgressBar
+                    android:id="@+id/auth_progress"
+                    android:layout_width="16dp"
+                    android:layout_height="16dp"
+                    android:indeterminate="true" />
+
+                <TextView
+                    android:id="@+id/tv_auth_status"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="Waiting for authorization..."
+                    android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
+                    android:textColor="?attr/colorOnSurfaceVariant" />
+            </LinearLayout>
+        </LinearLayout>
 
         <LinearLayout
             android:id="@+id/btns_container"
@@ -189,24 +211,9 @@
             android:layout_height="wrap_content"
             android:layout_marginTop="40dp"
             android:layout_marginBottom="20dp"
-            android:gravity="center_vertical"
+            android:gravity="end|center_vertical"
             android:orientation="horizontal"
             android:paddingHorizontal="@dimen/vcode_app_gap_horizontal">
-
-            <com.google.android.material.button.MaterialButton
-                android:id="@+id/btn_visit_token_page"
-                style="@style/Widget.Material3.Button.OutlinedButton.Icon"
-                android:layout_width="wrap_content"
-                android:layout_height="wrap_content"
-                android:paddingHorizontal="24dp"
-                android:text="@string/vcode_visit_token_page"
-                android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
-                app:icon="@drawable/ic_globe" />
-
-            <Space
-                android:layout_width="0dp"
-                android:layout_height="wrap_content"
-                android:layout_weight="1" />
 
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btn_connect_github"

@@ -11,6 +11,7 @@ import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.Toast;
+import android.content.DialogInterface;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -20,6 +21,8 @@ import androidx.fragment.app.FragmentManager;
 import com.cocode.vcode.ide.R;
 import com.cocode.vcode.ide.databinding.BottomSheetGithubLoginBinding;
 import com.cocode.vcode.ide.git.core.GitCredentialStore;
+import com.cocode.vcode.ide.git.github.GitHubDeviceFlowClient;
+import com.cocode.vcode.ide.git.github.GitHubApiClient;
 import com.cocode.vcode.ide.ui.git.GitCloneService;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FileUtils;
@@ -29,6 +32,7 @@ import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
 import java.io.File;
 import java.util.UUID;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
 
@@ -36,6 +40,8 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
     private GitHubLoginListener listener;
     private Runnable onCloneSuccess;
     private GitCloneService.CloneListener cloneListener;
+    private GitHubDeviceFlowClient deviceFlowClient;
+    private AtomicBoolean isPollingCancelled = new AtomicBoolean(false);
 
     public static void show(FragmentManager manager, @Nullable Runnable onCloneSuccess, GitHubLoginListener listener) {
         GitHubLoginBottomSheet sheet = new GitHubLoginBottomSheet();
@@ -56,6 +62,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, @Nullable ViewGroup container, @Nullable Bundle savedInstanceState) {
         binding = BottomSheetGithubLoginBinding.inflate(inflater, container, false);
+        deviceFlowClient = new GitHubDeviceFlowClient();
         return binding.getRoot();
     }
 
@@ -82,9 +89,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                     } else if (checkedId == R.id.tab_clone) {
                         binding.layoutLoginContainer.setVisibility(View.GONE);
                         binding.layoutCloneContainer.setVisibility(View.VISIBLE);
-                        // Make sure permission is handled in Activity? Or here. 
-                        // Actually, projectsActivity was handling permission.
-                        // Let's assume permission is granted or handle it.
                     }
                 }
             });
@@ -97,6 +101,12 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         }
     }
 
+    @Override
+    public void onDismiss(@NonNull DialogInterface dialog) {
+        super.onDismiss(dialog);
+        isPollingCancelled.set(true);
+    }
+
     private void refreshUIState() {
         GitCredentialStore store = new GitCredentialStore();
 
@@ -105,9 +115,8 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
 
             binding.imgGithub.setVisibility(View.GONE);
             binding.tvConnectYourGithub.setVisibility(View.GONE);
-            binding.tvHowToGetGithubToken.setVisibility(View.GONE);
-            binding.tvPat.setVisibility(View.GONE);
-            binding.etPat.setVisibility(View.GONE);
+            binding.tvDeviceFlowInstructions.setVisibility(View.GONE);
+            binding.layoutDeviceCode.setVisibility(View.GONE);
             binding.btnsContainer.setVisibility(View.GONE);
 
             String username = store.getUsername(requireContext());
@@ -118,51 +127,80 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
 
             binding.imgGithub.setVisibility(View.VISIBLE);
             binding.tvConnectYourGithub.setVisibility(View.VISIBLE);
-            binding.tvHowToGetGithubToken.setVisibility(View.VISIBLE);
-            binding.tvPat.setVisibility(View.VISIBLE);
-            binding.etPat.setVisibility(View.VISIBLE);
+            binding.tvDeviceFlowInstructions.setVisibility(View.VISIBLE);
+            binding.layoutDeviceCode.setVisibility(View.GONE);
             binding.btnsContainer.setVisibility(View.VISIBLE);
+            
+            binding.btnConnectGithub.setVisibility(View.VISIBLE);
         }
     }
 
     private void setupListeners() {
-        binding.btnVisitTokenPage.setOnClickListener(v -> {
-            try {
-                Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse("https://github.com/settings/tokens/new?scopes=repo,workflow"));
-                startActivity(intent);
-            } catch (Exception e) {
-                Toast.makeText(requireContext(), "No browser app found to open this URL.", Toast.LENGTH_SHORT).show();
-            }
-        });
-
         binding.btnConnectGithub.setOnClickListener(v -> {
-            String token = binding.etPat.getText() != null ? binding.etPat.getText().toString().trim() : "";
-
-            if (token.isEmpty()) {
-                binding.etPat.setError("Token is required");
-                binding.etPat.requestFocus();
-                return;
-            }
-            binding.etPat.setError(null);
             setLoadingState(true);
+            isPollingCancelled.set(false);
 
-            if (listener != null) {
-                listener.onLogin(token, (success, errorMsg) -> {
-                    if (getView() != null) {
-                        getView().post(() -> {
-                            setLoadingState(false);
-                            if (success) {
-                                refreshUIState();
-                            } else {
-                                binding.etPat.setError(errorMsg != null ? errorMsg : "Invalid token");
-                                binding.etPat.requestFocus();
-                            }
-                        });
+            deviceFlowClient.requestDeviceCode(new GitHubDeviceFlowClient.DeviceCodeCallback() {
+                @Override
+                public void onSuccess(GitHubDeviceFlowClient.DeviceCodeResponse response) {
+                    if (getView() == null) return;
+                    
+                    binding.btnConnectGithub.setVisibility(View.GONE);
+                    binding.layoutDeviceCode.setVisibility(View.VISIBLE);
+                    binding.tvUserCode.setText(response.userCode);
+                    binding.tvAuthStatus.setText("Waiting for authorization...");
+                    binding.authProgress.setVisibility(View.VISIBLE);
+
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(response.verificationUriComplete));
+                        startActivity(intent);
+                    } catch (Exception e) {
+                        Toast.makeText(requireContext(), "No browser app found to open GitHub.", Toast.LENGTH_SHORT).show();
                     }
-                });
-            } else {
-                dismiss();
-            }
+
+                    deviceFlowClient.pollForToken(response.deviceCode, response.intervalSeconds, isPollingCancelled, new GitHubDeviceFlowClient.TokenPollListener() {
+                        @Override
+                        public void onSuccess(String accessToken) {
+                            if (getView() == null) return;
+                            fetchIdentityAndFinish(accessToken);
+                        }
+
+                        @Override
+                        public void onExpired() {
+                            if (getView() == null) return;
+                            binding.authProgress.setVisibility(View.GONE);
+                            binding.tvAuthStatus.setText("Code expired, try again.");
+                            binding.btnConnectGithub.setVisibility(View.VISIBLE);
+                            setLoadingState(false);
+                        }
+
+                        @Override
+                        public void onDenied() {
+                            if (getView() == null) return;
+                            binding.authProgress.setVisibility(View.GONE);
+                            binding.tvAuthStatus.setText("Authorization cancelled.");
+                            binding.btnConnectGithub.setVisibility(View.VISIBLE);
+                            setLoadingState(false);
+                        }
+
+                        @Override
+                        public void onError(String error) {
+                            if (getView() == null) return;
+                            binding.authProgress.setVisibility(View.GONE);
+                            binding.tvAuthStatus.setText("Error: " + error);
+                            binding.btnConnectGithub.setVisibility(View.VISIBLE);
+                            setLoadingState(false);
+                        }
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    if (getView() == null) return;
+                    setLoadingState(false);
+                    Toast.makeText(requireContext(), "Error: " + error, Toast.LENGTH_LONG).show();
+                }
+            });
         });
 
         binding.btnDisconnectGithub.setOnClickListener(v -> {
@@ -174,6 +212,49 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                 Toast.makeText(requireContext(), "Failed to disconnect. Please try again.", Toast.LENGTH_SHORT).show();
             }
             refreshUIState();
+        });
+    }
+    
+    private void fetchIdentityAndFinish(String token) {
+        binding.tvAuthStatus.setText("Fetching profile...");
+        ExecutorProvider.getInstance().runOnIo(() -> {
+            try {
+                GitHubApiClient client = new GitHubApiClient(token);
+                GitHubApiClient.GitHubUser user = client.validateToken();
+                
+                GitCredentialStore store = new GitCredentialStore();
+                store.saveToken(requireContext(), token);
+                store.saveUsername(requireContext(), user.getLogin());
+                
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (getView() == null) return;
+                    
+                    if (listener != null) {
+                        listener.onLogin(token, (success, errorMsg) -> {
+                            if (getView() != null) {
+                                getView().post(() -> {
+                                    setLoadingState(false);
+                                    if (success) {
+                                        refreshUIState();
+                                    } else {
+                                        Toast.makeText(requireContext(), errorMsg != null ? errorMsg : "Authentication failed", Toast.LENGTH_LONG).show();
+                                    }
+                                });
+                            }
+                        });
+                    } else {
+                        dismiss();
+                    }
+                });
+            } catch (Exception e) {
+                ExecutorProvider.getInstance().runOnMain(() -> {
+                    if (getView() == null) return;
+                    binding.authProgress.setVisibility(View.GONE);
+                    binding.tvAuthStatus.setText("Failed to fetch profile.");
+                    binding.btnConnectGithub.setVisibility(View.VISIBLE);
+                    setLoadingState(false);
+                });
+            }
         });
     }
 
@@ -228,7 +309,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         setCancelable(false);
         binding.layoutForm.setVisibility(View.GONE);
         binding.layoutProgress.setVisibility(View.VISIBLE);
-        // also hide tabs
         binding.tabGroup.setVisibility(View.GONE);
 
         Context context = requireContext().getApplicationContext();
@@ -323,13 +403,13 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         Context ctx = requireContext();
 
         binding.tvConnectYourGithub.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tvHowToGetGithubToken.setTypeface(fm.getUiMedium(ctx));
-        binding.tvPat.setTypeface(fm.getUiMedium(ctx));
-        binding.etPat.setTypeface(fm.getUiMedium(ctx));
+        binding.tvDeviceFlowInstructions.setTypeface(fm.getUiMedium(ctx));
         binding.btnConnectGithub.setTypeface(fm.getUiSemiBold(ctx));
-        binding.btnVisitTokenPage.setTypeface(fm.getUiSemiBold(ctx));
         binding.tvGithubAccount.setTypeface(fm.getUiSemiBold(ctx));
         binding.tvAccountUsername.setTypeface(fm.getUiSemiBold(ctx));
+        
+        binding.tvUserCode.setTypeface(fm.getUiSemiBold(ctx));
+        binding.tvAuthStatus.setTypeface(fm.getUiMedium(ctx));
 
         binding.tabLogin.setTypeface(fm.getUiSemiBold(ctx));
         binding.tabClone.setTypeface(fm.getUiSemiBold(ctx));
@@ -347,7 +427,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         binding.tvProgressPercentage.setTypeface(fm.getUiSemiBold(ctx));
         binding.btnRunBackground.setTypeface(fm.getUiMedium(ctx));
 
-        UiUtils.setViewRounded(binding.etPat, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
+        UiUtils.setViewRounded(binding.layoutDeviceCode, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
         UiUtils.setViewRounded(binding.etRepoUrl, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
         UiUtils.setViewRounded(binding.etProjectName, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
     }
@@ -355,11 +435,9 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
     private void setLoadingState(boolean isLoading) {
         if (isLoading) {
             binding.btnConnectGithub.setEnabled(false);
-            binding.etPat.setEnabled(false);
             binding.btnConnectGithub.setText(R.string.vcode_connecting);
         } else {
             binding.btnConnectGithub.setEnabled(true);
-            binding.etPat.setEnabled(true);
             binding.btnConnectGithub.setText(R.string.vcode_connect);
         }
     }

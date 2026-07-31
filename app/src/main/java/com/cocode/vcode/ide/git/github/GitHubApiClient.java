@@ -25,7 +25,7 @@ public class GitHubApiClient {
     private HttpURLConnection openConnection(String path, String method) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) new URL(BASE_URL + path).openConnection();
         conn.setRequestMethod(method);
-        conn.setRequestProperty("Authorization", "token " + token);
+        conn.setRequestProperty("Authorization", "Bearer " + token);
         conn.setRequestProperty("Accept", "application/vnd.github.v3+json");
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setRequestProperty("User-Agent", "VCode-IDE");

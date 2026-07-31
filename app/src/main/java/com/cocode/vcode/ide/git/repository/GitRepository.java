@@ -523,7 +523,7 @@ public class GitRepository {
                 .add(branch);
 
         if (remoteUrl != null && remoteUrl.startsWith("http")) {
-            pushCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? pat : "token", pat != null ? pat : ""));
+            pushCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? "x-access-token" : "token", pat != null ? pat : ""));
         } else {
             pushCommand.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(VCodeApplication.getInstance()));
         }
@@ -584,7 +584,7 @@ public class GitRepository {
                 .setRemoteBranchName(branch);
 
         if (remoteUrl != null && remoteUrl.startsWith("http")) {
-            pullCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? pat : "token", pat != null ? pat : ""));
+            pullCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? "x-access-token" : "token", pat != null ? pat : ""));
         } else {
             pullCommand.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(VCodeApplication.getInstance()));
         }
@@ -646,7 +646,7 @@ public class GitRepository {
                 .setRemote("origin");
 
         if (remoteUrl != null && remoteUrl.startsWith("http")) {
-            fetchCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? pat : "token", pat != null ? pat : ""));
+            fetchCommand.setCredentialsProvider(new UsernamePasswordCredentialsProvider(pat != null ? "x-access-token" : "token", pat != null ? pat : ""));
         } else {
             fetchCommand.setTransportConfigCallback(SshKeyManager.getTransportConfigCallback(VCodeApplication.getInstance()));
         }
