@@ -79,7 +79,7 @@ public class GitHubDeviceFlowClient {
                 DeviceCodeResponse res = new DeviceCodeResponse(
                         obj.getString("device_code"),
                         obj.getString("user_code"),
-                        obj.getString("verification_uri_complete"),
+                        obj.optString("verification_uri_complete", obj.optString("verification_uri", "https://github.com/login/device")),
                         obj.getInt("expires_in"),
                         obj.getInt("interval")
                 );
