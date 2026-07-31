@@ -20,7 +20,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
 public class GitHubDeviceFlowClient {
 
     // Human action required: Replace with actual Client ID from GitHub OAuth App
-    public static final String CLIENT_ID = "PLACEHOLDER_CLIENT_ID";
+    public static final String CLIENT_ID = "Ov23li6GbHl3HBgK3EEG";
     
     private static final String BASE_URL = "https://github.com/login/device/code";
     private static final String TOKEN_URL = "https://github.com/login/oauth/access_token";
