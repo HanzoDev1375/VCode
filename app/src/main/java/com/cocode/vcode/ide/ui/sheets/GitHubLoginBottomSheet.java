@@ -38,20 +38,14 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetGithubLoginBinding binding;
     private GitHubLoginListener listener;
-    private Runnable onCloneSuccess;
     private GitCloneService.CloneListener cloneListener;
     private GitHubDeviceFlowClient deviceFlowClient;
     private AtomicBoolean isPollingCancelled = new AtomicBoolean(false);
 
-    public static void show(FragmentManager manager, @Nullable Runnable onCloneSuccess, GitHubLoginListener listener) {
+    public static void show(FragmentManager manager, GitHubLoginListener listener) {
         GitHubLoginBottomSheet sheet = new GitHubLoginBottomSheet();
         sheet.setListener(listener);
-        sheet.setOnCloneSuccess(onCloneSuccess);
         sheet.show(manager, "GitHubLoginBottomSheet");
-    }
-
-    public void setOnCloneSuccess(Runnable onCloneSuccess) {
-        this.onCloneSuccess = onCloneSuccess;
     }
 
     public void setListener(GitHubLoginListener listener) {
@@ -73,26 +67,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         designUI();
         refreshUIState();
         setupListeners();
-        setupCloneLogic();
-
-        if (onCloneSuccess == null) {
-            binding.tabGroup.setVisibility(View.GONE);
-            binding.layoutLoginContainer.setVisibility(View.VISIBLE);
-            binding.layoutCloneContainer.setVisibility(View.GONE);
-        } else {
-            binding.tabGroup.setVisibility(View.VISIBLE);
-            binding.tabGroup.addOnButtonCheckedListener((group, checkedId, isChecked) -> {
-                if (isChecked) {
-                    if (checkedId == R.id.tab_login) {
-                        binding.layoutLoginContainer.setVisibility(View.VISIBLE);
-                        binding.layoutCloneContainer.setVisibility(View.GONE);
-                    } else if (checkedId == R.id.tab_clone) {
-                        binding.layoutLoginContainer.setVisibility(View.GONE);
-                        binding.layoutCloneContainer.setVisibility(View.VISIBLE);
-                    }
-                }
-            });
-        }
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.POST_NOTIFICATIONS) != android.content.pm.PackageManager.PERMISSION_GRANTED) {
@@ -258,146 +232,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         });
     }
 
-    private void setupCloneLogic() {
-        binding.etRepoUrl.addTextChangedListener(new TextWatcher() {
-            @Override
-            public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-            }
-
-            @Override
-            public void onTextChanged(CharSequence s, int start, int before, int count) {
-            }
-
-            @Override
-            public void afterTextChanged(Editable s) {
-                String url = s.toString().trim();
-                if (url.endsWith(".git")) {
-                    url = url.substring(0, url.length() - 4);
-                }
-                int lastSlash = url.lastIndexOf('/');
-                if (lastSlash >= 0 && lastSlash < url.length() - 1) {
-                    String candidateName = url.substring(lastSlash + 1);
-                    if (binding.etProjectName.getText().toString().trim().isEmpty()) {
-                        binding.etProjectName.setText(candidateName);
-                    }
-                }
-            }
-        });
-
-        binding.btnExecuteClone.setOnClickListener(v -> initiateRepositoryCloneWorkflow());
-        binding.btnRunBackground.setOnClickListener(v -> dismiss());
-    }
-
-    private void initiateRepositoryCloneWorkflow() {
-        String repoUrl = binding.etRepoUrl.getText().toString().trim();
-        String projectName = binding.etProjectName.getText().toString().trim();
-
-        if (repoUrl.isEmpty()) {
-            Toast.makeText(getContext(), "Repository URL is required.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-        if (projectName.isEmpty()) {
-            Toast.makeText(getContext(), "Project name is required.", Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            Toast.makeText(getContext(), "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
-            return; // Or request permissions if needed.
-        }
-
-        setCancelable(false);
-        binding.layoutForm.setVisibility(View.GONE);
-        binding.layoutProgress.setVisibility(View.VISIBLE);
-        binding.tabGroup.setVisibility(View.GONE);
-
-        Context context = requireContext().getApplicationContext();
-        String projectId = UUID.randomUUID().toString();
-        File rootDir = FileUtils.getProjectsDir(context);
-        File targetProjectDirectory = new File(rootDir, projectId);
-
-        GitCredentialStore store = new GitCredentialStore();
-        String gitUser = store.getUsername(context);
-        String gitToken;
-        try {
-            gitToken = store.getToken(context);
-        } catch (Exception e) {
-            notifyFailure("Authentication token not found. Please log in to GitHub.");
-            return;
-        }
-
-        cloneListener = new GitCloneService.CloneListener() {
-            @Override
-            public void onProgress(String task, int done, int total, int percentage) {
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    if (isAdded()) {
-                        binding.tvProgressTask.setText(task);
-                        if (total > 0) {
-                            binding.progressIndicator.setIndeterminate(false);
-                            binding.progressIndicator.setProgressCompat(percentage, true);
-                            binding.tvProgressPercentage.setText(percentage + "%");
-                            binding.tvProgressDetails.setText(done + " / " + total + " completed.");
-                        } else {
-                            binding.progressIndicator.setIndeterminate(true);
-                            binding.tvProgressPercentage.setText("0%");
-                            binding.tvProgressDetails.setText("Working...");
-                        }
-                    }
-                });
-            }
-
-            @Override
-            public void onUpdate(int completed) {
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    if (isAdded()) {
-                        binding.tvProgressDetails.setText(completed + " entities synchronized.");
-                    }
-                });
-            }
-
-            @Override
-            public void onSuccess() {
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    if (isAdded()) {
-                        if (onCloneSuccess != null) {
-                            onCloneSuccess.run();
-                        }
-                        dismissAllowingStateLoss();
-                    }
-                });
-            }
-
-            @Override
-            public void onFailure(String error) {
-                notifyFailure(error);
-            }
-        };
-        GitCloneService.setListener(cloneListener);
-
-        Intent serviceIntent = new Intent(context, GitCloneService.class);
-        serviceIntent.setAction(GitCloneService.ACTION_START_CLONE);
-        serviceIntent.putExtra(GitCloneService.EXTRA_REPO_URL, repoUrl);
-        serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_NAME, projectName);
-        serviceIntent.putExtra(GitCloneService.EXTRA_TARGET_DIR, targetProjectDirectory.getAbsolutePath());
-        serviceIntent.putExtra(GitCloneService.EXTRA_GIT_USER, gitUser);
-        serviceIntent.putExtra(GitCloneService.EXTRA_GIT_TOKEN, gitToken);
-        serviceIntent.putExtra(GitCloneService.EXTRA_PROJECT_ID, projectId);
-
-        ContextCompat.startForegroundService(context, serviceIntent);
-    }
-
-    private void notifyFailure(String traceMessage) {
-        ExecutorProvider.getInstance().runOnMain(() -> {
-            if (isAdded()) {
-                setCancelable(true);
-                binding.layoutProgress.setVisibility(View.GONE);
-                binding.layoutForm.setVisibility(View.VISIBLE);
-                binding.tabGroup.setVisibility(View.VISIBLE);
-                Toast.makeText(getContext(), "Clone failed: " + traceMessage, Toast.LENGTH_LONG).show();
-            }
-        });
-    }
-
     private void designUI() {
         FontManager fm = FontManager.getInstance();
         Context ctx = requireContext();
@@ -411,25 +245,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
         binding.tvUserCode.setTypeface(fm.getUiSemiBold(ctx));
         binding.tvAuthStatus.setTypeface(fm.getUiMedium(ctx));
 
-        binding.tabLogin.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tabClone.setTypeface(fm.getUiSemiBold(ctx));
-
-        binding.tvCloneTitle.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tvCloneSubtitle.setTypeface(fm.getUiMedium(ctx));
-        binding.tvRepoUrlLabel.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tvProjectNameLabel.setTypeface(fm.getUiSemiBold(ctx));
-
-        binding.etRepoUrl.setTypeface(fm.getUiMedium(ctx));
-        binding.etProjectName.setTypeface(fm.getUiMedium(ctx));
-        binding.btnExecuteClone.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tvProgressTask.setTypeface(fm.getUiSemiBold(ctx));
-        binding.tvProgressDetails.setTypeface(fm.getUiMedium(ctx));
-        binding.tvProgressPercentage.setTypeface(fm.getUiSemiBold(ctx));
-        binding.btnRunBackground.setTypeface(fm.getUiMedium(ctx));
-
         UiUtils.setViewRounded(binding.layoutDeviceCode, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
-        UiUtils.setViewRounded(binding.etRepoUrl, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
-        UiUtils.setViewRounded(binding.etProjectName, UiUtils.dpToPx(ctx, 10), ContextCompat.getColor(ctx, R.color.vcode_bg_elevated));
     }
 
     private void setLoadingState(boolean isLoading) {

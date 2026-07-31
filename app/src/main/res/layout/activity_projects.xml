@@ -53,6 +53,17 @@
             app:tint="?attr/colorOnSurface" />
 
         <ImageView
+            android:id="@+id/icon_clone_repo"
+            android:layout_width="28dp"
+            android:layout_height="28dp"
+            android:layout_marginStart="8dp"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:importantForAccessibility="no"
+            android:padding="3dp"
+            android:src="@drawable/ic_code_branch"
+            app:tint="?attr/colorOnSurface" />
+
+        <ImageView
             android:id="@+id/icon_settings"
             android:layout_width="28dp"
             android:layout_height="28dp"
