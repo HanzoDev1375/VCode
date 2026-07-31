@@ -352,4 +352,32 @@
     <string name="vcode_response">RESPONSE</string>
     <string name="vcode_none">None</string>
     <string name="vcode_share">Share</string>
+    <!-- GitHub & Clone Strings -->
+    <string name="vcode_github_connected">Connected</string>
+    <string name="vcode_github_waiting_auth">Waiting for authorization...</string>
+    <string name="vcode_github_no_browser">No browser app found to open GitHub.</string>
+    <string name="vcode_github_code_expired">Code expired, try again.</string>
+    <string name="vcode_github_auth_cancelled">Authorization cancelled.</string>
+    <string name="vcode_github_error_prefix">Error: %1$s</string>
+    <string name="vcode_github_disconnected">Disconnected from GitHub.</string>
+    <string name="vcode_github_disconnect_failed">Failed to disconnect. Please try again.</string>
+    <string name="vcode_github_fetching_profile">Fetching profile...</string>
+    <string name="vcode_github_auth_failed">Authentication failed</string>
+    <string name="vcode_github_fetch_profile_failed">Failed to fetch profile.</string>
+
+    <string name="vcode_repo_url_required">Repository URL is required.</string>
+    <string name="vcode_project_name_required">Project name is required.</string>
+    <string name="vcode_storage_permission_required">Storage permission is required to clone repositories.</string>
+    <string name="vcode_github_auth_token_not_found">Authentication token not found. Please log in to GitHub.</string>
+    <string name="vcode_clone_progress_details">%1$d / %2$d completed.</string>
+    <string name="vcode_working">Working...</string>
+    <string name="vcode_entities_synchronized">%1$d entities synchronized.</string>
+    <string name="vcode_clone_failed">Clone failed: %1$s</string>
+
+    <string name="vcode_github_device_flow_instructions">Click below to open GitHub in your browser and authorize this device.</string>
+    <string name="vcode_github_device_code_label">Your Device Code</string>
+
+    <string name="vcode_cloning_repository">Cloning repository...</string>
+    <string name="vcode_initializing">Initializing...</string>
+
 </resources>

@@ -94,7 +94,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             binding.btnsContainer.setVisibility(View.GONE);
 
             String username = store.getUsername(requireContext());
-            binding.tvAccountUsername.setText(username != null ? username : "Connected");
+            binding.tvAccountUsername.setText(username != null ? username : getString(R.string.vcode_github_connected));
 
         } else {
             binding.cardGithubLoggedIn.setVisibility(View.GONE);
@@ -122,14 +122,14 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                     binding.btnConnectGithub.setVisibility(View.GONE);
                     binding.layoutDeviceCode.setVisibility(View.VISIBLE);
                     binding.tvUserCode.setText(response.userCode);
-                    binding.tvAuthStatus.setText("Waiting for authorization...");
+                    binding.tvAuthStatus.setText(R.string.vcode_github_waiting_auth);
                     binding.authProgress.setVisibility(View.VISIBLE);
 
                     try {
                         Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(response.verificationUriComplete));
                         startActivity(intent);
                     } catch (Exception e) {
-                        Toast.makeText(requireContext(), "No browser app found to open GitHub.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), R.string.vcode_github_no_browser, Toast.LENGTH_SHORT).show();
                     }
 
                     deviceFlowClient.pollForToken(response.deviceCode, response.intervalSeconds, isPollingCancelled, new GitHubDeviceFlowClient.TokenPollListener() {
@@ -143,7 +143,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                         public void onExpired() {
                             if (getView() == null) return;
                             binding.authProgress.setVisibility(View.GONE);
-                            binding.tvAuthStatus.setText("Code expired, try again.");
+                            binding.tvAuthStatus.setText(R.string.vcode_github_code_expired);
                             binding.btnConnectGithub.setVisibility(View.VISIBLE);
                             setLoadingState(false);
                         }
@@ -152,7 +152,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                         public void onDenied() {
                             if (getView() == null) return;
                             binding.authProgress.setVisibility(View.GONE);
-                            binding.tvAuthStatus.setText("Authorization cancelled.");
+                            binding.tvAuthStatus.setText(R.string.vcode_github_auth_cancelled);
                             binding.btnConnectGithub.setVisibility(View.VISIBLE);
                             setLoadingState(false);
                         }
@@ -161,7 +161,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                         public void onError(String error) {
                             if (getView() == null) return;
                             binding.authProgress.setVisibility(View.GONE);
-                            binding.tvAuthStatus.setText("Error: " + error);
+                            binding.tvAuthStatus.setText(getString(R.string.vcode_github_error_prefix, error));
                             binding.btnConnectGithub.setVisibility(View.VISIBLE);
                             setLoadingState(false);
                         }
@@ -172,7 +172,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                 public void onError(String error) {
                     if (getView() == null) return;
                     setLoadingState(false);
-                    Toast.makeText(requireContext(), "Error: " + error, Toast.LENGTH_LONG).show();
+                    Toast.makeText(requireContext(), getString(R.string.vcode_github_error_prefix, error), Toast.LENGTH_LONG).show();
                 }
             });
         });
@@ -181,16 +181,16 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             GitCredentialStore store = new GitCredentialStore();
             try {
                 store.clearCredentials(requireContext());
-                Toast.makeText(requireContext(), "Disconnected from GitHub.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.vcode_github_disconnected, Toast.LENGTH_SHORT).show();
             } catch (Exception e) {
-                Toast.makeText(requireContext(), "Failed to disconnect. Please try again.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.vcode_github_disconnect_failed, Toast.LENGTH_SHORT).show();
             }
             refreshUIState();
         });
     }
     
     private void fetchIdentityAndFinish(String token) {
-        binding.tvAuthStatus.setText("Fetching profile...");
+        binding.tvAuthStatus.setText(R.string.vcode_github_fetching_profile);
         ExecutorProvider.getInstance().runOnIo(() -> {
             try {
                 GitHubApiClient client = new GitHubApiClient(token);
@@ -211,7 +211,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                                     if (success) {
                                         refreshUIState();
                                     } else {
-                                        Toast.makeText(requireContext(), errorMsg != null ? errorMsg : "Authentication failed", Toast.LENGTH_LONG).show();
+                                        Toast.makeText(requireContext(), errorMsg != null ? errorMsg : getString(R.string.vcode_github_auth_failed), Toast.LENGTH_LONG).show();
                                     }
                                 });
                             }
@@ -224,7 +224,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (getView() == null) return;
                     binding.authProgress.setVisibility(View.GONE);
-                    binding.tvAuthStatus.setText("Failed to fetch profile.");
+                    binding.tvAuthStatus.setText(R.string.vcode_github_fetch_profile_failed);
                     binding.btnConnectGithub.setVisibility(View.VISIBLE);
                     setLoadingState(false);
                 });

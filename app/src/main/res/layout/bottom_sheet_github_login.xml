@@ -113,7 +113,7 @@
             android:layout_height="wrap_content"
             android:layout_marginHorizontal="@dimen/vcode_app_gap_horizontal"
             android:layout_marginTop="8dp"
-            android:text="Click below to open GitHub in your browser and authorize this device."
+            android:text="@string/vcode_github_device_flow_instructions"
             android:textAppearance="@style/TextAppearance.Material3.BodyMedium"
             android:textColor="?attr/colorOnSurfaceVariant" />
 
@@ -132,7 +132,7 @@
             <TextView
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="Your Device Code"
+                android:text="@string/vcode_github_device_code_label"
                 android:textAppearance="@style/TextAppearance.Material3.LabelSmall"
                 android:textAllCaps="true"
                 android:textColor="?attr/colorOnSurfaceVariant" />
@@ -167,7 +167,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="8dp"
-                    android:text="Waiting for authorization..."
+                    android:text="@string/vcode_github_waiting_auth"
                     android:textAppearance="@style/TextAppearance.Material3.LabelMedium"
                     android:textColor="?attr/colorOnSurfaceVariant" />
             </LinearLayout>

@@ -99,16 +99,16 @@ public class CloneRepoBottomSheet extends BottomSheetDialogFragment {
         String projectName = binding.etProjectName.getText().toString().trim();
 
         if (repoUrl.isEmpty()) {
-            Toast.makeText(getContext(), "Repository URL is required.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.vcode_repo_url_required, Toast.LENGTH_SHORT).show();
             return;
         }
         if (projectName.isEmpty()) {
-            Toast.makeText(getContext(), "Project name is required.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.vcode_project_name_required, Toast.LENGTH_SHORT).show();
             return;
         }
 
         if (ContextCompat.checkSelfPermission(requireContext(), android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != android.content.pm.PackageManager.PERMISSION_GRANTED && Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            Toast.makeText(getContext(), "Storage permission is required to clone repositories.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.vcode_storage_permission_required, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -127,7 +127,7 @@ public class CloneRepoBottomSheet extends BottomSheetDialogFragment {
         try {
             gitToken = store.getToken(context);
         } catch (Exception e) {
-            notifyFailure("Authentication token not found. Please log in to GitHub.");
+            notifyFailure(getString(R.string.vcode_github_auth_token_not_found));
             return;
         }
 
@@ -141,11 +141,11 @@ public class CloneRepoBottomSheet extends BottomSheetDialogFragment {
                             binding.progressIndicator.setIndeterminate(false);
                             binding.progressIndicator.setProgressCompat(percentage, true);
                             binding.tvProgressPercentage.setText(percentage + "%");
-                            binding.tvProgressDetails.setText(done + " / " + total + " completed.");
+                            binding.tvProgressDetails.setText(getString(R.string.vcode_clone_progress_details, done, total));
                         } else {
                             binding.progressIndicator.setIndeterminate(true);
                             binding.tvProgressPercentage.setText("0%");
-                            binding.tvProgressDetails.setText("Working...");
+                            binding.tvProgressDetails.setText(R.string.vcode_working);
                         }
                     }
                 });
@@ -155,7 +155,7 @@ public class CloneRepoBottomSheet extends BottomSheetDialogFragment {
             public void onUpdate(int completed) {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (isAdded()) {
-                        binding.tvProgressDetails.setText(completed + " entities synchronized.");
+                        binding.tvProgressDetails.setText(getString(R.string.vcode_entities_synchronized, completed));
                     }
                 });
             }
@@ -197,7 +197,7 @@ public class CloneRepoBottomSheet extends BottomSheetDialogFragment {
                 setCancelable(true);
                 binding.layoutProgress.setVisibility(View.GONE);
                 binding.layoutForm.setVisibility(View.VISIBLE);
-                Toast.makeText(getContext(), "Clone failed: " + traceMessage, Toast.LENGTH_LONG).show();
+                Toast.makeText(getContext(), getString(R.string.vcode_clone_failed, traceMessage), Toast.LENGTH_LONG).show();
             }
         });
     }
