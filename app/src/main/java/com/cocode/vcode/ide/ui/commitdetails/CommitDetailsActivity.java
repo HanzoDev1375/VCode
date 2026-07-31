@@ -16,6 +16,7 @@ import com.cocode.vcode.ide.ui.sheets.DiffViewerBottomSheet;
 import com.cocode.vcode.ide.ui.sheets.ResetConfirmBottomSheet;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
+import com.cocode.vcode.ide.R;
 
 /**
  * CommitDetailsActivity displays granular information about a specific Git commit.
@@ -78,7 +79,7 @@ public class CommitDetailsActivity extends BaseActivity {
         // Notify user if commit file metadata fails to load
         viewModel.getCommitChangesLoadError().observe(this, failed -> {
             if (Boolean.TRUE.equals(failed)) {
-                Toast.makeText(this, "Failed to load commit changes list.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_failed_to_load_commit_changes, Toast.LENGTH_SHORT).show();
             }
         });
 

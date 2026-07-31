@@ -128,8 +128,7 @@ public class GitConflictBottomSheet extends BottomSheetDialogFragment {
             try {
                 repository.hardReset("ORIG_HEAD");
                 ExecutorProvider.getInstance().runOnMain(() -> {
-                    if (isAdded()) Toast.makeText(requireContext(),
-                            "Merge aborted. Repository restored to state before pull.", Toast.LENGTH_SHORT).show();
+                    if (isAdded()) Toast.makeText(requireContext(), R.string.vcode_merge_aborted_repository_restored_to, Toast.LENGTH_SHORT).show();
                     if (onResolved != null) onResolved.run();
                     dismiss();
                 });

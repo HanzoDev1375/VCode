@@ -331,7 +331,7 @@ public class ProjectsActivity extends BaseActivity {
                 binding.tvTotalProjectsCount.setText(String.valueOf(allProjects.size()));
                 calculateCommitsToday(allProjects);
             } else {
-                Toast.makeText(this, "Failed to load projects.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_failed_to_load_projects, Toast.LENGTH_SHORT).show();
                 updateEmptyStateVisibility(true);
             }
         });
@@ -420,7 +420,7 @@ public class ProjectsActivity extends BaseActivity {
      * @param projects The list of projects to analyze.
      */
     private void calculateCommitsToday(List<Project> projects) {
-        binding.tvTotalCommitsCount.setText("...");
+        binding.tvTotalCommitsCount.setText(R.string.vcode_empty);
 
         ExecutorProvider.getInstance().runOnIo(() -> {
             int count = 0;

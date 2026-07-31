@@ -165,7 +165,7 @@ public class GitChangesFragment extends Fragment implements GitFilesAdapter.GitF
         binding.btnCommit.setOnClickListener(v -> {
             String message = binding.etCommitMessage.getText().toString().trim();
             if (message.isEmpty()) {
-                Toast.makeText(getContext(), "Commit message is required.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), R.string.vcode_commit_message_is_required, Toast.LENGTH_SHORT).show();
                 return;
             }
 

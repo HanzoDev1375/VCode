@@ -144,7 +144,7 @@ public class CloneRepoBottomSheet extends BottomSheetDialogFragment {
                             binding.tvProgressDetails.setText(getString(R.string.vcode_clone_progress_details, done, total));
                         } else {
                             binding.progressIndicator.setIndeterminate(true);
-                            binding.tvProgressPercentage.setText("0%");
+                            binding.tvProgressPercentage.setText(R.string.vcode_0);
                             binding.tvProgressDetails.setText(R.string.vcode_working);
                         }
                     }

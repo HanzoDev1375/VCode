@@ -128,7 +128,7 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
             } catch (Exception e) {
                 ExecutorProvider.getInstance().runOnMain(() -> {
                     if (getContext() != null) {
-                        Toast.makeText(getContext(), "Failed to load diff.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(getContext(), R.string.vcode_failed_to_load_diff, Toast.LENGTH_SHORT).show();
                     }
                     dismiss();
                 });
@@ -147,7 +147,7 @@ public class DiffViewerBottomSheet extends BottomSheetDialogFragment {
         if (diff == null || diff.trim().isEmpty()) {
             View emptyLineView = getLayoutInflater().inflate(R.layout.item_diff_line, binding.layoutDiffLines, false);
             TextView tvContent = emptyLineView.findViewById(R.id.root_view).findViewById(R.id.tv_line_content);
-            tvContent.setText("No changes detected in this tracking block index.");
+            tvContent.setText(R.string.vcode_no_changes_detected_in_this);
             tvContent.setTextColor(ContextCompat.getColor(requireContext(), R.color.vcode_text_secondary));
             binding.layoutDiffLines.addView(emptyLineView);
             return;

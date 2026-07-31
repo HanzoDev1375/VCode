@@ -64,7 +64,7 @@ public class FontFileViewer implements IFileViewer {
             etFontPreview.setBackground(null);
             etFontPreview.setGravity(Gravity.CENTER);
             etFontPreview.setHint("Type here to preview font...");
-            etFontPreview.setText("The quick brown fox jumps over the lazy dog\n0123456789");
+            etFontPreview.setText(R.string.vcode_the_quick_brown_fox_jumps);
             etFontPreview.setTextColor(ContextCompat.getColor(context, R.color.vcode_text_primary));
             etFontPreview.setTextSize(24f);
 
@@ -98,7 +98,7 @@ public class FontFileViewer implements IFileViewer {
                 Typeface tf = Typeface.createFromFile(f);
                 etFontPreview.setTypeface(tf);
             } catch (Exception e) {
-                Toast.makeText(context, "Unable to preview this font.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(context, R.string.vcode_unable_to_preview_this_font_2, Toast.LENGTH_SHORT).show();
                 etFontPreview.setVisibility(View.GONE);
                 webviewFontPreview.setVisibility(View.VISIBLE);
                 loadWebFontPreview(f, ext);
@@ -140,7 +140,7 @@ public class FontFileViewer implements IFileViewer {
                 Handler mainHandler = ExecutorProvider.getInstance().getMainHandler();
                 mainHandler.post(() -> {
                     if (context != null)
-                        Toast.makeText(context, "Unable to preview this font.", Toast.LENGTH_SHORT).show();
+                        Toast.makeText(context, R.string.vcode_unable_to_preview_this_font, Toast.LENGTH_SHORT).show();
                 });
             }
         });

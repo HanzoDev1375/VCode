@@ -89,7 +89,7 @@ public class SshKeyBottomSheet extends BottomSheetDialogFragment {
         if (clipboard != null) {
             ClipData clip = ClipData.newPlainText("SSH Public Key", key);
             clipboard.setPrimaryClip(clip);
-            Toast.makeText(requireContext(), "SSH Key copied to clipboard", Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), R.string.vcode_ssh_key_copied_to_clipboard, Toast.LENGTH_SHORT).show();
             dismiss();
         }
     }

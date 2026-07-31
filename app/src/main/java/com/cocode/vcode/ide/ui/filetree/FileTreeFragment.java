@@ -148,7 +148,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
                 });
                 bottomSheet.show(getChildFragmentManager(), "ProjectSearch");
             } else {
-                Toast.makeText(getContext(), "Project root not loaded", Toast.LENGTH_SHORT).show();
+                Toast.makeText(getContext(), R.string.vcode_project_root_not_loaded, Toast.LENGTH_SHORT).show();
             }
         });
 
@@ -275,7 +275,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
 
     private void showImportDestinationDialog(Runnable onConfirmed) {
         if (viewModel.getFileTree().getValue() == null || viewModel.getProjectRoot() == null) {
-            Toast.makeText(getContext(), "Project is still loading. Please wait.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.vcode_project_is_still_loading_please, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -522,7 +522,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         ClipData clip = ClipData.newPlainText(label, text);
         if (clipboard != null) {
             clipboard.setPrimaryClip(clip);
-            Toast.makeText(getContext(), "Path copied to clipboard.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(getContext(), R.string.vcode_path_copied_to_clipboard, Toast.LENGTH_SHORT).show();
         }
     }
 

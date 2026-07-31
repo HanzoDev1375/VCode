@@ -15,6 +15,7 @@ import com.cocode.vcode.ide.databinding.ActivityDebugBinding;
 import com.cocode.vcode.ide.ui.projects.ProjectsActivity;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
+import com.cocode.vcode.ide.R;
 
 public class DebugActivity extends AppCompatActivity {
 
@@ -51,7 +52,7 @@ public class DebugActivity extends AppCompatActivity {
             ClipData clip = ClipData.newPlainText("Crash Log", finalCrashLog);
             if (clipboard != null) {
                 clipboard.setPrimaryClip(clip);
-                Toast.makeText(this, "Crash log copied.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_crash_log_copied, Toast.LENGTH_SHORT).show();
             }
         });
 

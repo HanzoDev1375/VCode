@@ -83,7 +83,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         String projectName = getIntent().getStringExtra(EXTRA_PROJECT_NAME);
 
         if (projectPath == null) {
-            Toast.makeText(this, "No project path provided", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.vcode_no_project_path_provided, Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
@@ -272,7 +272,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             localWebServer.stop();
             binding.btnRun.setImageResource(R.drawable.ic_play);
             binding.ivViewPreview.setVisibility(View.GONE);
-            Toast.makeText(this, "Server stopped", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.vcode_server_stopped, Toast.LENGTH_SHORT).show();
             updateToolbarVisibility();
             return;
         }
@@ -281,7 +281,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         List<EditorFile> files = viewModel.getOpenFiles().getValue();
 
         if (files == null || activeIndex < 0 || activeIndex >= files.size()) {
-            Toast.makeText(this, "Open a file first to run the preview.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.vcode_open_a_file_first_to, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -368,7 +368,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(serverUrl));
                 startActivity(browserIntent);
             } catch (Exception e) {
-                Toast.makeText(this, "No browser app found to open this URL.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_no_browser_app_found_to, Toast.LENGTH_SHORT).show();
             }
         }
     }
@@ -627,11 +627,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
 
         if (file.isDirty() && confirm) {
             new AlertDialog.Builder(this)
-                    .setTitle("Unsaved Changes")
+                    .setTitle(R.string.vcode_unsaved_changes_2)
                     .setMessage("Save changes to " + file.getFileName() + " before closing?")
-                    .setPositiveButton("Save & Close", (d, w) -> viewModel.saveFile(index, doClose))
-                    .setNegativeButton("Discard", (d, w) -> doClose.run())
-                    .setNeutralButton("Cancel", null)
+                    .setPositiveButton(R.string.vcode_save_close, (d, w) -> viewModel.saveFile(index, doClose))
+                    .setNegativeButton(R.string.vcode_discard_2, (d, w) -> doClose.run())
+                    .setNeutralButton(R.string.vcode_action_cancel, null)
                     .show();
         } else {
             doClose.run();
@@ -692,7 +692,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                 }
                 startActivity(navToGit);
             } else {
-                Toast.makeText(this, "Error: Project directory not loaded.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_error_project_directory_not_loaded, Toast.LENGTH_SHORT).show();
             }
         })));
 
@@ -701,7 +701,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         if (hasOpenFile && !autoSave) {
             options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_floppy_disk, "Save All", () -> {
                 viewModel.saveAll();
-                Toast.makeText(this, "Saving all files...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_saving_all_files, Toast.LENGTH_SHORT).show();
             }));
         }
 
@@ -788,13 +788,13 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         Integer activeIndex = viewModel.getActiveTabIndex().getValue();
 
         if (files == null || activeIndex == null || activeIndex < 0 || activeIndex >= files.size() || codeEditText == null) {
-            Toast.makeText(this, "No file open to format", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.vcode_no_file_open_to_format, Toast.LENGTH_SHORT).show();
             return;
         }
 
         EditorFile activeFile = files.get(activeIndex);
         if (activeFile.isBinaryAsset()) {
-            Toast.makeText(this, "Cannot format a media asset.", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, R.string.vcode_cannot_format_a_media_asset, Toast.LENGTH_SHORT).show();
             return;
         }
 
@@ -802,7 +802,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
         FileType lang = activeFile.getFileType();
         int originalCursor = codeEditText.getSelectionStart();
 
-        Toast.makeText(this, "Formatting...", Toast.LENGTH_SHORT).show();
+        Toast.makeText(this, R.string.vcode_formatting, Toast.LENGTH_SHORT).show();
         ExecutorProvider.getInstance().runOnIo(() -> {
             String formattedCode = CodeFormatter.format(rawCode, lang);
             ExecutorProvider.getInstance().runOnMain(() -> {
@@ -812,9 +812,9 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
                     // logic scrolls back to the right place instead of jumping to the top.
                     int safeCursor = Math.min(originalCursor, formattedCode.length());
                     codeEditText.setSelection(safeCursor);
-                    Toast.makeText(this, "Formatted successfully", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.vcode_formatted_successfully, Toast.LENGTH_SHORT).show();
                 } else {
-                    Toast.makeText(this, "Code is already formatted", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.vcode_code_is_already_formatted, Toast.LENGTH_SHORT).show();
                 }
             });
         });
@@ -823,11 +823,11 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     private void navigateWithUnsavedCheck(Runnable navigateAction) {
         if (viewModel.hasUnsavedFiles()) {
             new AlertDialog.Builder(this)
-                    .setTitle("Unsaved Changes")
-                    .setMessage("You have unsaved files. Save them before leaving?")
-                    .setPositiveButton("Save All", (d, w) -> viewModel.saveAll(navigateAction))
-                    .setNegativeButton("Discard", (d, w) -> navigateAction.run())
-                    .setNeutralButton("Cancel", null)
+                    .setTitle(R.string.vcode_unsaved_changes)
+                    .setMessage(R.string.vcode_you_have_unsaved_files_save)
+                    .setPositiveButton(R.string.vcode_save_all, (d, w) -> viewModel.saveAll(navigateAction))
+                    .setNegativeButton(R.string.vcode_discard, (d, w) -> navigateAction.run())
+                    .setNeutralButton(R.string.vcode_action_cancel, null)
                     .show();
         } else {
             navigateAction.run();

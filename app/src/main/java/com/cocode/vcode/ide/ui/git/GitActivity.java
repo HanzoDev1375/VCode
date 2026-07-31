@@ -28,6 +28,7 @@ import com.google.android.material.snackbar.Snackbar;
 import com.google.android.material.tabs.TabLayoutMediator;
 
 import java.io.File;
+import com.cocode.vcode.ide.R;
 
 /**
  * GitActivity provides a comprehensive interface for Git version control management.
@@ -162,10 +163,10 @@ public class GitActivity extends BaseActivity {
 
         if (hasStagedChanges || hasUnstagedChanges) {
             new AlertDialog.Builder(this)
-                    .setTitle("Uncommitted Changes")
-                    .setMessage("You have uncommitted modifications inside your workspace tracking area. Leave anyway?")
-                    .setPositiveButton("Leave", (dialog, which) -> finish())
-                    .setNegativeButton("Stay", null)
+                    .setTitle(R.string.vcode_uncommitted_changes)
+                    .setMessage(R.string.vcode_you_have_uncommitted_modifications_inside)
+                    .setPositiveButton(R.string.vcode_leave, (dialog, which) -> finish())
+                    .setNegativeButton(R.string.vcode_stay, null)
                     .show();
         } else {
             finish();

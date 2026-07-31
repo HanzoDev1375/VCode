@@ -130,7 +130,7 @@ public class NewFolderBottomSheet extends BottomSheetDialogFragment {
                 viewModel.createDirectory(parentDir, folderName);
                 dismiss();
             } else {
-                Toast.makeText(requireContext(), "Unable to create folder. Please try again.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(requireContext(), R.string.vcode_unable_to_create_folder_please, Toast.LENGTH_SHORT).show();
             }
         });
     }

@@ -246,7 +246,7 @@ public class ApiTesterViewer implements IFileViewer {
     private void executeRequest() {
         String urlString = binding.etUrl.getText().toString().trim();
         if (urlString.isEmpty()) {
-            Toast.makeText(context, "URL cannot be empty", Toast.LENGTH_SHORT).show();
+            Toast.makeText(context, R.string.vcode_url_cannot_be_empty, Toast.LENGTH_SHORT).show();
             return;
         }
 

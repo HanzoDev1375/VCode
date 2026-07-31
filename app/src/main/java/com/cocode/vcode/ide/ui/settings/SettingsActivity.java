@@ -208,7 +208,7 @@ public class SettingsActivity extends BaseActivity {
                 if (settings.gitAuthorName != null && !settings.gitAuthorName.trim().isEmpty()) {
                     binding.tvGitCredentialsDesc.setText(settings.gitAuthorName + " <" + settings.gitAuthorEmail + ">");
                 } else {
-                    binding.tvGitCredentialsDesc.setText("Not configured");
+                    binding.tvGitCredentialsDesc.setText(R.string.vcode_not_configured);
                 }
 
                 // Sync the theme radio group selection

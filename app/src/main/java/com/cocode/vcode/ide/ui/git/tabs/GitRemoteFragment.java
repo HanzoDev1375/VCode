@@ -117,7 +117,7 @@ public class GitRemoteFragment extends Fragment {
             binding.scrollRemoteContent.setVisibility(View.GONE);
             binding.layoutEmptyRemote.setVisibility(View.VISIBLE);
 
-            binding.tvAccountUsername.setText("Not Logged In");
+            binding.tvAccountUsername.setText(R.string.vcode_not_logged_in);
         }
         
         if (binding.etRemoteUrl != null && binding.etRemoteUrl.getText() != null) {
@@ -228,10 +228,10 @@ public class GitRemoteFragment extends Fragment {
             if (credentialStore.hasCredentials(requireContext())) {
                 try {
                     credentialStore.clearCredentials(requireContext());
-                    Toast.makeText(requireContext(), "Disconnected from GitHub.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), R.string.vcode_github_disconnected, Toast.LENGTH_SHORT).show();
                     refreshAccountUIState();
                 } catch (Exception e) {
-                    Toast.makeText(requireContext(), "Failed to disconnect. Please try again.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), R.string.vcode_github_disconnect_failed, Toast.LENGTH_SHORT).show();
                 }
             } else {
                 openGitHubLoginSheet();
@@ -248,7 +248,7 @@ public class GitRemoteFragment extends Fragment {
                 String url = binding.etRemoteUrl.getText() != null 
                     ? binding.etRemoteUrl.getText().toString().trim() : "";
                 if (url.isEmpty()) {
-                    Toast.makeText(requireContext(), "No remote URL configured.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), R.string.vcode_no_remote_url_configured, Toast.LENGTH_SHORT).show();
                     return;
                 }
                 String browserUrl = url.replace(".git", "");
@@ -258,7 +258,7 @@ public class GitRemoteFragment extends Fragment {
                 try {
                     startActivity(new android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(browserUrl)));
                 } catch (Exception e) {
-                    Toast.makeText(requireContext(), "Could not open URL.", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(requireContext(), R.string.vcode_could_not_open_url, Toast.LENGTH_SHORT).show();
                 }
             });
         }

@@ -11,6 +11,7 @@ import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.utils.FileUtils;
 
 import java.io.File;
+import com.cocode.vcode.ide.R;
 
 /**
  * Transparent trampoline Activity that handles ACTION_VIEW intents for supported file types
@@ -47,7 +48,7 @@ public class FileOpenActivity extends Activity {
 
             if (file == null || !file.exists() || !file.isFile()) {
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "Could not open file", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.vcode_could_not_open_file, Toast.LENGTH_SHORT).show();
                     finish();
                 });
                 return;
@@ -66,7 +67,7 @@ public class FileOpenActivity extends Activity {
             if (fileType != null && !fileType.isTextBased()) {
                 // Binary files can't be edited as text
                 runOnUiThread(() -> {
-                    Toast.makeText(this, "VCode cannot edit binary files", Toast.LENGTH_SHORT).show();
+                    Toast.makeText(this, R.string.vcode_vcode_cannot_edit_binary_files, Toast.LENGTH_SHORT).show();
                     finish();
                 });
                 return;

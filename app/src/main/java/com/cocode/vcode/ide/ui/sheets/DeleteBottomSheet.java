@@ -97,12 +97,12 @@ public class DeleteBottomSheet extends BottomSheetDialogFragment {
             binding.tvDesc.setText(getString(R.string.vcode_action_cannot_be_undone, "branch"));
         } else if (deleteType == DeleteType.DISCARD) {
             binding.tvDelete.setText(itemName != null && !itemName.isEmpty() ? "Discard " + itemName + "?" : "Discard all unstaged changes?");
-            binding.tvDesc.setText("This action cannot be undone.");
-            binding.btnDelete.setText("Discard");
+            binding.tvDesc.setText(R.string.vcode_this_action_cannot_be_undone_2);
+            binding.btnDelete.setText(R.string.vcode_discard_3);
         } else if (deleteType == DeleteType.STASH) {
             binding.tvDelete.setText("Drop Stash " + itemName + "?");
-            binding.tvDesc.setText("This action cannot be undone.");
-            binding.btnDelete.setText("Drop");
+            binding.tvDesc.setText(R.string.vcode_this_action_cannot_be_undone);
+            binding.btnDelete.setText(R.string.vcode_drop);
         }
 
         // Apply custom message override if provided

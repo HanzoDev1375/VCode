@@ -18,6 +18,7 @@ import androidx.activity.OnBackPressedCallback;
 import com.cocode.vcode.ide.databinding.ActivityPreviewBinding;
 import com.cocode.vcode.ide.ui.base.BaseActivity;
 import com.cocode.vcode.ide.utils.UiUtils;
+import com.cocode.vcode.ide.R;
 
 /**
  * PreviewActivity provides an in-app web environment for viewing HTML and web projects.
@@ -264,7 +265,7 @@ public class PreviewActivity extends BaseActivity {
                 startActivity(browserIntent);
             } catch (Exception e) {
                 // Inform the user if the browser handover fails
-                Toast.makeText(this, "Could not open in browser.", Toast.LENGTH_SHORT).show();
+                Toast.makeText(this, R.string.vcode_could_not_open_in_browser, Toast.LENGTH_SHORT).show();
             }
         });
     }
