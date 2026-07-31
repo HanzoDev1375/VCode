@@ -268,49 +268,54 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     }
 
     private void handleRunAction() {
-        if (localWebServer != null && localWebServer.isRunning()) {
-            localWebServer.stop();
+        EditorPreviewHelper.PreviewCallbacks callbacks = new EditorPreviewHelper.PreviewCallbacks() {
+            @Override
+            public void updateToolbarVisibility() {
+                EditorActivity.this.updateToolbarVisibility();
+            }
+
+            @Override
+            public void executeActiveFilePreviewIntent() {
+                EditorActivity.this.executeActiveFilePreviewIntent();
+            }
+
+            @Override
+            public void updateActiveViewer(EditorFile file, boolean isPreview) {
+                EditorActivity.this.updateActiveViewer(file, isPreview);
+            }
+        };
+
+        Runnable stopUI = () -> {
             binding.btnRun.setImageResource(R.drawable.ic_play);
             binding.ivViewPreview.setVisibility(View.GONE);
-            Toast.makeText(this, R.string.vcode_server_stopped, Toast.LENGTH_SHORT).show();
-            updateToolbarVisibility();
-            return;
-        }
+        };
 
-        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
-        List<EditorFile> files = viewModel.getOpenFiles().getValue();
+        Runnable startUI = () -> {
+            binding.btnRun.setImageResource(R.drawable.ic_stop);
+            binding.ivViewPreview.setVisibility(View.VISIBLE);
+        };
 
-        if (files == null || activeIndex < 0 || activeIndex >= files.size()) {
-            Toast.makeText(this, R.string.vcode_open_a_file_first_to, Toast.LENGTH_SHORT).show();
-            return;
-        }
-
-        if (localWebServer == null) {
-            localWebServer = new LocalWebServer(viewModel.getProjectRoot());
-        }
-        localWebServer.start();
-        binding.btnRun.setImageResource(R.drawable.ic_stop);
-        binding.ivViewPreview.setVisibility(View.VISIBLE);
-        executeActiveFilePreviewIntent();
-        updateToolbarVisibility();
+        localWebServer = EditorPreviewHelper.handleRunAction(this, viewModel, localWebServer, callbacks, stopUI, startUI);
     }
 
     private void toggleInlinePreview() {
-        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
-        List<EditorFile> files = viewModel.getOpenFiles().getValue();
-        if (files == null || activeIndex < 0 || activeIndex >= files.size()) return;
+        EditorPreviewHelper.PreviewCallbacks callbacks = new EditorPreviewHelper.PreviewCallbacks() {
+            @Override
+            public void updateToolbarVisibility() {
+                EditorActivity.this.updateToolbarVisibility();
+            }
 
-        EditorFile activeFile = files.get(activeIndex);
-        FileType type = activeFile.getFileType();
-        if (type != FileType.SVG && type != FileType.CSV && type != FileType.MARKDOWN) return;
+            @Override
+            public void executeActiveFilePreviewIntent() {
+                EditorActivity.this.executeActiveFilePreviewIntent();
+            }
 
-        String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
-        boolean isPreviewMode = viewModel.getPreviewState(relPath);
-
-        viewModel.setPreviewState(relPath, !isPreviewMode);
-
-        // This will trigger getSettingsLiveData or we can just force the update manually:
-        updateActiveViewer(activeFile, !isPreviewMode);
+            @Override
+            public void updateActiveViewer(EditorFile file, boolean isPreview) {
+                EditorActivity.this.updateActiveViewer(file, isPreview);
+            }
+        };
+        EditorPreviewHelper.toggleInlinePreview(viewModel, callbacks);
     }
 
     private void updateToolbarVisibility() {
@@ -345,32 +350,7 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     }
 
     private void executeActiveFilePreviewIntent() {
-        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
-        List<EditorFile> files = viewModel.getOpenFiles().getValue();
-        String path = "";
-        if (files != null && activeIndex >= 0 && activeIndex < files.size()) {
-            path = files.get(activeIndex).getRelativePath(viewModel.getProjectRoot());
-        }
-
-        String serverUrl = localWebServer.getUrl(path);
-        AppSettings settings = viewModel.getSettingsLiveData().getValue();
-        boolean openInApp = settings == null || settings.openPreviewInApp;
-
-        if (openInApp) {
-            Intent intent = new Intent(this, PreviewActivity.class);
-            intent.putExtra(PreviewActivity.EXTRA_URL, serverUrl);
-            if (viewModel.getProjectRoot() != null) {
-                intent.putExtra(PreviewActivity.EXTRA_PROJECT_PATH, viewModel.getProjectRoot().getAbsolutePath());
-            }
-            startActivity(intent);
-        } else {
-            try {
-                Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(serverUrl));
-                startActivity(browserIntent);
-            } catch (Exception e) {
-                Toast.makeText(this, R.string.vcode_no_browser_app_found_to, Toast.LENGTH_SHORT).show();
-            }
-        }
+        EditorPreviewHelper.executeActiveFilePreviewIntent(this, viewModel, localWebServer);
     }
 
     private void setupObservers() {
@@ -639,75 +619,46 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
     }
 
     private void showOverflowMenu() {
-        int activeIndex = viewModel.getActiveTabIndex().getValue() != null ? viewModel.getActiveTabIndex().getValue() : -1;
-        List<EditorFile> files = viewModel.getOpenFiles().getValue();
-        boolean hasOpenFile = files != null && activeIndex >= 0 && activeIndex < files.size();
-        boolean showTextEditingOptions = false;
-        EditorFile activeFile = hasOpenFile ? files.get(activeIndex) : null;
-
-        if (hasOpenFile && activeFile != null) {
-            FileType type = activeFile.getFileType();
-            boolean isBinary = activeFile.isBinaryAsset();
-
-            boolean supportsPreview = type == FileType.CSV || type == FileType.SVG || type == FileType.MARKDOWN;
-            String relPath = activeFile.getRelativePath(viewModel.getProjectRoot());
-            boolean isPreviewMode = supportsPreview && viewModel.getPreviewState(relPath);
-
-            if (!isBinary && !isPreviewMode) {
-                showTextEditingOptions = true;
+        EditorMenuHelper.MenuCallbacks callbacks = new EditorMenuHelper.MenuCallbacks() {
+            @Override
+            public void onShowFindReplace() {
+                showFindReplaceBar();
             }
-        }
 
-        List<EditorOptionsBottomSheet.Option> options = new ArrayList<>();
-
-        if (showTextEditingOptions) {
-            boolean isVirtual = activeFile.isVirtual();
-            if (!isVirtual) {
-                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_magnifying_glass, "Find/Replace", this::showFindReplaceBar));
-                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_lock, "Read-only", true, isReadOnly, () -> {
-                    isReadOnly = !isReadOnly;
-                    applyReadOnlyState();
-                }));
+            @Override
+            public void onToggleReadOnly() {
+                isReadOnly = !isReadOnly;
+                applyReadOnlyState();
             }
-            if (CodeFormatter.isFormatSupported(files.get(activeIndex).getFileType())) {
-                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_wand_magic, "Format Code", this::formatCurrentFile));
+
+            @Override
+            public void onFormatCode() {
+                formatCurrentFile();
             }
-            if (!isVirtual) {
-                options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_arrow_right, "Go to Line", this::showGoToLineDialog));
+
+            @Override
+            public void onGoToLine() {
+                showGoToLineDialog();
             }
-        }
 
-        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_star, "Snippet Manager", this::showSnippetManager));
-
-        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_globe, "API Tester", () -> viewModel.openApiTester()));
-
-        options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_git, "Git", () -> navigateWithUnsavedCheck(() -> {
-            Intent navToGit = new Intent(this, GitActivity.class);
-            if (viewModel.getProjectRoot() != null) {
-                navToGit.putExtra("project_path", viewModel.getProjectRoot().getAbsolutePath());
-                navToGit.putExtra("project_name", getIntent().getStringExtra(EXTRA_PROJECT_NAME));
-                AppSettings settings = viewModel.getSettingsLiveData().getValue();
-                if (settings != null && settings.gitDefaultBranch != null) {
-                    navToGit.putExtra("default_branch", settings.gitDefaultBranch);
-                }
-                startActivity(navToGit);
-            } else {
-                Toast.makeText(this, R.string.vcode_error_project_directory_not_loaded, Toast.LENGTH_SHORT).show();
+            @Override
+            public void onShowSnippetManager() {
+                showSnippetManager();
             }
-        })));
 
-        AppSettings settingsForMenu = viewModel.getSettingsLiveData().getValue();
-        boolean autoSave = settingsForMenu != null && settingsForMenu.autoSave;
-        if (hasOpenFile && !autoSave) {
-            options.add(new EditorOptionsBottomSheet.Option(R.drawable.ic_floppy_disk, "Save All", () -> {
-                viewModel.saveAll();
-                Toast.makeText(this, R.string.vcode_saving_all_files, Toast.LENGTH_SHORT).show();
-            }));
-        }
+            @Override
+            public void onNavigateWithUnsavedCheck(Runnable action) {
+                navigateWithUnsavedCheck(action);
+            }
 
-        EditorOptionsBottomSheet bottomSheet = new EditorOptionsBottomSheet();
-        bottomSheet.setOptions(options);
-        bottomSheet.show(getSupportFragmentManager(), "EditorOptions");
+            @Override
+            public boolean isReadOnly() {
+                return isReadOnly;
+            }
+        };
+
+        String projectName = getIntent().getStringExtra(EXTRA_PROJECT_NAME);
+        EditorMenuHelper.showOverflowMenu(this, viewModel, getSupportFragmentManager(), projectName, callbacks);
     }
 
     private void applyReadOnlyState() {

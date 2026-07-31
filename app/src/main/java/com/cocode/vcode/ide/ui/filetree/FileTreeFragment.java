@@ -197,42 +197,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
      */
     private void copyUrisToProject(List<Uri> uris) {
         File root = selectedImportDestination != null ? selectedImportDestination : viewModel.getProjectRoot();
-        if (root == null) return;
-
-        FileOperationManager opManager = FileOperationManager.getInstance(requireContext());
-        opManager.startOperation("Importing Files");
-
-        ExecutorProvider.getInstance().runOnIo(() -> {
-            int total = uris.size();
-            int current = 0;
-            boolean success = true;
-
-            try {
-                for (Uri uri : uris) {
-                    if (opManager.getCancelToken().get()) {
-                        success = false;
-                        break;
-                    }
-                    current++;
-                    String fileName = getFileNameFromUri(uri);
-                    if (fileName == null) fileName = "imported_file_" + System.currentTimeMillis();
-
-                    opManager.updateProgress("Importing Files", "Importing: " + fileName + " (" + current + "/" + total + ")", total, current);
-
-                    File destFile = new File(root, fileName);
-                    copyStreamToFile(uri, destFile, opManager.getCancelToken());
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                success = false;
-            } finally {
-                final boolean finalSuccess = success;
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    opManager.finishOperation("Import Files", finalSuccess ? "Imported successfully" : "Import failed or cancelled", finalSuccess);
-                    viewModel.refreshFileTree();
-                });
-            }
-        });
+        FileImportHelper.copyUrisToProject(requireContext(), uris, root, () -> viewModel.refreshFileTree());
     }
 
     /**
@@ -240,37 +205,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
      */
     private void copyFolderToProject(Uri treeUri) {
         File root = selectedImportDestination != null ? selectedImportDestination : viewModel.getProjectRoot();
-        if (root == null) return;
-
-        FileOperationManager opManager = FileOperationManager.getInstance(requireContext());
-        opManager.startOperation("Importing Folder");
-
-        ExecutorProvider.getInstance().runOnIo(() -> {
-            DocumentFile documentFile = DocumentFile.fromTreeUri(requireContext(), treeUri);
-            boolean[] success = new boolean[]{true};
-            int[] fileCount = new int[]{0};
-
-            try {
-                if (documentFile != null) {
-                    String folderName = documentFile.getName() != null ? documentFile.getName() : "Imported_Folder";
-                    File destDir = new File(root, folderName);
-                    if (!destDir.exists()) destDir.mkdirs();
-
-                    copyDocumentFileTree(documentFile, destDir, opManager.getCancelToken(), opManager, fileCount);
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                success[0] = false;
-            } finally {
-                if (opManager.getCancelToken().get()) success[0] = false;
-
-                final boolean finalSuccess = success[0];
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    opManager.finishOperation("Import Folder", finalSuccess ? "Imported successfully" : "Import failed or cancelled", finalSuccess);
-                    viewModel.refreshFileTree();
-                });
-            }
-        });
+        FileImportHelper.copyFolderToProject(requireContext(), treeUri, root, () -> viewModel.refreshFileTree());
     }
 
     private void showImportDestinationDialog(Runnable onConfirmed) {
@@ -291,74 +226,7 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
         dialog.show(getChildFragmentManager(), "ImportDestinationDialog");
     }
 
-    /**
-     * Recursively traverses a DocumentFile tree and copies it to the filesystem.
-     */
-    private void copyDocumentFileTree(DocumentFile sourceDoc, File destDir, java.util.concurrent.atomic.AtomicBoolean cancelToken, FileOperationManager opManager, int[] fileCount) {
-        if (cancelToken.get()) return;
-        for (DocumentFile file : sourceDoc.listFiles()) {
-            if (cancelToken.get()) return;
-            String name = file.getName();
-            if (name == null) name = "unknown_file_" + System.currentTimeMillis();
 
-            if (file.isDirectory()) {
-                File newDir = new File(destDir, name);
-                if (!newDir.exists()) newDir.mkdirs();
-                copyDocumentFileTree(file, newDir, cancelToken, opManager, fileCount);
-            } else {
-                File newFile = new File(destDir, name);
-                copyStreamToFile(file.getUri(), newFile, cancelToken);
-                fileCount[0]++;
-                opManager.updateProgress("Importing Folder", "Importing: " + name + " (" + fileCount[0] + ")", 0, fileCount[0]);
-            }
-        }
-    }
-
-    /**
-     * Performs a low-level stream copy from a content Uri to a destination File.
-     */
-    private void copyStreamToFile(Uri sourceUri, File destFile, java.util.concurrent.atomic.AtomicBoolean cancelToken) {
-        try (InputStream in = requireContext().getContentResolver().openInputStream(sourceUri);
-             OutputStream out = new FileOutputStream(destFile)) {
-            if (in == null) return;
-
-            byte[] buffer = new byte[8192];
-            int length;
-            while ((length = in.read(buffer)) > 0) {
-                if (cancelToken != null && cancelToken.get()) return;
-                out.write(buffer, 0, length);
-            }
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
-
-    /**
-     * Resolves the user-friendly filename from a system Uri.
-     */
-    private String getFileNameFromUri(Uri uri) {
-        String result = null;
-        if ("content".equals(uri.getScheme())) {
-            try (Cursor cursor = requireContext().getContentResolver().query(uri, null, null, null, null)) {
-                if (cursor != null && cursor.moveToFirst()) {
-                    int index = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
-                    if (index != -1) {
-                        result = cursor.getString(index);
-                    }
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-        }
-        if (result == null) {
-            result = uri.getPath();
-            int cut = result != null ? result.lastIndexOf('/') : 0;
-            if (cut != -1) {
-                result = result != null ? result.substring(cut + 1) : null;
-            }
-        }
-        return result;
-    }
 
     @Override
     public void onFileClick(File file) {
@@ -529,73 +397,11 @@ public class FileTreeFragment extends Fragment implements FileTreeAdapter.FileTr
     private void performPaste(File destinationDir) {
         File source = adapter.getClipboardFile();
         boolean isCut = adapter.isCutAction();
-        if (source == null || !source.exists() || destinationDir == null) return;
-
-        FileOperationManager opManager = FileOperationManager.getInstance(requireContext());
-        opManager.startOperation("Pasting...");
-
-        ExecutorProvider.getInstance().runOnIo(() -> {
-            File target = new File(destinationDir, source.getName());
-            boolean success = false;
-
-            try {
-                int counter = 1;
-                String baseName = source.getName();
-                String extension = "";
-                int dotIndex = baseName.lastIndexOf('.');
-                if (dotIndex > 0) {
-                    extension = baseName.substring(dotIndex);
-                    baseName = baseName.substring(0, dotIndex);
-                }
-                while (target.exists()) {
-                    target = new File(destinationDir, baseName + "_" + counter + extension);
-                    counter++;
-                }
-
-                long[] bytesCopied = new long[]{0};
-                long[] lastUpdate = new long[]{0};
-                FileUtils.ProgressListener listener = (file, read) -> {
-                    bytesCopied[0] += read;
-                    long now = System.currentTimeMillis();
-                    if (now - lastUpdate[0] > 500) {
-                        opManager.updateProgress("Pasting...", "Pasting: " + file.getName(), 0, 0);
-                        lastUpdate[0] = now;
-                    }
-                };
-
-                if (isCut) {
-                    success = source.renameTo(target);
-                    if (!success) {
-                        if (source.isDirectory()) {
-                            success = FileUtils.copyDirectory(source, target, opManager.getCancelToken(), listener) && FileUtils.deleteRecursive(source);
-                        } else {
-                            success = FileUtils.copyFile(source, target, opManager.getCancelToken(), listener) && source.delete();
-                        }
-                    }
-                    if (success) {
-                        ExecutorProvider.getInstance().runOnMain(() -> adapter.setClipboardState(null, false));
-                    }
-                } else {
-                    if (source.isDirectory()) {
-                        success = FileUtils.copyDirectory(source, target, opManager.getCancelToken(), listener);
-                    } else {
-                        success = FileUtils.copyFile(source, target, opManager.getCancelToken(), listener);
-                    }
-                }
-
-                if (opManager.getCancelToken().get()) {
-                    success = false;
-                }
-            } catch (Exception e) {
-                e.printStackTrace();
-                success = false;
-            } finally {
-                final boolean finalSuccess = success;
-                ExecutorProvider.getInstance().runOnMain(() -> {
-                    opManager.finishOperation("Paste", finalSuccess ? "Pasted successfully" : "Paste failed or cancelled", finalSuccess);
-                    viewModel.refreshFileTree();
-                });
+        FileClipboardHelper.performPaste(requireContext(), source, isCut, destinationDir, success -> {
+            if (success && isCut) {
+                adapter.setClipboardState(null, false);
             }
+            viewModel.refreshFileTree();
         });
     }
 

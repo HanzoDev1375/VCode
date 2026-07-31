@@ -373,42 +373,7 @@ public class EditorViewModel extends ViewModel {
      * Results are mapped by relative path for easy lookup by the UI.
      */
     public void refreshGitStatuses() {
-        if (projectRoot == null) return;
-
-        // Skip Git analysis if the project is not a valid repository
-        File gitDir = new File(projectRoot, ".git");
-        if (!gitDir.exists()) {
-            ExecutorProvider.getInstance().runOnMain(() -> gitStatusesLiveData.setValue(new HashMap<>()));
-            return;
-        }
-
-        ExecutorProvider.getInstance().runOnIo(() -> {
-            try (org.eclipse.jgit.api.Git git = org.eclipse.jgit.api.Git.open(projectRoot)) {
-                org.eclipse.jgit.api.Status workspaceStatus = git.status().call();
-                Map<String, FileStatus.Type> freshMap = new HashMap<>();
-
-                // Compile JGit's categorical status sets into our unified mapping
-                for (String path : workspaceStatus.getAdded())
-                    freshMap.put(path, FileStatus.Type.STAGED_ADDED);
-                for (String path : workspaceStatus.getChanged())
-                    freshMap.put(path, FileStatus.Type.STAGED_MODIFIED);
-                for (String path : workspaceStatus.getRemoved())
-                    freshMap.put(path, FileStatus.Type.STAGED_DELETED);
-                for (String path : workspaceStatus.getModified())
-                    freshMap.put(path, FileStatus.Type.UNSTAGED_MODIFIED);
-                for (String path : workspaceStatus.getMissing())
-                    freshMap.put(path, FileStatus.Type.UNSTAGED_DELETED);
-                for (String path : workspaceStatus.getUntracked())
-                    freshMap.put(path, FileStatus.Type.UNTRACKED);
-                for (String path : workspaceStatus.getConflicting())
-                    freshMap.put(path, FileStatus.Type.CONFLICTED);
-
-                ExecutorProvider.getInstance().runOnMain(() -> gitStatusesLiveData.setValue(freshMap));
-            } catch (Exception e) {
-                // Silently handle JGit errors to prevent crashes in malformed repositories
-                e.printStackTrace();
-            }
-        });
+        EditorGitHelper.refreshGitStatuses(projectRoot, gitStatusesLiveData);
     }
 
     /**
@@ -481,29 +446,11 @@ public class EditorViewModel extends ViewModel {
      * Creates a new file on disk and refreshes the tree.
      */
     private String getMainFileFromMeta() {
-        try {
-            File metaFile = new File(projectRoot, "project_meta.json");
-            if (metaFile.exists()) {
-                String metaContent = FileUtils.readFile(metaFile);
-                org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
-                return metaJson.optString("mainFile", "");
-            }
-        } catch (Exception ignored) {
-        }
-        return "";
+        return ProjectMetaHelper.getMainFileFromMeta(projectRoot);
     }
 
     private void updateMainFileInMeta(String newMainFile) {
-        try {
-            File metaFile = new File(projectRoot, "project_meta.json");
-            if (metaFile.exists()) {
-                String metaContent = FileUtils.readFile(metaFile);
-                org.json.JSONObject metaJson = new org.json.JSONObject(metaContent);
-                metaJson.put("mainFile", newMainFile);
-                FileUtils.writeFile(metaFile, metaJson.toString(2));
-            }
-        } catch (Exception ignored) {
-        }
+        ProjectMetaHelper.updateMainFileInMeta(projectRoot, newMainFile);
     }
 
     public void createFile(File parentDir, String name, String content) {
