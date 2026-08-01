@@ -241,12 +241,13 @@ public final class LspClientManager {
      */
     private LspServer createServer(String languageId) {
         // Servers will be registered here as they are implemented in subsequent phases.
-        // Example (once HtmlLspServer is created):
-        //   case "html": return new HtmlLspServer();
         switch (languageId) {
+            case "json":
+                return new com.cocode.vcode.ide.core.lsp.servers.JsonLspServer();
             default:
                 return null;
         }
+
     }
 
     private <T> void deliverResult(LspCallback<T> callback, T result) {
