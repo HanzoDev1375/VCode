@@ -242,11 +242,18 @@ public final class LspClientManager {
     private LspServer createServer(String languageId) {
         // Servers will be registered here as they are implemented in subsequent phases.
         switch (languageId) {
+            case "html":
+                return new com.cocode.vcode.ide.core.lsp.servers.HtmlLspServer();
+            case "css":
+            case "scss":
+                return new com.cocode.vcode.ide.core.lsp.servers.CssLspServer();
             case "json":
                 return new com.cocode.vcode.ide.core.lsp.servers.JsonLspServer();
             default:
                 return null;
         }
+
+
 
     }
 

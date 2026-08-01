@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  *
  * Language-specific servers can build richer scope trees on top of this baseline.
  */
-final class SymbolExtractor {
+public final class SymbolExtractor {
 
     // JS / TS patterns
     private static final Pattern JS_FUNCTION = Pattern.compile(
@@ -163,7 +163,7 @@ final class SymbolExtractor {
     /**
      * Converts a flat character offset to a zero-based (line, character) position.
      */
-    static LspPosition offsetToPosition(String text, int offset) {
+    public static LspPosition offsetToPosition(String text, int offset) {
         int line = 0;
         int lastNewline = -1;
         for (int i = 0; i < offset && i < text.length(); i++) {
