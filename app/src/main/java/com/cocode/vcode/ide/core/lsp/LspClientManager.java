@@ -247,11 +247,21 @@ public final class LspClientManager {
             case "css":
             case "scss":
                 return new com.cocode.vcode.ide.core.lsp.servers.CssLspServer();
+            case "javascript":
+                return new com.cocode.vcode.ide.core.lsp.servers.JsLspServer();
+            case "typescript":
+                return new com.cocode.vcode.ide.core.lsp.servers.TsLspServer();
             case "json":
                 return new com.cocode.vcode.ide.core.lsp.servers.JsonLspServer();
+            case "markdown":
+                return new com.cocode.vcode.ide.core.lsp.servers.MarkdownLspServer();
+            case "svg":
+                return new com.cocode.vcode.ide.core.lsp.servers.SvgLspServer();
             default:
                 return null;
         }
+
+
 
 
 
