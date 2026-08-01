@@ -15,16 +15,20 @@ import com.cocode.vcode.ide.ui.editor.EditorViewModel;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 import com.cocode.vcode.ide.views.CodeEditText;
 import com.cocode.vcode.ide.views.CodeEditorLayout;
+import com.cocode.vcode.ide.core.lsp.LspEditorBridge;
+
 
 public class CodeFileViewer implements IFileViewer {
 
     private final Handler jsonValidationHandler = new Handler(Looper.getMainLooper());
+    private final LspEditorBridge lspBridge = new LspEditorBridge();
     private FrameLayout viewContainer;
     private CodeEditorLayout editorLayout;
     private CodeEditText codeEditText;
     private EditorFile currentFile;
     private EditorViewModel viewModel;
     private IEditorCallback editorCallback;
+
     public void flushContentToViewModel() {
         if (currentFile != null && codeEditText != null) {
             currentFile.setContent(codeEditText.getTextAsString());
@@ -61,7 +65,12 @@ public class CodeFileViewer implements IFileViewer {
                 }
             });
 
+            // Attach LSP bridge now that the editor view exists.
+            // setFile() will be called in bindFile() once a file is known.
+            lspBridge.attach(codeEditText);
+
             if (context instanceof IEditorCallback) {
+
                 editorCallback = (IEditorCallback) context;
             }
         }
@@ -98,6 +107,12 @@ public class CodeFileViewer implements IFileViewer {
         codeEditText.setTag(file.getId());
         codeEditText.setCurrentFile(file.getFile());
         codeEditText.setFileType(file.getFileType());
+
+        // Notify LSP bridge of the file that is now open so it can start indexing
+        // and schedule an initial diagnostic pass.
+        if (file.getFile() != null && !file.isBinaryAsset()) {
+            lspBridge.setFile(file.getFile());
+        }
 
         if (!file.isContentLoaded() && !file.isVirtual() && !file.isBinaryAsset()) {
             // Content was never successfully read (e.g. read failed during session restore).
@@ -161,6 +176,7 @@ public class CodeFileViewer implements IFileViewer {
     @Override
     public void destroy() {
         onPause();
+        lspBridge.detach();
         if (codeEditText != null) {
             // Nothing to remove for lambdas since we just clear the reference
         }
@@ -170,6 +186,7 @@ public class CodeFileViewer implements IFileViewer {
         viewModel = null;
         editorCallback = null;
     }
+
 
     @Override
     public CodeEditText getCodeEditor() {
