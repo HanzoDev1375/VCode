@@ -94,4 +94,31 @@ public enum FileType {
     public boolean isTextBased() {
         return isTextBased;
     }
+
+    /**
+     * Returns the LSP language identifier for this file type, as required by
+     * {@link com.cocode.vcode.ide.core.lsp.LspServer#getLanguageId()}.
+     * Returns {@code "plaintext"} for types that have no language server.
+     */
+    public String getLspLanguageId() {
+        switch (this) {
+            case HTML:       return "html";
+            case CSS:        return "css";
+            case SCSS:       return "scss";
+            case JAVASCRIPT: return "javascript";
+            case TYPESCRIPT: return "typescript";
+            case JSON:       return "json";
+            case MARKDOWN:   return "markdown";
+            case SVG:        return "svg";
+            default:         return "plaintext";
+        }
+    }
+
+    /**
+     * Returns true if this file type is a binary asset that cannot be opened as text.
+     */
+    public boolean isBinaryAsset() {
+        return !isTextBased;
+    }
 }
+
