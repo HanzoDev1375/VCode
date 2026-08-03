@@ -171,6 +171,8 @@ public class CodeEditText extends View {
     private boolean autoIndent = true;
     private IndentationEngine indentEngine;
     private AutoCompletePopup autoCompletePopup;
+    /** When true, LSP is handling completions and the legacy engine is suppressed. */
+    private boolean lspCompletionActive = false;
     // ── Highlight state ───────────────────────────────────────────────────────
     private final Runnable autoCompleteRunnable = this::triggerAutoComplete;
     /**
@@ -1316,6 +1318,31 @@ public class CodeEditText extends View {
         return content.flatOffset(ContentPosition.max(cursor, selectionAnchor));
     }
 
+    /**
+     * Called by {@link com.cocode.vcode.ide.core.lsp.LspEditorBridge} to suppress the
+     * legacy autocomplete engine when an LSP server is available for the current language.
+     * When {@code suppress} is true, {@link #triggerAutoComplete()} becomes a no-op and
+     * all completions are delivered via {@link #showLspCompletions(java.util.List)}.
+     */
+    public void suppressLegacyAutoComplete(boolean suppress) {
+        this.lspCompletionActive = suppress;
+        if (!suppress && autoCompletePopup != null) {
+            autoCompletePopup.dismiss();
+        }
+    }
+
+    /**
+     * Displays LSP-generated completion items in the autocomplete popup.
+     * Called on the main thread by {@link com.cocode.vcode.ide.core.lsp.LspEditorBridge}
+     * after the LSP server returns its result.
+     *
+     * @param items the completion items to show; must not be null or empty
+     */
+    public void showLspCompletions(java.util.List<CompletionItem> items) {
+        if (autoCompletePopup == null || items == null || items.isEmpty()) return;
+        autoCompletePopup.show(items, this, getSelectionStart());
+    }
+
     public void setSelection(int index) {
         cursor = content.positionAt(Math.max(0, Math.min(index, content.totalLength())));
         selectionAnchor = null;
@@ -2084,6 +2111,8 @@ public class CodeEditText extends View {
 
     private void triggerAutoComplete() {
         if (autoCompleteEngine == null) return;
+        // LSP bridge has taken over completions for this language — skip legacy engine.
+        if (lspCompletionActive) return;
 
         int flatCursor = content.flatOffset(cursor);
         String text = content.getSubstring(0, flatCursor);

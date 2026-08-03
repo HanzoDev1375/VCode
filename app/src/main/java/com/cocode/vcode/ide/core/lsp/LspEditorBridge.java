@@ -3,6 +3,7 @@ package com.cocode.vcode.ide.core.lsp;
 import android.os.Handler;
 import android.os.Looper;
 
+import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.data.model.Problem;
 import com.cocode.vcode.ide.views.CodeEditText;
@@ -55,6 +56,13 @@ public final class LspEditorBridge {
     /** Whether the bridge is actively connected to an editor instance. */
     private boolean attached = false;
 
+    /**
+     * True when the current language has a registered LSP server.
+     * When true, the legacy autocomplete engine in {@link CodeEditText} is suppressed
+     * and all completions flow exclusively through the LSP pipeline.
+     */
+    private boolean hasLspServer = false;
+
     // -------------------------------------------------------------------------
     // Debounce runnables — cancelled and rescheduled on every keystroke
     // -------------------------------------------------------------------------
@@ -106,6 +114,13 @@ public final class LspEditorBridge {
     public void setFile(File file) {
         this.currentFile = file;
         this.fileType = editor != null ? editor.getFileType() : fileType;
+        // Determine whether this language has a registered LSP server.
+        // If so, suppress the legacy autocomplete engine so LSP is the sole source.
+        String languageId = fileType != null ? fileType.getLspLanguageId() : "plaintext";
+        hasLspServer = !"plaintext".equals(languageId);
+        if (editor != null) {
+            editor.suppressLegacyAutoComplete(hasLspServer);
+        }
         docVersion.incrementAndGet();
         updateProjectIndex();
         // Trigger an immediate diagnostic pass for the newly opened file
@@ -227,9 +242,72 @@ public final class LspEditorBridge {
     }
 
     private void performCompletion() {
-        // Completion is handled by the editor's own triggerAutoComplete() during transition.
-        // Once LSP servers are fully wired, this will replace that call.
-        // For now this is a no-op placeholder.
+        if (!attached || editor == null || !hasLspServer) return;
+        LspDocument doc = buildSnapshot();
+        if (doc == null) return;
+        LspPosition pos = cursorPosition();
+        final int capturedVersion = docVersion.get();
+
+        LspClientManager.getInstance().requestCompletion(doc, pos, new LspCallback<List<LspCompletionItem>>() {
+            @Override
+            public void onResult(List<LspCompletionItem> result) {
+                if (capturedVersion != docVersion.get() || !attached || editor == null) return;
+                if (result != null && !result.isEmpty()) {
+                    editor.showLspCompletions(convertToLegacy(result));
+                }
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                // Server not ready — let the legacy engine handle it this keystroke.
+            }
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // Private — LSP → legacy CompletionItem conversion
+    // -------------------------------------------------------------------------
+
+    /**
+     * Converts a list of {@link LspCompletionItem} objects returned by the LSP server
+     * into the editor's native {@link CompletionItem} format expected by
+     * {@link com.cocode.vcode.ide.views.AutoCompletePopup}.
+     */
+    private List<CompletionItem> convertToLegacy(List<LspCompletionItem> lspItems) {
+        List<CompletionItem> out = new ArrayList<>(lspItems.size());
+        for (LspCompletionItem li : lspItems) {
+            if (li == null || li.label == null) continue;
+            String insert = (li.insertText != null && !li.insertText.isEmpty())
+                    ? li.insertText : li.label;
+            // Compute the cursor offset inside the insert text if a '|' marker is present.
+            // The '|' convention is used by the autocomplete engines to mark cursor position.
+            int cursorOffset = 0;
+            int pipeIdx = insert.indexOf('|');
+            if (pipeIdx >= 0) {
+                cursorOffset = -(insert.length() - pipeIdx - 1);
+                insert = insert.replace("|", "");
+            }
+            CompletionItem ci = new CompletionItem(
+                    li.label, insert, li.detail, mapKindToLegacy(li.kind), cursorOffset);
+            out.add(ci);
+        }
+        return out;
+    }
+
+    /** Maps an LSP completion kind integer to the editor's {@link CompletionItem.Type} enum. */
+    private static CompletionItem.Type mapKindToLegacy(int kind) {
+        switch (kind) {
+            case LspCompletionItem.KIND_FUNCTION: return CompletionItem.Type.FUNCTION;
+            case LspCompletionItem.KIND_CLASS:    return CompletionItem.Type.TAG;
+            case LspCompletionItem.KIND_PROPERTY: return CompletionItem.Type.CSS_PROPERTY;
+            case LspCompletionItem.KIND_VALUE:    return CompletionItem.Type.CSS_VALUE;
+            case LspCompletionItem.KIND_KEYWORD:  return CompletionItem.Type.KEYWORD;
+            case LspCompletionItem.KIND_SNIPPET:  return CompletionItem.Type.SNIPPET;
+            case LspCompletionItem.KIND_FILE:     return CompletionItem.Type.FILE;
+            case LspCompletionItem.KIND_FOLDER:   return CompletionItem.Type.FOLDER;
+            case LspCompletionItem.KIND_TEXT:     return CompletionItem.Type.VALUE;
+            default:                              return CompletionItem.Type.BUILTIN;
+        }
     }
 
     // -------------------------------------------------------------------------

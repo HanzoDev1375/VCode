@@ -13,12 +13,15 @@ import com.cocode.vcode.ide.core.lsp.LspServer;
 import com.cocode.vcode.ide.core.lsp.LspSignatureHelp;
 import com.cocode.vcode.ide.core.lsp.ProjectIndex;
 import com.cocode.vcode.ide.core.lsp.SymbolEntry;
+import com.cocode.vcode.ide.core.parser.HtmlTagParser;
 import com.cocode.vcode.ide.data.model.Problem;
 
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -94,12 +97,26 @@ public final class HtmlLspServer implements LspServer {
         if (flatOffset < 0) flatOffset = doc.text.length();
 
         // HtmlAutoCompleteEngine requires a File for file-relative src/href resolution.
-        // We pass the document's URI as a file path.
         File file = new File(doc.uri);
         completeEngine.setCurrentFile(file);
 
         List<CompletionItem> legacy = completeEngine.getSuggestions(doc.text, flatOffset);
-        return convertCompletions(legacy);
+        List<LspCompletionItem> lspItems = new ArrayList<>(convertCompletions(legacy));
+
+        // Enrich with cross-file completions when inside class="" or id=""
+        HtmlTagParser tagParser = new HtmlTagParser();
+        HtmlTagParser.HtmlContext ctx = tagParser.parseContext(doc.text, flatOffset);
+        if (ctx.isInsideAttributeValue && ctx.currentAttributeName != null
+                && projectIndex != null) {
+            String prefix = ctx.currentAttributeValue != null ? ctx.currentAttributeValue : "";
+            if ("class".equals(ctx.currentAttributeName)) {
+                lspItems.addAll(getCssClassCompletions(prefix));
+            } else if ("id".equals(ctx.currentAttributeName)) {
+                lspItems.addAll(getIdCompletions(prefix));
+            }
+        }
+
+        return lspItems;
     }
 
     // -------------------------------------------------------------------------
@@ -340,5 +357,64 @@ public final class HtmlLspServer implements LspServer {
             }
         }
         return null;
+    }
+
+    // -------------------------------------------------------------------------
+    // Cross-file completion helpers (Phase 2 IntelliSense)
+    // -------------------------------------------------------------------------
+
+    private static final Pattern CSS_CLASS_PATTERN =
+            Pattern.compile("\\.([\\w-]+)\\s*[{,]");
+    private static final Pattern HTML_ID_PATTERN =
+            Pattern.compile("\\bid\\s*=\\s*[\"']([^\"']+)[\"']");
+
+    /**
+     * Scans all indexed CSS files for {@code .className} selectors and returns them
+     * as value completions. Used to power class="" attribute IntelliSense.
+     */
+    private List<LspCompletionItem> getCssClassCompletions(String prefix) {
+        List<LspCompletionItem> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (String uri : projectIndex.getAllUris()) {
+            if (!uri.endsWith(".css") && !uri.endsWith(".scss")) continue;
+            LspDocument cssDoc = projectIndex.getDocument(uri);
+            if (cssDoc == null || cssDoc.text == null) continue;
+            Matcher m = CSS_CLASS_PATTERN.matcher(cssDoc.text);
+            while (m.find()) {
+                String cls = m.group(1);
+                if (seen.contains(cls)) continue;
+                if (prefix.isEmpty() || cls.startsWith(prefix)) {
+                    seen.add(cls);
+                    result.add(new LspCompletionItem(
+                            cls, cls, LspCompletionItem.KIND_VALUE, "CSS class", null));
+                }
+            }
+        }
+        return result;
+    }
+
+    /**
+     * Scans all indexed HTML files for {@code id="..."} attributes and returns them
+     * as value completions. Used to power id="" attribute IntelliSense.
+     */
+    private List<LspCompletionItem> getIdCompletions(String prefix) {
+        List<LspCompletionItem> result = new ArrayList<>();
+        Set<String> seen = new HashSet<>();
+        for (String uri : projectIndex.getAllUris()) {
+            if (!uri.endsWith(".html") && !uri.endsWith(".htm")) continue;
+            LspDocument htmlDoc = projectIndex.getDocument(uri);
+            if (htmlDoc == null || htmlDoc.text == null) continue;
+            Matcher m = HTML_ID_PATTERN.matcher(htmlDoc.text);
+            while (m.find()) {
+                String id = m.group(1);
+                if (seen.contains(id)) continue;
+                if (prefix.isEmpty() || id.startsWith(prefix)) {
+                    seen.add(id);
+                    result.add(new LspCompletionItem(
+                            id, id, LspCompletionItem.KIND_VALUE, "HTML id", null));
+                }
+            }
+        }
+        return result;
     }
 }

@@ -16,8 +16,11 @@ import com.cocode.vcode.ide.data.model.Problem;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -38,6 +41,202 @@ public final class JsLspServer implements LspServer {
 
     private static final Pattern IMPORT_FROM =
             Pattern.compile("import\\s+.*?from\\s+['\"]([^'\"]+)['\"]");
+
+    // -------------------------------------------------------------------------
+    // Member access completion table (Phase 4 IntelliSense)
+    // -------------------------------------------------------------------------
+
+    private static final Map<String, List<LspCompletionItem>> MEMBER_MAP;
+    static {
+        MEMBER_MAP = new HashMap<>();
+        MEMBER_MAP.put("document", Arrays.asList(
+            fn("getElementById",        "getElementById(id)",            "Returns element by ID"),
+            fn("querySelector",         "querySelector(selector)",        "First matching element"),
+            fn("querySelectorAll",       "querySelectorAll(selector)",     "NodeList of matches"),
+            fn("createElement",         "createElement(tag)",             "Creates HTML element"),
+            fn("createTextNode",        "createTextNode(text)",           "Creates text node"),
+            fn("addEventListener",      "addEventListener(type, handler)","Adds event listener"),
+            fn("removeEventListener",   "removeEventListener(type, handler)","Removes event listener"),
+            fn("getElementsByClassName","getElementsByClassName(name)",   "Find by class name"),
+            fn("getElementsByTagName",  "getElementsByTagName(tag)",      "Find by tag name"),
+            fn("write",                 "write(content)",                 "Write to document"),
+            fn("close",                 "close()",                        "Close document stream"),
+            prop("body",                "HTMLBodyElement"),
+            prop("head",                "HTMLHeadElement"),
+            prop("title",               "string"),
+            prop("URL",                 "string \u2013 current URL"),
+            prop("cookie",              "string \u2013 cookies"),
+            prop("readyState",          "string \u2013 loading state"),
+            prop("documentElement",     "HTMLElement \u2013 root element")
+        ));
+        MEMBER_MAP.put("console", Arrays.asList(
+            fn("log",    "log(...data)",           "General log"),
+            fn("warn",   "warn(...data)",          "Warning log"),
+            fn("error",  "error(...data)",         "Error log"),
+            fn("info",   "info(...data)",          "Info log"),
+            fn("debug",  "debug(...data)",         "Debug log"),
+            fn("table",  "table(data)",            "Tabular output"),
+            fn("group",  "group(label)",           "Start group"),
+            fn("groupEnd","groupEnd()",            "End group"),
+            fn("time",   "time(label)",            "Start timer"),
+            fn("timeEnd","timeEnd(label)",         "Stop timer"),
+            fn("count",  "count(label)",           "Count calls"),
+            fn("clear",  "clear()",               "Clear console"),
+            fn("assert", "assert(condition, msg)","Assert condition"),
+            fn("dir",    "dir(obj)",              "List properties")
+        ));
+        MEMBER_MAP.put("Math", Arrays.asList(
+            fn("floor",  "Math.floor(x)",          "Round down"),
+            fn("ceil",   "Math.ceil(x)",           "Round up"),
+            fn("round",  "Math.round(x)",          "Round to nearest"),
+            fn("random", "Math.random()",          "Random 0\u20131"),
+            fn("max",    "Math.max(...values)",    "Maximum value"),
+            fn("min",    "Math.min(...values)",    "Minimum value"),
+            fn("abs",    "Math.abs(x)",           "Absolute value"),
+            fn("sqrt",   "Math.sqrt(x)",          "Square root"),
+            fn("pow",    "Math.pow(base, exp)",   "Power"),
+            fn("log",    "Math.log(x)",           "Natural log"),
+            fn("log2",   "Math.log2(x)",          "Log base 2"),
+            fn("log10",  "Math.log10(x)",         "Log base 10"),
+            fn("sin",    "Math.sin(x)",           "Sine"),
+            fn("cos",    "Math.cos(x)",           "Cosine"),
+            fn("tan",    "Math.tan(x)",           "Tangent"),
+            fn("sign",   "Math.sign(x)",          "Sign (-1/0/1)"),
+            fn("trunc",  "Math.trunc(x)",         "Integer part"),
+            fn("hypot",  "Math.hypot(...values)", "Hypotenuse"),
+            prop("PI",   "number \u2013 3.14159..."),
+            prop("E",    "number \u2013 2.71828...")
+        ));
+        MEMBER_MAP.put("JSON", Arrays.asList(
+            fn("parse",     "JSON.parse(text)",                       "JSON string \u2192 object"),
+            fn("stringify", "JSON.stringify(value, replacer, space)", "Object \u2192 JSON string")
+        ));
+        MEMBER_MAP.put("Object", Arrays.asList(
+            fn("keys",              "Object.keys(obj)",                           "Array of own property names"),
+            fn("values",            "Object.values(obj)",                         "Array of own values"),
+            fn("entries",           "Object.entries(obj)",                        "Array of [key, value] pairs"),
+            fn("assign",            "Object.assign(target, ...sources)",          "Merge objects"),
+            fn("freeze",            "Object.freeze(obj)",                         "Make immutable"),
+            fn("isFrozen",          "Object.isFrozen(obj)",                       "Check if frozen"),
+            fn("create",            "Object.create(proto)",                       "Create with prototype"),
+            fn("defineProperty",    "Object.defineProperty(obj, prop, descriptor)","Define property"),
+            fn("getOwnPropertyNames","Object.getOwnPropertyNames(obj)",           "All own property names"),
+            fn("fromEntries",       "Object.fromEntries(entries)",                "Entries \u2192 object"),
+            fn("hasOwn",            "Object.hasOwn(obj, key)",                    "Has own property")
+        ));
+        MEMBER_MAP.put("Array", Arrays.asList(
+            fn("from",    "Array.from(iterable)",   "Create from iterable"),
+            fn("isArray", "Array.isArray(value)",   "Check if array"),
+            fn("of",      "Array.of(...items)",     "Create from arguments")
+        ));
+        MEMBER_MAP.put("Promise", Arrays.asList(
+            fn("resolve",    "Promise.resolve(value)",          "Fulfilled promise"),
+            fn("reject",     "Promise.reject(reason)",          "Rejected promise"),
+            fn("all",        "Promise.all([...promises])",      "Wait for all"),
+            fn("allSettled", "Promise.allSettled([...promises])","Wait for all, any outcome"),
+            fn("race",       "Promise.race([...promises])",     "First to settle"),
+            fn("any",        "Promise.any([...promises])",      "First to fulfill")
+        ));
+        List<LspCompletionItem> storageMembers = Arrays.asList(
+            fn("getItem",    "getItem(key)",          "Read value"),
+            fn("setItem",    "setItem(key, value)",   "Write value"),
+            fn("removeItem", "removeItem(key)",       "Delete entry"),
+            fn("clear",      "clear()",               "Clear all"),
+            fn("key",        "key(index)",             "Get key by index"),
+            prop("length",   "number \u2013 entries count")
+        );
+        MEMBER_MAP.put("localStorage",   storageMembers);
+        MEMBER_MAP.put("sessionStorage", storageMembers);
+        MEMBER_MAP.put("window", Arrays.asList(
+            fn("setTimeout",       "setTimeout(fn, ms)",          "Delayed call"),
+            fn("setInterval",      "setInterval(fn, ms)",         "Repeating call"),
+            fn("clearTimeout",     "clearTimeout(id)",             "Cancel timeout"),
+            fn("clearInterval",    "clearInterval(id)",            "Cancel interval"),
+            fn("fetch",            "fetch(url, options)",          "HTTP request"),
+            fn("alert",            "alert(message)",               "Show alert"),
+            fn("confirm",          "confirm(message)",             "Show confirm"),
+            fn("prompt",           "prompt(message, default)",     "Show input"),
+            fn("addEventListener", "addEventListener(type, handler)","Listen to events"),
+            fn("scrollTo",         "scrollTo(x, y)",              "Scroll to position"),
+            fn("open",             "open(url, target)",            "Open window"),
+            prop("localStorage",   "Storage object"),
+            prop("sessionStorage", "Storage object"),
+            prop("location",       "Location object"),
+            prop("history",        "History object"),
+            prop("navigator",      "Navigator object"),
+            prop("document",       "Document object"),
+            prop("innerWidth",     "number \u2013 viewport width"),
+            prop("innerHeight",    "number \u2013 viewport height"),
+            prop("scrollX",        "number \u2013 horizontal scroll"),
+            prop("scrollY",        "number \u2013 vertical scroll")
+        ));
+        // Inferred type: array variable (e.g. const arr = [])
+        MEMBER_MAP.put("__array__", Arrays.asList(
+            fn("push",        "push(...items)",              "Append items"),
+            fn("pop",         "pop()",                       "Remove last"),
+            fn("shift",       "shift()",                    "Remove first"),
+            fn("unshift",     "unshift(...items)",           "Prepend items"),
+            fn("map",         "map(fn)",                    "Transform elements"),
+            fn("filter",      "filter(fn)",                 "Keep matching"),
+            fn("reduce",      "reduce(fn, initial)",        "Accumulate"),
+            fn("find",        "find(fn)",                   "First matching"),
+            fn("findIndex",   "findIndex(fn)",              "Index of first match"),
+            fn("includes",    "includes(value)",            "Check membership"),
+            fn("indexOf",     "indexOf(value)",             "Find index"),
+            fn("forEach",     "forEach(fn)",               "Iterate"),
+            fn("sort",        "sort(compareFn)",            "Sort in place"),
+            fn("reverse",     "reverse()",                  "Reverse in place"),
+            fn("splice",      "splice(start, count)",       "Modify in place"),
+            fn("slice",       "slice(start, end)",         "Extract subarray"),
+            fn("join",        "join(separator)",            "Join as string"),
+            fn("flat",        "flat(depth)",                "Flatten"),
+            fn("flatMap",     "flatMap(fn)",               "Map then flatten"),
+            fn("every",       "every(fn)",                 "All match"),
+            fn("some",        "some(fn)",                  "Any match"),
+            fn("fill",        "fill(value, start, end)",   "Fill range"),
+            fn("concat",      "concat(...arrays)",          "Merge arrays"),
+            fn("at",          "at(index)",                  "Get by index (negative ok)"),
+            fn("entries",     "entries()",                  "[index, value] iterator"),
+            fn("keys",        "keys()",                     "Index iterator"),
+            fn("values",      "values()",                   "Value iterator"),
+            prop("length",    "number \u2013 array length")
+        ));
+        // Inferred type: string variable (e.g. const s = '')
+        MEMBER_MAP.put("__string__", Arrays.asList(
+            fn("split",      "split(separator)",     "Split to array"),
+            fn("trim",       "trim()",               "Remove whitespace"),
+            fn("trimStart",  "trimStart()",          "Remove leading whitespace"),
+            fn("trimEnd",    "trimEnd()",            "Remove trailing whitespace"),
+            fn("includes",   "includes(search)",    "Check contains"),
+            fn("startsWith", "startsWith(prefix)",  "Check prefix"),
+            fn("endsWith",   "endsWith(suffix)",    "Check suffix"),
+            fn("replace",    "replace(from, to)",   "Replace first"),
+            fn("replaceAll", "replaceAll(from, to)","Replace all"),
+            fn("toUpperCase","toUpperCase()",       "Uppercase"),
+            fn("toLowerCase","toLowerCase()",       "Lowercase"),
+            fn("indexOf",    "indexOf(search)",     "Find index"),
+            fn("substring",  "substring(start, end)","Extract substring"),
+            fn("slice",      "slice(start, end)",   "Extract slice"),
+            fn("charAt",     "charAt(index)",        "Get character"),
+            fn("charCodeAt", "charCodeAt(index)",    "Get char code"),
+            fn("padStart",   "padStart(len, char)", "Pad start"),
+            fn("padEnd",     "padEnd(len, char)",   "Pad end"),
+            fn("repeat",     "repeat(count)",        "Repeat string"),
+            fn("match",      "match(regex)",         "Match against regex"),
+            fn("search",     "search(regex)",        "Search with regex"),
+            fn("at",         "at(index)",             "Get by index (negative ok)"),
+            fn("normalize",  "normalize(form)",      "Unicode normalize"),
+            prop("length",   "number \u2013 character count")
+        ));
+    }
+
+    private static LspCompletionItem fn(String label, String insert, String detail) {
+        return new LspCompletionItem(label, insert, LspCompletionItem.KIND_FUNCTION, detail, null);
+    }
+
+    private static LspCompletionItem prop(String label, String detail) {
+        return new LspCompletionItem(label, label, LspCompletionItem.KIND_PROPERTY, detail, null);
+    }
 
     private volatile boolean ready = false;
     private ProjectIndex projectIndex;
@@ -81,6 +280,31 @@ public final class JsLspServer implements LspServer {
         int offset = doc.toOffset(pos);
         if (offset < 0) offset = doc.text.length();
 
+        // --- Member access completions (Phase 4 IntelliSense) ---
+        // Detect patterns like 'document.', 'console.', 'arr.' before the cursor.
+        String lineBeforeCursor = getLineBeforeCursor(doc.text, offset);
+        int dotIdx = lineBeforeCursor.lastIndexOf('.');
+        if (dotIdx > 0) {
+            String objectName = extractWordBefore(lineBeforeCursor, dotIdx);
+            String prefix = lineBeforeCursor.substring(dotIdx + 1);
+            List<LspCompletionItem> members = MEMBER_MAP.get(objectName);
+            if (members == null) {
+                // Type inference: 'const arr = []' → array methods
+                String inferred = inferType(objectName, doc.text);
+                if (inferred != null) members = MEMBER_MAP.get(inferred);
+            }
+            if (members != null) {
+                List<LspCompletionItem> filtered = new ArrayList<>();
+                for (LspCompletionItem item : members) {
+                    if (prefix.isEmpty() || item.label.startsWith(prefix)) {
+                        filtered.add(item);
+                    }
+                }
+                if (!filtered.isEmpty()) return filtered;
+            }
+        }
+
+        // --- Fall back to legacy engine for general keyword/scope completions ---
         autoCompleteEngine.setCurrentFile(new File(doc.uri));
         List<CompletionItem> suggestions = autoCompleteEngine.getSuggestions(doc.text, offset);
         if (suggestions == null) return Collections.emptyList();
@@ -237,5 +461,39 @@ public final class JsLspServer implements LspServer {
             case WARNING: return LspDiagnostic.SEVERITY_WARNING;
             default:      return LspDiagnostic.SEVERITY_INFORMATION;
         }
+    }
+
+    // -------------------------------------------------------------------------
+    // Member-access detection helpers
+    // -------------------------------------------------------------------------
+
+    /** Returns the text on the current line from the line start up to {@code offset}. */
+    private static String getLineBeforeCursor(String text, int offset) {
+        if (text == null || offset <= 0) return "";
+        int lineStart = Math.min(offset, text.length());
+        while (lineStart > 0 && text.charAt(lineStart - 1) != '\n') lineStart--;
+        return text.substring(lineStart, Math.min(offset, text.length()));
+    }
+
+    /** Extracts the identifier immediately before {@code idx} in {@code line}. */
+    private static String extractWordBefore(String line, int idx) {
+        int end = idx;
+        int start = end;
+        while (start > 0 && isWordChar(line.charAt(start - 1))) start--;
+        return line.substring(start, end);
+    }
+
+    /**
+     * Simple pattern-based type inference.
+     * {@code const arr = []} → "__array__"; {@code const s = ''} → "__string__".
+     */
+    private static String inferType(String varName, String text) {
+        if (varName == null || varName.isEmpty() || text == null) return null;
+        String quoted = Pattern.quote(varName);
+        if (Pattern.compile("(?:const|let|var)\\s+" + quoted + "\\s*=\\s*\\[").matcher(text).find())
+            return "__array__";
+        if (Pattern.compile("(?:const|let|var)\\s+" + quoted + "\\s*=\\s*['\"`]").matcher(text).find())
+            return "__string__";
+        return null;
     }
 }
