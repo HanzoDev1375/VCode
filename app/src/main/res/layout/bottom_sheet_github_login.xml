@@ -159,6 +159,8 @@
                     android:id="@+id/auth_progress"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
+                    app:indicatorSize="16dp"
+                    app:trackThickness="2dp"
                     android:layout_gravity="center"
                     android:indeterminate="true"
                     app:indicatorColor="?attr/colorPrimary" />
