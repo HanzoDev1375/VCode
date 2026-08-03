@@ -5,8 +5,6 @@ import android.content.Intent;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
-import android.text.Editable;
-import android.text.TextWatcher;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -23,24 +21,19 @@ import com.cocode.vcode.ide.databinding.BottomSheetGithubLoginBinding;
 import com.cocode.vcode.ide.git.core.GitCredentialStore;
 import com.cocode.vcode.ide.git.github.GitHubDeviceFlowClient;
 import com.cocode.vcode.ide.git.github.GitHubApiClient;
-import com.cocode.vcode.ide.ui.git.GitCloneService;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
-import com.cocode.vcode.ide.utils.FileUtils;
 import com.cocode.vcode.ide.utils.FontManager;
 import com.cocode.vcode.ide.utils.UiUtils;
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment;
 
-import java.io.File;
-import java.util.UUID;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
 
     private BottomSheetGithubLoginBinding binding;
     private GitHubLoginListener listener;
-    private GitCloneService.CloneListener cloneListener;
     private GitHubDeviceFlowClient deviceFlowClient;
-    private AtomicBoolean isPollingCancelled = new AtomicBoolean(false);
+    private final AtomicBoolean isPollingCancelled = new AtomicBoolean(false);
 
     public static void show(FragmentManager manager, GitHubLoginListener listener) {
         GitHubLoginBottomSheet sheet = new GitHubLoginBottomSheet();
@@ -91,7 +84,7 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             binding.tvConnectYourGithub.setVisibility(View.GONE);
             binding.tvDeviceFlowInstructions.setVisibility(View.GONE);
             binding.layoutDeviceCode.setVisibility(View.GONE);
-            binding.btnsContainer.setVisibility(View.GONE);
+            binding.btnConnectGithub.setVisibility(View.GONE);
 
             String username = store.getUsername(requireContext());
             binding.tvAccountUsername.setText(username != null ? username : getString(R.string.vcode_github_connected));
@@ -103,8 +96,6 @@ public class GitHubLoginBottomSheet extends BottomSheetDialogFragment {
             binding.tvConnectYourGithub.setVisibility(View.VISIBLE);
             binding.tvDeviceFlowInstructions.setVisibility(View.VISIBLE);
             binding.layoutDeviceCode.setVisibility(View.GONE);
-            binding.btnsContainer.setVisibility(View.VISIBLE);
-            
             binding.btnConnectGithub.setVisibility(View.VISIBLE);
         }
     }
