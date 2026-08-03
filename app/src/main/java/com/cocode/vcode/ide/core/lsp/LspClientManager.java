@@ -255,11 +255,10 @@ public final class LspClientManager {
                 return new com.cocode.vcode.ide.core.lsp.servers.JsonLspServer();
             case "markdown":
                 return new com.cocode.vcode.ide.core.lsp.servers.MarkdownLspServer();
-            case "svg":
-                return new com.cocode.vcode.ide.core.lsp.servers.SvgLspServer();
             default:
                 return null;
         }
+
 
 
 

@@ -193,6 +193,11 @@ public class CodeFileViewer implements IFileViewer {
         return codeEditText;
     }
 
+    /** Returns the LSP bridge so callers can trigger Go to Definition / Find References. */
+    public com.cocode.vcode.ide.core.lsp.LspEditorBridge getLspBridge() {
+        return lspBridge;
+    }
+
     private void validateCodeIfRequired() {
         if (editorCallback == null || currentFile == null || viewModel == null) return;
 

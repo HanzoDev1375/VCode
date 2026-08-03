@@ -156,6 +156,13 @@
     <string name="vcode_line_number">Line Number</string>
     <string name="vcode_btn_go">Go</string>
 
+    <!--    LSP Navigation Actions-->
+    <string name="vcode_lsp_go_to_definition">Go to Definition</string>
+    <string name="vcode_lsp_find_references">Find References</string>
+    <string name="vcode_lsp_no_definition_found">No definition found</string>
+    <string name="vcode_lsp_no_references_found">No references found</string>
+    <string name="vcode_lsp_references_title">References</string>
+
 <!--    Bottom Sheet: New Branch-->
     <string name="vcode_new_branch">New Branch</string>
     <string name="vcode_branch_name_hint">Branch name</string>

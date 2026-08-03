@@ -655,6 +655,33 @@ public class EditorActivity extends BaseActivity implements FileTreeFragment.Fil
             public boolean isReadOnly() {
                 return isReadOnly;
             }
+
+            @Override
+            public com.cocode.vcode.ide.core.lsp.LspEditorBridge getActiveLspBridge() {
+                if (activeViewer instanceof com.cocode.vcode.ide.ui.editor.viewer.CodeFileViewer) {
+                    return ((com.cocode.vcode.ide.ui.editor.viewer.CodeFileViewer) activeViewer).getLspBridge();
+                }
+                return null;
+            }
+
+            @Override
+            public void openFileAtLine(java.io.File file, int line) {
+                if (file == null || !file.exists()) {
+                    android.widget.Toast.makeText(EditorActivity.this,
+                            R.string.vcode_lsp_no_definition_found, android.widget.Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                // Open (or switch to) the target file, then jump to the given line
+                viewModel.openFile(file);
+                // After the tab is active, scroll to the requested line
+                binding.viewerContainer.postDelayed(() -> {
+                    com.cocode.vcode.ide.views.CodeEditText editor = getActiveCodeEditor();
+                    if (editor != null && line > 1) {
+                        editor.goToLine(line);
+                    }
+                }, 300);
+
+            }
         };
 
         String projectName = getIntent().getStringExtra(EXTRA_PROJECT_NAME);

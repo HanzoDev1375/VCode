@@ -256,9 +256,16 @@ public final class CssLspServer implements LspServer {
         List<LspDiagnostic> result = new ArrayList<>(problems.size());
         for (Problem p : problems) {
             if (p == null) continue;
-            int line = Math.max(0, p.getLine() - 1);
+            // CssLinter occasionally reports line 0 (1-based) for selector-level checks
+            // that haven't tracked the line correctly. Skip those rather than rendering
+            // a spurious squiggle at the top of the file.
+            if (p.getLine() <= 0) continue;
+            int line = p.getLine() - 1; // Convert 1-based → 0-based
             int col  = Math.max(0, p.getColumn());
-            int end  = col + Math.max(1, p.getLength());
+            // getLength() from CssLinter covers the whole declaration span; clamp to a
+            // reasonable maximum so the squiggle stays within the token that caused the error.
+            int length = p.getLength() > 0 ? Math.min(p.getLength(), 80) : 1;
+            int end  = col + length;
             int severity = p.getSeverity() == Problem.Severity.ERROR
                     ? LspDiagnostic.SEVERITY_ERROR
                     : p.getSeverity() == Problem.Severity.WARNING
@@ -275,3 +282,4 @@ public final class CssLspServer implements LspServer {
         return result;
     }
 }
+

@@ -268,15 +268,16 @@ public final class LspEditorBridge {
     }
 
     /**
-     * Attempts to read the flat cursor offset from the editor.
-     * Returns 0 if the editor does not expose a direct accessor.
+     * Reads the flat cursor offset from the editor using the public
+     * {@link CodeEditText#getSelectionStart()} accessor.
      */
     private int getCursorFlatOffset() {
-        // CodeEditText currently stores the cursor internally; the public API exposes
-        // getCursorScreenCoords() but not a raw flat offset.
-        // We conservatively return 0 here; a direct accessor will be added in
-        // a follow-up when CodeEditText is wired more deeply.
-        return 0;
+        if (editor == null) return 0;
+        try {
+            return editor.getSelectionStart();
+        } catch (Exception e) {
+            return 0;
+        }
     }
 
     /** Converts a flat character offset to a zero-based LSP Position. */
