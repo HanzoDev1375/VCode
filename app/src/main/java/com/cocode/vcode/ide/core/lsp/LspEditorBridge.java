@@ -253,7 +253,32 @@ public final class LspEditorBridge {
     private void performCompletion() {
         if (!attached || editor == null || !hasLspServer) return;
         LspDocument doc = buildSnapshot();
-        if (doc == null) return;
+        if (doc == null || doc.text == null) return;
+
+        // Fast-path: prevent autocomplete popup from flashing/triggering on 
+        // newlines, spaces, backspaces on empty lines, and non-trigger symbols.
+        int flatCursor = getCursorFlatOffset();
+        if (flatCursor <= 0 || flatCursor > doc.text.length()) {
+            editor.dismissAutoCompletePopup();
+            return;
+        }
+
+        char lastChar = doc.text.charAt(flatCursor - 1);
+        if (Character.isWhitespace(lastChar)) {
+            editor.dismissAutoCompletePopup();
+            return;
+        }
+
+        String triggerChars = ".</:'\"@#!";
+        boolean isTriggerChar = triggerChars.indexOf(lastChar) >= 0;
+        boolean isIdentifier = Character.isLetterOrDigit(lastChar)
+                || lastChar == '_' || lastChar == '$' || lastChar == '-';
+
+        if (!isIdentifier && !isTriggerChar) {
+            editor.dismissAutoCompletePopup();
+            return;
+        }
+
         LspPosition pos = cursorPosition();
         final int capturedVersion = docVersion.get();
 
