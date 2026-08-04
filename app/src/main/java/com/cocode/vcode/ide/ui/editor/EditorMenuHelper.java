@@ -113,8 +113,12 @@ public class EditorMenuHelper {
                                             File f = new File(loc.uri);
                                             int line = loc.range != null ? loc.range.start.line + 1 : 1;
                                             String label = f.getName() + ":" + line;
+                                            
+                                            String ext = com.cocode.vcode.ide.utils.FileUtils.getExtension(f.getName());
+                                            int iconResId = FileType.fromExtension(ext).getIconResId();
+                                            
                                             refOptions.add(new EditorOptionsBottomSheet.Option(
-                                                    R.drawable.ic_file_code, label,
+                                                    iconResId, label,
                                                     () -> callbacks.openFileAtLine(f, line)
                                             ));
                                         }
