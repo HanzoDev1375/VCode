@@ -103,6 +103,8 @@ public final class LspEditorBridge {
         this.fileType = codeEditor.getFileType();
         this.attached = true;
         codeEditor.addContentChangeListener(contentListener);
+        // Pass the application context so LSP servers can load JSON assets (keywords, etc.)
+        LspClientManager.getInstance().setApplicationContext(codeEditor.getContext());
     }
 
     /**
@@ -123,6 +125,13 @@ public final class LspEditorBridge {
         }
         docVersion.incrementAndGet();
         updateProjectIndex();
+        // Kick off background project-wide indexing the first time a file is set.
+        // This populates ProjectIndex so that Go to Definition / Find References work
+        // across all files in the project, not just the currently open one.
+        if (file != null && file.getParentFile() != null) {
+            File projectRoot = file.getParentFile();
+            ProjectIndex.getInstance().indexProject(projectRoot, null);
+        }
         // Trigger an immediate diagnostic pass for the newly opened file
         mainHandler.removeCallbacks(diagnosticRunnable);
         mainHandler.post(diagnosticRunnable);
@@ -254,12 +263,18 @@ public final class LspEditorBridge {
                 if (capturedVersion != docVersion.get() || !attached || editor == null) return;
                 if (result != null && !result.isEmpty()) {
                     editor.showLspCompletions(convertToLegacy(result));
+                } else {
+                    // No completions for this position — dismiss any stale popup
+                    editor.dismissAutoCompletePopup();
                 }
             }
 
             @Override
             public void onError(String errorMessage) {
-                // Server not ready — let the legacy engine handle it this keystroke.
+                // Server not ready — dismiss stale popup silently
+                if (attached && editor != null && capturedVersion == docVersion.get()) {
+                    editor.dismissAutoCompletePopup();
+                }
             }
         });
     }

@@ -1343,6 +1343,15 @@ public class CodeEditText extends View {
         autoCompletePopup.show(items, this, getSelectionStart());
     }
 
+    /**
+     * Dismisses the autocomplete popup if it is currently showing.
+     * Called by {@link com.cocode.vcode.ide.core.lsp.LspEditorBridge} when the LSP
+     * server returns an empty completion list for the current position.
+     */
+    public void dismissAutoCompletePopup() {
+        if (autoCompletePopup != null) autoCompletePopup.dismiss();
+    }
+
     public void setSelection(int index) {
         cursor = content.positionAt(Math.max(0, Math.min(index, content.totalLength())));
         selectionAnchor = null;

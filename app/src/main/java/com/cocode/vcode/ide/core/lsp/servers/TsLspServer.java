@@ -1,5 +1,7 @@
 package com.cocode.vcode.ide.core.lsp.servers;
 
+import android.content.Context;
+
 import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
 import com.cocode.vcode.ide.core.autocomplete.TsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.diagnostic.linters.TsLinter;
@@ -36,7 +38,15 @@ public final class TsLspServer implements LspServer {
     private volatile boolean ready = false;
     private ProjectIndex projectIndex;
 
-    private final TsAutoCompleteEngine autoCompleteEngine = new TsAutoCompleteEngine(null);
+    private final TsAutoCompleteEngine autoCompleteEngine;
+
+    public TsLspServer(Context context) {
+        this.autoCompleteEngine = new TsAutoCompleteEngine(context);
+    }
+
+    public TsLspServer() {
+        this(null);
+    }
 
     // -------------------------------------------------------------------------
     // LspServer contract

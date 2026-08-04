@@ -16,6 +16,8 @@ import com.cocode.vcode.ide.core.lsp.SymbolEntry;
 import com.cocode.vcode.ide.core.parser.HtmlTagParser;
 import com.cocode.vcode.ide.data.model.Problem;
 
+import android.content.Context;
+
 import java.io.File;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -58,7 +60,16 @@ public final class HtmlLspServer implements LspServer {
     private volatile boolean ready = false;
     private ProjectIndex projectIndex;
 
-    private final HtmlAutoCompleteEngine completeEngine = new HtmlAutoCompleteEngine(null);
+    private final HtmlAutoCompleteEngine completeEngine;
+
+    public HtmlLspServer(Context context) {
+        this.completeEngine = new HtmlAutoCompleteEngine(context);
+    }
+
+    /** No-arg constructor for backwards compatibility (no asset loading). */
+    public HtmlLspServer() {
+        this(null);
+    }
 
     // -------------------------------------------------------------------------
     // LspServer contract

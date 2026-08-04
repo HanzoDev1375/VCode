@@ -1,5 +1,7 @@
 package com.cocode.vcode.ide.core.lsp.servers;
 
+import android.content.Context;
+
 import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
 import com.cocode.vcode.ide.core.autocomplete.JsAutoCompleteEngine;
 import com.cocode.vcode.ide.core.diagnostic.linters.JsLinter;
@@ -241,9 +243,15 @@ public final class JsLspServer implements LspServer {
     private volatile boolean ready = false;
     private ProjectIndex projectIndex;
 
-    // JsAutoCompleteEngine requires Context only for asset loading; null is safe
-    // when running without UI (server mode).
-    private final JsAutoCompleteEngine autoCompleteEngine = new JsAutoCompleteEngine(null);
+    private final JsAutoCompleteEngine autoCompleteEngine;
+
+    public JsLspServer(Context context) {
+        this.autoCompleteEngine = new JsAutoCompleteEngine(context);
+    }
+
+    public JsLspServer() {
+        this(null);
+    }
 
     // -------------------------------------------------------------------------
     // LspServer contract

@@ -1,5 +1,7 @@
 package com.cocode.vcode.ide.core.lsp;
 
+import android.content.Context;
+
 import com.cocode.vcode.ide.core.model.FileType;
 import com.cocode.vcode.ide.utils.ExecutorProvider;
 
@@ -38,6 +40,9 @@ public final class LspClientManager {
     /** Active servers keyed by LSP language id (e.g. "html", "javascript"). */
     private final ConcurrentHashMap<String, LspServer> servers = new ConcurrentHashMap<>();
 
+    /** Application context — used to pass to server engines for JSON asset loading. */
+    private volatile Context appContext;
+
     private LspClientManager() {}
 
     public static LspClientManager getInstance() {
@@ -47,6 +52,17 @@ public final class LspClientManager {
             }
         }
         return sInstance;
+    }
+
+    /**
+     * Stores the application context so that LSP servers can pass it to their autocomplete
+     * engines for loading JSON keyword/property assets from the APK assets directory.
+     * Must be called once before any server is used, e.g. from {@code LspEditorBridge.attach()}.
+     *
+     * @param context any Context; {@code getApplicationContext()} is called internally
+     */
+    public void setApplicationContext(Context context) {
+        if (context != null) this.appContext = context.getApplicationContext();
     }
 
     // -------------------------------------------------------------------------
@@ -243,14 +259,14 @@ public final class LspClientManager {
         // Servers will be registered here as they are implemented in subsequent phases.
         switch (languageId) {
             case "html":
-                return new com.cocode.vcode.ide.core.lsp.servers.HtmlLspServer();
+                return new com.cocode.vcode.ide.core.lsp.servers.HtmlLspServer(appContext);
             case "css":
             case "scss":
-                return new com.cocode.vcode.ide.core.lsp.servers.CssLspServer();
+                return new com.cocode.vcode.ide.core.lsp.servers.CssLspServer(appContext);
             case "javascript":
-                return new com.cocode.vcode.ide.core.lsp.servers.JsLspServer();
+                return new com.cocode.vcode.ide.core.lsp.servers.JsLspServer(appContext);
             case "typescript":
-                return new com.cocode.vcode.ide.core.lsp.servers.TsLspServer();
+                return new com.cocode.vcode.ide.core.lsp.servers.TsLspServer(appContext);
             case "json":
                 return new com.cocode.vcode.ide.core.lsp.servers.JsonLspServer();
             case "markdown":
@@ -258,12 +274,6 @@ public final class LspClientManager {
             default:
                 return null;
         }
-
-
-
-
-
-
     }
 
     private <T> void deliverResult(LspCallback<T> callback, T result) {

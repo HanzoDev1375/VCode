@@ -1,5 +1,7 @@
 package com.cocode.vcode.ide.core.lsp.servers;
 
+import android.content.Context;
+
 import com.cocode.vcode.ide.core.autocomplete.CompletionItem;
 import com.cocode.vcode.ide.core.autocomplete.CssAutoCompleteEngine;
 import com.cocode.vcode.ide.core.diagnostic.linters.CssLinter;
@@ -48,7 +50,15 @@ public final class CssLspServer implements LspServer {
     private volatile boolean ready = false;
     private ProjectIndex projectIndex;
 
-    private final CssAutoCompleteEngine completeEngine = new CssAutoCompleteEngine(null);
+    private final CssAutoCompleteEngine completeEngine;
+
+    public CssLspServer(Context context) {
+        this.completeEngine = new CssAutoCompleteEngine(context);
+    }
+
+    public CssLspServer() {
+        this(null);
+    }
 
     // -------------------------------------------------------------------------
     // LspServer contract
