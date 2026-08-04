@@ -237,11 +237,18 @@ public final class CssLspServer implements LspServer {
         if (legacy == null || legacy.isEmpty()) return Collections.emptyList();
         List<LspCompletionItem> result = new ArrayList<>(legacy.size());
         for (CompletionItem ci : legacy) {
-            if (ci == null) continue;
+            String insert = ci.getEffectiveInsertText();
+            int curOffset = ci.getCursorOffset();
+            if (curOffset < 0) {
+                int pipeIdx = insert.length() + curOffset;
+                if (pipeIdx >= 0 && pipeIdx <= insert.length()) {
+                    insert = insert.substring(0, pipeIdx) + "|" + insert.substring(pipeIdx);
+                }
+            }
             int kind = mapKind(ci.getType());
             result.add(new LspCompletionItem(
                     ci.getLabel(),
-                    ci.getEffectiveInsertText(),
+                    insert,
                     kind,
                     ci.getDetail(),
                     null

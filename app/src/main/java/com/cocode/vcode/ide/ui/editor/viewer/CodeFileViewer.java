@@ -171,6 +171,9 @@ public class CodeFileViewer implements IFileViewer {
     @Override
     public void onPause() {
         jsonValidationHandler.removeCallbacksAndMessages(null);
+        if (editorLayout != null && editorLayout.getSelectionToolbar() != null) {
+            editorLayout.getSelectionToolbar().hide();
+        }
     }
 
     @Override

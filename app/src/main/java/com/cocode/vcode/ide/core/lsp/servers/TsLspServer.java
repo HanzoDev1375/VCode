@@ -89,9 +89,17 @@ public final class TsLspServer implements LspServer {
 
         List<LspCompletionItem> result = new ArrayList<>(suggestions.size());
         for (CompletionItem item : suggestions) {
+            String insert = item.getEffectiveInsertText();
+            int curOffset = item.getCursorOffset();
+            if (curOffset < 0) {
+                int pipeIdx = insert.length() + curOffset;
+                if (pipeIdx >= 0 && pipeIdx <= insert.length()) {
+                    insert = insert.substring(0, pipeIdx) + "|" + insert.substring(pipeIdx);
+                }
+            }
             result.add(new LspCompletionItem(
                     item.getLabel(),
-                    item.getEffectiveInsertText(),
+                    insert,
                     mapKind(item.getType()),
                     item.getDetail(),
                     null
